@@ -5,7 +5,7 @@ use bevy::prelude::shape::Quad;
 use bevy::render::camera::ScalingMode;
 use bevy::window::{WindowMode, WindowResizeConstraints};
 use vidya_rust::app::{AppState, VidyaPlugin};
-use vidya_rust::map::{CurrentMap, goto_map, LoadMapEvent, MapState, VidyaMap, VidyaMapLoader};
+use vidya_rust::map::{CurrentMap, LoadMapEvent, MapState, VidyaMap, VidyaMapLoader};
 
 /*
 fn add_entities(

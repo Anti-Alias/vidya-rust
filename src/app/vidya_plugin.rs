@@ -42,8 +42,8 @@ fn on_load_map(
     if let Some(event) = events.iter().next() {
 
         // Begins loading map and stores the handle for later use
-        let map_name = &event.0;
-        let map_handle = asset_server.load(map_name);
+        let map_file = &event.0;
+        let map_handle = asset_server.load(map_file);
 
         // If we already have a current map, despawn the current map entity
         if let Some(current_map) = current_map {
@@ -61,14 +61,14 @@ fn on_load_map(
 
         // Tracks current map in a resource and its graphics
         commands.insert_resource(CurrentMap {
-            file: map_name.to_string(),
+            file: map_file.to_string(),
             map_handle,
             map_entity: map_parent_entity
         });
 
         // Puts game in loading state
         map_state.set(MapState::LoadingMap);
-        log::info!("Loading map {}", map_name);
+        log::info!("Loading map {}", map_file);
     }
 }
 
@@ -102,12 +102,15 @@ fn finish_loading_map(
         let map_dir = map_file.parent().unwrap();
 
         // Begins loading map graphics
+        let mut image_path = PathBuf::new();
         for tileset in &tiled_map.tilesets {
-            let map_image = &tileset.images[0];
-            let image_path = format!("{}/{}", map_dir.display(), map_image.source);
-            let image_handle: Handle<Image> = asset_server.load(&image_path);
+            let map_image = tileset.image.as_ref().unwrap();
+            image_path.push(map_dir);
+            image_path.push(&map_image.source);
+            let image_handle: Handle<Image> = asset_server.load(&image_path.display().to_string());
             current_map_graphics.tileset_image_handles.insert(tileset.first_gid, image_handle);
-            log::info!("Loading tileset {}", image_path);
+            log::info!("Loading tileset {}", image_path.display());
+            image_path.clear();
         }
         state.set(MapState::LoadingMapGraphics);
         commands.insert_resource(current_map_graphics);

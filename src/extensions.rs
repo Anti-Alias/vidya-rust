@@ -18,7 +18,8 @@ impl PathExt for Path {
                         break;
                     }
                 }
-            } else if let Some(child_comp) = child_comp {
+            }
+            else if let Some(child_comp) = child_comp {
                 result.push(child_comp);
                 for comp in child_iter {
                     result.push(comp);

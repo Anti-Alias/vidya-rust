@@ -1,8 +1,9 @@
 use std::path::PathBuf;
-use bevy::asset::LoadState;
+use bevy::asset::{AssetServerSettings, LoadState};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use crate::map::{CurrentMap, CurrentMapGraphics, LoadMapEvent, MapState, VidyaMap, VidyaMapLoader};
+use crate::extensions::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
@@ -77,6 +78,7 @@ fn on_load_map(
 fn finish_loading_map(
     mut current_map: ResMut<CurrentMap>,
     mut asset_server: ResMut<AssetServer>,
+    asset_server_settings: Res<AssetServerSettings>,
     mut state: ResMut<State<MapState>>,
     vidya_maps: Res<Assets<VidyaMap>>,
     mut commands: Commands
@@ -98,19 +100,14 @@ fn finish_loading_map(
             .get(&current_map.map_handle)
             .unwrap()
             .tiled_map;
-        let map_file = PathBuf::from(&current_map.file);
-        let map_dir = map_file.parent().unwrap();
 
         // Begins loading map graphics
-        let mut image_path = PathBuf::new();
+        let asset_folder = PathBuf::from(&asset_server_settings.asset_folder);
         for tileset in &tiled_map.tilesets {
-            let map_image = tileset.image.as_ref().unwrap();
-            image_path.push(map_dir);
-            image_path.push(&map_image.source);
-            let image_handle: Handle<Image> = asset_server.load(&image_path.display().to_string());
+            let image = tileset.image.as_ref().unwrap();
+            let image_source = image.source.relativize(&asset_folder).display().to_string();
+            let image_handle: Handle<Image> = asset_server.load(&image_source);
             current_map_graphics.tileset_image_handles.insert(tileset.first_gid, image_handle);
-            log::info!("Loading tileset {}", image_path.display());
-            image_path.clear();
         }
         state.set(MapState::LoadingMapGraphics);
         commands.insert_resource(current_map_graphics);
@@ -144,8 +141,6 @@ fn populate_map(
 ) {
     let tiled_map = &vidya_map.get(&current_map.map_handle).unwrap().tiled_map;
     for (id, layer) in tiled_map.layers.iter().enumerate() {
-        println!("{}", layer.name);
-        println!("{}", layer.offset_x);
     }
     state.set(MapState::Finished);
 }

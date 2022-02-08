@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.5" tiledversion="1.7.0" name="terrain" tilewidth="16" tileheight="16" tilecount="64" columns="8">
- <image source="../images/terrain.png" width="128" height="128"/>
+<tileset version="1.5" tiledversion="1.7.0" name="collision" tilewidth="16" tileheight="16" tilecount="64" columns="8">
+ <image source="../images/collision.png" width="128" height="128"/>
  <tile id="0">
   <properties>
    <property name="type" value="lip-tl"/>

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
-use crate::map::{CurrentMap, LoadMapEvent, MapState, VidyaMap, VidyaMapLoader};
+use crate::map::{CurrentMap, CurrentMapGraphics, LoadMapEvent, MapState, VidyaMap, VidyaMapLoader};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
@@ -20,15 +20,19 @@ impl Plugin for VidyaPlugin {
             .add_event::<LoadMapEvent>()
             .add_asset::<VidyaMap>()
             .init_asset_loader::<VidyaMapLoader>()
-            .add_system(on_new_map)
-            .add_system_set(SystemSet::on_update(MapState::LoadingMap).with_system(check_loading_map))
-            .add_system_set(SystemSet::on_enter(MapState::LoadingMapGraphics).with_system(load_map_graphics))
+            .add_system(on_load_map)
+            .add_system_set(SystemSet::on_update(MapState::LoadingMap).with_system(finish_loading_map))
+            .add_system_set(SystemSet::on_update(MapState::LoadingMapGraphics).with_system(finish_loading_map_graphics))
+            .add_system_set(SystemSet::on_enter(MapState::PopulatingMap).with_system(populate_map))
         ;
     }
     fn name(&self) -> &str { "vidya_plugin" }
 }
 
-fn on_new_map(
+// 1) Listens for "LoadMapEvent"
+// 2) Begins loading map specified
+// 3) Goes to LoadingMap state
+fn on_load_map(
     mut events: EventReader<LoadMapEvent>,
     mut map_state: ResMut<State<MapState>>,
     current_map: Option<ResMut<CurrentMap>>,
@@ -55,54 +59,91 @@ fn on_new_map(
             .spawn()
             .id();
 
-        // Tracks current map in a temp resource
+        // Tracks current map in a resource and its graphics
         commands.insert_resource(CurrentMap {
             file: map_name.to_string(),
-            map_handle: map_handle,
-            tileset_handles: HashMap::default(),
+            map_handle,
             map_entity: map_parent_entity
         });
 
-        // Puts us in loading state
+        // Puts game in loading state
         map_state.set(MapState::LoadingMap);
         log::info!("Loading map {}", map_name);
     }
 }
 
-fn check_loading_map(
-    mut asset_server: ResMut<AssetServer>,
-    current_map: Res<CurrentMap>,
-    mut state: ResMut<State<MapState>>
-) {
-    if asset_server.get_load_state(&current_map.map_handle) == LoadState::Loaded {
-        state.set(MapState::LoadingMapGraphics);
-        log::info!("Map {} finished loading", &current_map.file);
-    }
-}
-
-fn load_map_graphics(
+// 1) When in LoadingMapState, checks if map finished loading
+// 2) If so, loads tileset images and goes to LoadingMapGraphics state
+fn finish_loading_map(
     mut current_map: ResMut<CurrentMap>,
+    mut asset_server: ResMut<AssetServer>,
     mut state: ResMut<State<MapState>>,
     vidya_maps: Res<Assets<VidyaMap>>,
-    mut asset_server: ResMut<AssetServer>
+    mut commands: Commands
 ) {
-    let tiled_map = &vidya_maps
-        .get(&current_map.map_handle)
-        .unwrap()
-        .tiled_map;
-    let map_file = PathBuf::from(&current_map.file);
-    let map_dir = map_file.parent().unwrap();
-    for tileset in &tiled_map.tilesets {
-        let map_image = &tileset.images[0];
-        let image_path = format!("{}/{}", map_dir.display(), map_image.source);
-        let image_handle: Handle<Image> = asset_server.load(&image_path);
-        current_map.tileset_handles.insert(tileset.first_gid, image_handle);
-        log::info!("Loading tileset {}", image_path);
+    if asset_server.get_load_state(&current_map.map_handle) == LoadState::Loaded {
+
+        // Creates initial map graphics
+        log::info!("Map {} finished loading", &current_map.file);
+        let mut current_map_graphics = CurrentMapGraphics {
+            chunk_width: 32,
+            chunk_height: 32,
+            tile_width: 16,
+            tile_height: 16,
+            ..Default::default()
+        };
+
+        // Gets parent directory of tmx map file
+        let tiled_map = &vidya_maps
+            .get(&current_map.map_handle)
+            .unwrap()
+            .tiled_map;
+        let map_file = PathBuf::from(&current_map.file);
+        let map_dir = map_file.parent().unwrap();
+
+        // Begins loading map graphics
+        for tileset in &tiled_map.tilesets {
+            let map_image = &tileset.images[0];
+            let image_path = format!("{}/{}", map_dir.display(), map_image.source);
+            let image_handle: Handle<Image> = asset_server.load(&image_path);
+            current_map_graphics.tileset_image_handles.insert(tileset.first_gid, image_handle);
+            log::info!("Loading tileset {}", image_path);
+        }
+        state.set(MapState::LoadingMapGraphics);
+        commands.insert_resource(current_map_graphics);
     }
 }
 
-fn check_loading_map_graphics (
-
+// 1) When in LoadingMapGraphics state, checks if tilesets finished loading
+// 2) If so, goes to SpawningMapChunks state
+fn finish_loading_map_graphics(
+    current_map: Res<CurrentMap>,
+    current_map_graphics: Res<CurrentMapGraphics>,
+    asset_server: Res<AssetServer>,
+    mut state: ResMut<State<MapState>>
 ) {
-
+    // If tileset images have finished loading, go into spawning state
+    let tileset_handles = current_map_graphics.tileset_image_handles.values().map(|handle| { handle.id });
+    if asset_server.get_group_load_state(tileset_handles) == LoadState::Loaded {
+        log::info!("Finished loading tilesets for {}", current_map.file);
+        log::info!("Spawning map chunks for {}", current_map.file);
+        state.set(MapState::PopulatingMap);
+    }
 }
+
+// Fire events that cause map to populate
+fn populate_map(
+    current_map: Res<CurrentMap>,
+    current_map_graphics: Res<CurrentMapGraphics>,
+    asset_server: Res<AssetServer>,
+    vidya_map: Res<Assets<VidyaMap>>,
+    mut state: ResMut<State<MapState>>
+) {
+    let tiled_map = &vidya_map.get(&current_map.map_handle).unwrap().tiled_map;
+    for (id, layer) in tiled_map.layers.iter().enumerate() {
+        println!("{}", layer.name);
+        println!("{}", layer.offset_x);
+    }
+    state.set(MapState::Finished);
+}
+

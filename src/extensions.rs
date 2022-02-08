@@ -30,6 +30,12 @@ impl PathExt for Path {
     }
 }
 
+impl PathExt for PathBuf {
+    fn relativize(&self, parent: impl AsRef<Path>) -> PathBuf {
+        self.as_path().relativize(parent)
+    }
+}
+
 
 #[test]
 fn test_relativize() {

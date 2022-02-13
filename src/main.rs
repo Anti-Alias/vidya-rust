@@ -71,17 +71,17 @@ fn main() {
             mode: WindowMode::Windowed,
             transparent: false,
         })
-        .add_startup_system(start)
         .add_plugins(DefaultPlugins)
         .add_plugin(VidyaPlugin)
+        .add_system_set(SystemSet::on_enter(AppState::Running).with_system(load_map))
         .run();
 }
 
-fn start(
+fn load_map(
     mut app_state: ResMut<State<AppState>>,
     mut emitter: EventWriter<LoadMapEvent>
 ) {
     // Starts the app
-    app_state.set(AppState::Started).unwrap();
-    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()))
+    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
+    log::debug!("Sent LoadMapEvent event");
 }

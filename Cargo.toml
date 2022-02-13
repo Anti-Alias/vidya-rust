@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.6" }
-tiled = { git = "https://github.com/Anti-Alias/tiled-rs", branch = "add-group-layer" }  # Temporary until group layers are supported
+tiled = { git = "https://github.com/mapeditor/rs-tiled", branch = "master" }  # Temporary until 1.0 release
 anyhow = "1.0"
 log = "0.4"

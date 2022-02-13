@@ -12,6 +12,9 @@ pub enum MapState {
     /// Map entities (physics/graphics) are being populated
     PopulatingMap,
 
+    // Waits for map graphics to finish loading
+    FinishLoadingMapGraphics,
+
     /// Map is finished and in use
     Finished
 }

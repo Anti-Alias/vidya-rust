@@ -2861,7 +2861,7 @@ dependencies = [
 [[package]]
 name = "tiled"
 version = "0.9.5"
-source = "git+https://github.com/Anti-Alias/tiled-rs?branch=add-group-layer#d0a5d97f319016f248b6d3430cf458a9bb94aeaf"
+source = "git+https://github.com/mapeditor/rs-tiled?branch=master#e05eda433242b9e9c860ec6374f86dbbc900c79a"
 dependencies = [
  "base64",
  "libflate",

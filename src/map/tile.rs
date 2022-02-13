@@ -51,6 +51,12 @@ impl CollisionType {
             _ => None
         }
     }
+
+    pub fn is_lip(self) -> bool {
+        self == Self::LipN ||
+        self == Self::LipNE ||
+        self == Self::LipNW
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]

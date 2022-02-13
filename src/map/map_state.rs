@@ -6,9 +6,6 @@ pub enum MapState {
     /// TMX file is loading
     LoadingMap,
 
-    /// Image files referenced by TMX file are loading
-    LoadingMapGraphics,
-
     /// Map entities (physics/graphics) are being populated
     PopulatingMap,
 

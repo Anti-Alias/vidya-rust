@@ -2,7 +2,6 @@ use std::iter::Iterator;
 use std::path::PathBuf;
 use bevy::asset::{AssetServerSettings, LoadState};
 use bevy::prelude::*;
-use bevy::sprite::collide_aabb::Collision;
 use tiled::*;
 use crate::map::*;
 use crate::extensions::*;
@@ -32,11 +31,11 @@ impl Plugin for VidyaPlugin {
             // App start
             .add_startup_system(start_app)
 
-            // Map-loading
-            .add_system_set(SystemSet::on_update(AppState::Running).with_system(on_load_map))
-            .add_system_set(SystemSet::on_update(MapState::LoadingMap).with_system(finish_loading_map))
-            .add_system_set(SystemSet::on_enter(MapState::PopulatingMap).with_system(populate_map))
-            .add_system_set(SystemSet::on_update(MapState::FinishLoadingMapGraphics).with_system(finish_loading_map_graphics))
+            // Map-loading (Fire LoadMapEvent to kickstart)
+            .add_system_set(SystemSet::on_update(AppState::Running).with_system(on_load_map))                           // -> LoadingMap
+            .add_system_set(SystemSet::on_update(MapState::LoadingMap).with_system(finish_loading_map))                 // -> PopulatingMap
+            .add_system_set(SystemSet::on_enter(MapState::PopulatingMap).with_system(populate_map))                     // -> FinishLoadingMapGraphics
+            .add_system_set(SystemSet::on_update(MapState::FinishLoadingMapGraphics).with_system(finish_loading_map_graphics))  // -> Finished
         ;
     }
     fn name(&self) -> &str { "vidya_plugin" }
@@ -237,7 +236,7 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
 fn add_tiles_from_group_layer(
     map: &Map,                                              // Map itself
     c_layer: Option<TileLayer>,                             // Collision layer of group
-    t_layers: &[TileLayer],                                 // Terrain layers
+    t_layers: &[TileLayer],                                 // Terrain layers of group
     offset: Vec2,                                           // Offset of collision layer
     graphics_events: &mut EventWriter<AddTileGraphicsEvent> // Resulting graphics events
 ) {
@@ -266,7 +265,6 @@ fn add_tiles_from_group_layer(
                 .flat_map(|t_layer| t_layer.get_tile(x, y));
 
             // "Climb" the current tile at x, y
-            log::debug!("----------\nOn tile {}, {}", x, y);
             log::debug!("x, y: {}, {}", x, y);
             log::debug!("Pos: {:?}", current_pos);
             let prev_status = climb_status;
@@ -279,7 +277,7 @@ fn add_tiles_from_group_layer(
                 prev_status,
                 graphics_events
             );
-            log::debug!("cur status {:?}", climb_status);
+            log::debug!("Cur status: {:?}", climb_status);
 
             // Offset position for next iteration based on previous status and current one
             if climb_status == ClimbStatus::NotClimbing {
@@ -296,15 +294,6 @@ fn add_tiles_from_group_layer(
         }
 
     }
-}
-
-fn add_floor_tiles<'map>(
-    map: &Map,                                              // Map itself
-    t_layers: &[TileLayer],                                 // Terrain layers
-    offset: Vec2,                                           // Offset of collision layer
-    graphics_events: &mut EventWriter<AddTileGraphicsEvent> // Resulting graphics events
-) {
-    
 }
 
 fn add_tiles_with_collision_tile<'map>(
@@ -370,7 +359,19 @@ impl ClimbStatus {
         log::debug!("Type: {:?}, prev stat: {:?}", collision, prev_status);
         // What should the resulting climb status be, considering the current collision tile and the previous climb status?
         // Yes, this is ugly and no, I'm not going to fix it...
-        if collision == CollisionType::Wall {
+        if collision == CollisionType::Floor {
+            let is_status_valid =
+                prev_status == Self::NotClimbing ||
+                prev_status == Self::ClimbingWallS ||
+                prev_status == Self::ClimbingWallSE ||
+                prev_status == Self::ClimbingWallSW ||
+                prev_status == Self::FinishedClimbing;
+            if !is_status_valid {
+                panic!("Encountered a {:?} tile while in climb status {:?}", collision, prev_status)
+            }
+            Self::NotClimbing
+        }
+        else if collision == CollisionType::Wall {
             if  prev_status == Self::NotClimbing ||
                 prev_status == Self::ClimbingWallS ||
                 prev_status == Self::FinishedClimbing {
@@ -386,16 +387,6 @@ impl ClimbStatus {
                 // Slopes???
                 todo!()
             }
-        }
-        else if collision == CollisionType::Floor {
-            let is_status_valid =
-                prev_status == Self::NotClimbing ||
-                prev_status == Self::ClimbingWallS ||
-                prev_status == Self::FinishedClimbing;
-            if !is_status_valid {
-                panic!("Encountered a {:?} tile while in climb status {:?}", collision, prev_status)
-            }
-            Self::NotClimbing
         }
         else if collision == CollisionType::WallStartSE {
             let is_status_valid =
@@ -427,11 +418,8 @@ impl ClimbStatus {
             }
             Self::NotClimbing
         }
-        else if collision == CollisionType::LipN || collision == CollisionType::LipNE || collision == CollisionType::LipNW {
-            let is_status_valid =
-                prev_status.is_climbing_wall() ||
-                prev_status == Self::NotClimbing;
-            if !is_status_valid {
+        else if collision.is_lip() {
+            if !(prev_status.is_climbing_wall() || prev_status == Self::NotClimbing) {
                 panic!("Encountered a {:?} tile while in climb status {:?}", collision, prev_status)
             }
             Self::FinishedClimbing
@@ -446,11 +434,6 @@ impl ClimbStatus {
         self == Self::ClimbingWallS ||
         self == Self::ClimbingWallSE ||
         self == Self::ClimbingWallSW
-    }
-
-    fn is_on_floor(self) -> bool {
-        self == Self::NotClimbing ||
-        self == Self::FinishedClimbing
     }
 
     fn to_terrain_shape(self) -> TerrainShape {

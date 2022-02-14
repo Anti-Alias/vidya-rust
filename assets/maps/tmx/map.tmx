@@ -28,9 +28,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
   </layer>
-  <layer id="12" name="collision" width="28" height="19">
+  <layer id="12" name="geom_coll" width="28" height="19">
    <properties>
-    <property name="type" value="collision"/>
+    <property name="type" value="geom_coll"/>
    </properties>
    <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

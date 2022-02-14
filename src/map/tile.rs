@@ -10,11 +10,11 @@ pub struct TileGraphics {
     pub tile_index: u32,
     pub position: Vec3,
     pub size: Vec2,
-    pub shape: TerrainShape
+    pub shape: PrimitiveShape
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum CollisionType {
+pub enum TileType {
     Floor,
     Wall,
     WallStartSE,
@@ -31,7 +31,7 @@ pub enum CollisionType {
     SlopeEndW
 }
 
-impl CollisionType {
+impl TileType {
     pub fn from_str(str: &str) -> Option<Self> {
         match str {
             "floor" => Some(Self::Floor),
@@ -60,7 +60,7 @@ impl CollisionType {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum TerrainShape {
+pub enum PrimitiveShape {
     Floor,
     Wall,
     WallStartSE,

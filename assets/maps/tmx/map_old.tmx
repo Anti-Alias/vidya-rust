@@ -170,8 +170,8 @@
 </data>
   </layer>
  </group>
- <group id="7" name="trees" visible="0">
-  <layer id="8" name="trees" width="32" height="36" locked="1">
+ <group id="7" name="trees">
+  <layer id="8" name="trees" width="32" height="36">
    <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

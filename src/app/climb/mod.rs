@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use log::debug;
 use tiled::*;
 
 use crate::map::{GeomShape, TileType, AddTileGraphicsEvent, TileGraphics};
@@ -22,7 +23,7 @@ pub(crate) fn add_tiles_from_map(
 
 
                 // Populate tiles from group layer
-                log::debug!("Processing group layer {}", &root_layer.data().name);
+                debug!("Processing group layer {}", &root_layer.data().name);
                 let offset = Vec2::new(
                     root_layer.data().offset_x,
                     root_layer.data().offset_y
@@ -73,7 +74,6 @@ fn add_tiles_from_group_layer(
             add_tiles(
                 meta_tile,
                 t_tiles,
-                tile_size,
                 map,
                 &mut geom_climber,
                 &mut coll_climber,
@@ -86,7 +86,6 @@ fn add_tiles_from_group_layer(
 fn add_tiles<'map>(
     meta_tile: Option<MetaTile<'map>>,
     terrain_tiles: impl Iterator<Item=LayerTile<'map>>,
-    tile_size: Vec2,
     map: &'map Map,
     geom_climber: &mut Climber,
     coll_climber: &mut Climber,
@@ -97,6 +96,8 @@ fn add_tiles<'map>(
     let (geom_type, coll_type) = meta_tile
         .map(|tile| tile.get_types())
         .unwrap_or((TileType::Floor, TileType::Floor));
+    let geom_pos = geom_climber.position;
+    //let coll_pos = coll_climber.position;
     geom_climber.climb(geom_type);
     coll_climber.climb(coll_type);
     let geom_shape = geom_climber.climb_status.to_geom_shape();
@@ -105,21 +106,26 @@ fn add_tiles<'map>(
     let tilesets = map.tilesets();
     for t_tile in terrain_tiles {
 
-        // Fire graphics event
+        // Finds tileset, and computes uvs
         let tileset_index = tilesets
             .iter()
             .position(|tileset| &tileset.name == &t_tile.tileset.name)
-            .unwrap() as u32;
+            .unwrap();
+        let tileset = &tilesets[tileset_index];
+        let (size, uv1, uv2) = get_tile_size_and_uvs(&tileset, t_tile.id);
+
+        // Fire graphics event
         let event = AddTileGraphicsEvent(TileGraphics {
-            tileset_index,
-            tile_index: t_tile.id as u32,
-            position: geom_climber.position,
-            size: tile_size,
+            tileset_index: tileset_index as u32,
+            position: geom_pos,
+            size,
+            uv1,
+            uv2,
             shape: geom_shape
         });
 
         // Send event for adding tile's graphics
-        log::debug!("Fired event {:?}", event);
+        debug!("Fired event {:?}", event);
         graphics_events.send(event);
     }
 }
@@ -269,6 +275,23 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
     }
 }
 
+fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32) -> (Vec2, Vec2, Vec2) {
+    let tsm = tileset.margin as f32;
+    let tss = tileset.spacing as f32;
+    let (tsr, tsc) = ((tileset.tilecount/tileset.columns) as f32, tileset.columns as f32);
+    let (tw, th) = (tileset.tile_width as f32, tileset.tile_height as f32);
+    let (tx, ty) = (tile_id % tileset.columns, tile_id / tileset.columns);
+    let (spx, spy) = ((tx*tileset.spacing) as f32, (ty*tileset.spacing) as f32);
+    let (tx, ty) = (tx as f32 * tw, ty as f32 * th);
+    let tssize = Vec2::new(
+        tsm*2.0   +   tsc*tw   +   tss*f32::max(tsc-1.0, 0.0),
+        tsm*2.0   +   tsr*th   +   tss*f32::max(tsr-1.0, 0.0)
+    );
+    let uv1 = Vec2::new(tsm, tsm) + Vec2::new(tx, ty) + Vec2::new(spx, spy);
+    let uv2 = uv1 + Vec2::new(tw, th);
+    (Vec2::new(tw, th), uv1 / tssize, uv2 / tssize)
+}
+
 // A Group layer that has has been parsed (split between the terrain layers and the optional meta layers)
 struct SplitGroupLayer<'map> {
     terrain_layers: Vec<TileLayer<'map>>,
@@ -354,6 +377,7 @@ impl Climber {
 
     /// Compares current climb status and the next tile encountered, and "climbs" appropriately.
     fn climb(&mut self, tile_type: TileType) {
+        self.climb_status = ClimbStatus::next(self.climb_status, tile_type);
         if self.climb_status == ClimbStatus::NotClimbing {
             self.position.z -= self.tile_height;
         }
@@ -365,6 +389,5 @@ impl Climber {
             self.position.y = self.offset.y;
             self.position.z -= ydiff + self.tile_height;
         }
-        self.climb_status = ClimbStatus::next(self.climb_status, tile_type);
     }
 }

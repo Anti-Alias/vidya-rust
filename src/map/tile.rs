@@ -7,9 +7,10 @@ pub type LocalId = u32;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TileGraphics {
     pub tileset_index: u32,
-    pub tile_index: u32,
     pub position: Vec3,
     pub size: Vec2,
+    pub uv1: Vec2,
+    pub uv2: Vec2,
     pub shape: GeomShape
 }
 

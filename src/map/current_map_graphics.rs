@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use bevy::utils::HashMap;
 use crate::map::{ TileGraphics, GeomShape };
 
-const CHUNK_DIM: f32 = 16.0*8.0;
-
+/// Staging resource for the graphics of a loading tiled map
 #[derive(Default)]
 pub struct CurrentMapGraphics {
     pub tileset_image_handles: HashMap<String, Handle<Image>>,  // Tileset name -> image
@@ -12,9 +11,9 @@ pub struct CurrentMapGraphics {
 }
 
 impl CurrentMapGraphics {
-    pub fn new(chunk_width: f32, chunk_height: f32) -> Self {
+    pub fn new(chunk_size: Vec3) -> Self {
         Self {
-            chunk_size: Vec3::new(CHUNK_DIM, CHUNK_DIM, CHUNK_DIM),
+            chunk_size,
             ..Default::default()
         }
     }
@@ -23,13 +22,8 @@ impl CurrentMapGraphics {
         let chunk_size = self.chunk_size;
         let tile_pos = tile.position / chunk_size;
         let (x, y, z) = (tile_pos.x as i32, tile_pos.y as i32, tile_pos.z as i32);
-        let tileset_index = tile.tileset_index;
-        let key = ChunkKey {
-            x,
-            y,
-            z,
-            tileset_index: tileset_index as usize
-        };
+        let tileset_index = tile.tileset_index as usize;
+        let key = ChunkKey { x, y, z, tileset_index };
         let chunk = self.chunks.entry(key).or_default();
         chunk.add_tile(tile);
         log::debug!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.position, key);
@@ -46,17 +40,40 @@ pub struct ChunkKey {
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Chunk {
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    uvs: Vec<[f32; 2]>,
+    positions: Vec<Vec3>,
+    normals: Vec<Vec3>,
+    uvs: Vec<Vec2>,
     indices: Vec<u32>
 }
 
 impl Chunk {
     fn add_tile(&mut self, tile: TileGraphics) {
+        let p = &mut self.positions;
+        let n = &mut self.normals;
+        let u = &mut self.uvs;
+        let i = &mut self.indices;
+        let ilen = i.len() as u32;
+
+        let mut tp = tile.position;
+        let ts = tile.size;
         match tile.shape {
             GeomShape::Floor => {
-                
+
+                // Position
+                p.push(tp); tp.x += ts.x;
+                p.push(tp); tp.z -= ts.y;
+                p.push(tp); tp.x -= ts.x;
+                p.push(tp);
+
+                // Normals
+                let up = Vec3::new(0.0, 1.0, 0.0);
+                for _ in 0..4 { n.push(up); }
+
+                // Normals
+                //u.push()
+
+                // Indices
+                i.push(ilen); i.push(ilen+1); i.push(ilen+2); i.push(ilen+2); i.push(ilen+3); i.push(ilen);
             },
             GeomShape::Wall => {
 

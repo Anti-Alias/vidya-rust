@@ -1,4 +1,4 @@
 mod vidya_plugin;
-mod wall_climb;
+mod climb;
 
 pub use vidya_plugin::*;

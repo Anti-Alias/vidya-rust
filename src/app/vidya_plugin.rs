@@ -2,9 +2,7 @@ use std::iter::Iterator;
 use std::path::PathBuf;
 use bevy::asset::{AssetServerSettings, LoadState};
 use bevy::prelude::*;
-use bevy::utils::tracing::Event;
-use tiled::*;
-use crate::app::wall_climb::{SplitGroupLayer, split_group_layer, add_tiles_from_group_layer};
+use crate::app::climb::add_tiles_from_map;
 use crate::map::*;
 use crate::extensions::*;
 
@@ -146,41 +144,17 @@ fn finish_loading_map(
 fn fire_map_events(
     current_map: Res<CurrentMap>,
     vidya_map: Res<Assets<VidyaMap>>,
-    mut graphics_events: EventWriter<AddTileGraphicsEvent>,
+    graphics_events: EventWriter<AddTileGraphicsEvent>,
     mut state: ResMut<State<MapState>>
 ) {
     // Gets tiled map
-    let tiled_map = &vidya_map.get(&current_map.map_handle).unwrap().tiled_map;
+    let tiled_map = &vidya_map
+        .get(&current_map.map_handle)
+        .unwrap()
+        .tiled_map;
 
-    // For all group layers in the root...
-    for root_layer in tiled_map.layers() {
-        match &root_layer.layer_type() {
-            LayerType::GroupLayer(group_layer) => {
-
-                // Split the sub layers between terrain and collision
-                let SplitGroupLayer {
-                    terrain_layers,
-                    geom_coll_layers
-                } = split_group_layer(group_layer);
-
-                let offset = Vec2::new(
-                    root_layer.data().offset_x,
-                    root_layer.data().offset_y
-                );
-
-                // Populate tiles from group layer
-                log::debug!("Processing group layer {}", &root_layer.data().name);
-                add_tiles_from_group_layer(
-                    tiled_map,
-                    &geom_coll_layers,
-                    &terrain_layers,
-                    offset,
-                    &mut graphics_events
-                );
-            },
-            _ => panic!("All root layers must be group layers")
-        }
-    }
+    // "Climbs" all group layers of map and fires events
+    add_tiles_from_map(&tiled_map, graphics_events);
 
     // Goes to state that waits for map graphics to finish loading
     state.set(MapState::HandlingMapEvents).unwrap();

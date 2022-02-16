@@ -10,7 +10,7 @@ pub struct TileGraphics {
     pub tile_index: u32,
     pub position: Vec3,
     pub size: Vec2,
-    pub shape: PrimitiveShape
+    pub shape: GeomShape
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -60,7 +60,7 @@ impl TileType {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum PrimitiveShape {
+pub enum GeomShape {
     Floor,
     Wall,
     WallStartSE,

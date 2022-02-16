@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
-use crate::map::{ TileGraphics, PrimitiveShape };
+use crate::map::{ TileGraphics, GeomShape };
 
 const CHUNK_DIM: f32 = 16.0*8.0;
 
@@ -55,10 +55,10 @@ pub struct Chunk {
 impl Chunk {
     fn add_tile(&mut self, tile: TileGraphics) {
         match tile.shape {
-            PrimitiveShape::Floor => {
+            GeomShape::Floor => {
                 
             },
-            PrimitiveShape::Wall => {
+            GeomShape::Wall => {
 
             },
             _ => {

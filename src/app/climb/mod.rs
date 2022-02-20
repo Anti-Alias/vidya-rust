@@ -24,10 +24,10 @@ pub(crate) fn add_tiles_from_map(
 
 
                 // Populate tiles from group layer
-                debug!("Processing group layer {}", &root_layer.data().name);
+                debug!("Processing group layer {}", &root_layer.name());
                 let offset = Vec2::new(
-                    root_layer.data().offset_x,
-                    root_layer.data().offset_y
+                    root_layer.offset_x(),
+                    root_layer.offset_y()
                 );
                 add_tiles_from_group_layer(
                     &meta_layers,
@@ -53,7 +53,7 @@ fn add_tiles_from_group_layer(
     flip_y: bool
 ) {
     // For all columns in the group...
-    let (w, h) = (map.width as usize, map.height as usize);
+    let (w, h) = (map.width, map.height);
     let tile_size = Vec2::new(map.tile_width as f32, map.tile_height as f32);
     for x in 0..w {
 
@@ -62,9 +62,11 @@ fn add_tiles_from_group_layer(
         let mut coll_climber = Climber::new(offset, tile_size.y);
 
         // Traverse the strip from bottom to top
+        let x = x as i32;
         for y in (0..h).rev() {
 
             // Gets meta tile (optional) and terrain tiles at (x, y)
+            let y = y as i32;
             let meta_tile = m_layers
                 .iter()
                 .next()
@@ -77,7 +79,6 @@ fn add_tiles_from_group_layer(
             add_tiles(
                 meta_tile,
                 t_tiles,
-                map,
                 &mut geom_climber,
                 &mut coll_climber,
                 graphics_events,
@@ -90,7 +91,6 @@ fn add_tiles_from_group_layer(
 fn add_tiles<'map>(
     meta_tile: Option<MetaTile<'map>>,
     terrain_tiles: impl Iterator<Item=LayerTile<'map>>,
-    map: &'map Map,
     geom_climber: &mut Climber,
     coll_climber: &mut Climber,
     graphics_events: &mut EventWriter<AddTileGraphicsEvent>,
@@ -108,13 +108,12 @@ fn add_tiles<'map>(
     let geom_shape = geom_climber.climb_status.to_geom_shape();
 
     // For all terrain layers belonging to the same layer group in the same position...
-    let tilesets = map.tilesets();
     for t_tile in terrain_tiles {
 
         // Finds tileset, and computes uvs
         let tileset_index = t_tile.tileset_index();
         let tileset = t_tile.get_tileset();
-        let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id, flip_y);
+        let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id(), flip_y);
 
         // Fire graphics event
         let event = AddTileGraphicsEvent(TileGraphics {
@@ -136,7 +135,7 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
     let mut terrain_layers = Vec::new();
     let mut meta_layers = Vec::new();
     for sub_layer in group_layer.layers() {
-        let sub_properties = &sub_layer.data().properties;
+        let sub_properties = &sub_layer.properties();
         match sub_layer.layer_type() {
             LayerType::TileLayer(sub_layer) => {
                 let tile_layer_type = get_string_property(sub_properties, "type").unwrap_or("terrain");
@@ -313,7 +312,6 @@ fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileM
         let uv4 = uv1 + Vec2::new(tiw, 0.0);
         (uv1, uv2, uv3, uv4)
     };
-    let uv2 = uv1 + Vec2::new(tiw, tih);
 
     // Done
     //(Vec2::new(tiw,tih), uv1/tssize, uv2/tssize)
@@ -336,7 +334,6 @@ struct SplitGroupLayer<'map> {
 // 1) All geom (Tiles represent geometry, which is the shape of the terrain tiles in the graphics engine)
 // 2) All coll (Tiles represent collision, which is used in the physics engine)
 // 3) All geom_coll (Tiles represent geometry and collision)
-#[derive(Clone)]
 enum MetaLayer<'map> {
     GeomColl(TileLayer<'map>),
     Geom(TileLayer<'map>),
@@ -344,7 +341,7 @@ enum MetaLayer<'map> {
 }
 
 impl<'map> MetaLayer<'map> {
-    fn get_tile(&'map self, x: usize, y: usize) -> Option<MetaTile<'map>> {
+    fn get_tile(&'map self, x: i32, y: i32) -> Option<MetaTile<'map>> {
         match self {
             Self::GeomColl(layer) => layer
                 .get_tile(x, y)

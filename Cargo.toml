@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.6" }
-tiled = { git = "https://github.com/mapeditor/rs-tiled", branch = "master" }  # Temporary until 1.0 release
+tiled = { git = "https://github.com/Anti-Alias/rs-tiled", branch = "master" }  # Temporary until 1.0 release
 anyhow = "1.0"
 log = "0.4"

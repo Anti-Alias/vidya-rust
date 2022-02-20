@@ -1,11 +1,7 @@
-use std::f32::consts::SQRT_2;
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
-use bevy::prelude::shape::Quad;
-use bevy::render::camera::ScalingMode;
-use bevy::window::{WindowMode, WindowResizeConstraints};
-use vidya_rust::app::{AppState, VidyaPlugin};
-use vidya_rust::map::{CurrentMap, LoadMapEvent, MapState, VidyaMap, VidyaMapLoader};
+use bevy::window::{ WindowMode, WindowResizeConstraints };
+use vidya_rust::app::{ AppState, VidyaPlugin };
+use vidya_rust::map::{ LoadMapEvent };
 
 /*
 fn add_entities(
@@ -77,10 +73,7 @@ fn main() {
         .run();
 }
 
-fn load_map(
-    mut app_state: ResMut<State<AppState>>,
-    mut emitter: EventWriter<LoadMapEvent>
-) {
+fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
     // Starts the app
     emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
     log::debug!("Sent LoadMapEvent event");

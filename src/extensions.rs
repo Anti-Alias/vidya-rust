@@ -1,4 +1,4 @@
-use std::path::{ Component, Path, PathBuf };
+use std::path::{ Path, PathBuf };
 
 pub trait PathExt {
     fn relativize(&self, parent: impl AsRef<Path>) -> PathBuf;

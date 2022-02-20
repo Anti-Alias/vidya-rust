@@ -56,7 +56,8 @@ impl Chunk {
         let ilen = i.len() as u32;
 
         let mut tp = tile.position;
-        let ts = tile.size;
+        let md = tile.mesh_data;
+        let ts = md.size;
         match tile.shape {
             GeomShape::Floor => {
 
@@ -67,12 +68,14 @@ impl Chunk {
                 p.push(tp);
 
                 // Normals
-                let up = Vec3::new(0.0, 1.0, 0.0);
-                for _ in 0..4 { n.push(up); }
+                let norm = Vec3::new(0.0, 1.0, 0.0);
+                for _ in 0..4 { n.push(norm); }
 
                 // UVs
-                self.uvs.push(tile.uv1);
-                self.uvs.push(tile.uv1);
+                uvs.push(md.uv1);
+                uvs.push(md.uv2);
+                uvs.push(md.uv3);
+                uvs.push(md.uv4);
 
                 // Indices
                 i.push(ilen); i.push(ilen+1); i.push(ilen+2); i.push(ilen+2); i.push(ilen+3); i.push(ilen);

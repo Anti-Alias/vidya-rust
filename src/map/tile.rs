@@ -8,10 +8,17 @@ pub type LocalId = u32;
 pub struct TileGraphics {
     pub tileset_index: u32,
     pub position: Vec3,
+    pub mesh_data: TileMeshData,
+    pub shape: GeomShape
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct TileMeshData {
     pub size: Vec2,
     pub uv1: Vec2,
     pub uv2: Vec2,
-    pub shape: GeomShape
+    pub uv3: Vec2,
+    pub uv4: Vec2
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]

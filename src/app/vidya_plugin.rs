@@ -154,7 +154,7 @@ fn fire_map_events(
         .tiled_map;
 
     // "Climbs" all group layers of map and fires events
-    add_tiles_from_map(&tiled_map, graphics_events);
+    add_tiles_from_map(&tiled_map, graphics_events, true);
 
     // Goes to state that waits for map graphics to finish loading
     state.set(MapState::HandlingMapEvents).unwrap();

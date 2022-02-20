@@ -2,13 +2,14 @@ use bevy::prelude::*;
 use log::debug;
 use tiled::*;
 
-use crate::map::{GeomShape, TileType, AddTileGraphicsEvent, TileGraphics};
+use crate::map::{ GeomShape, TileType, AddTileGraphicsEvent, TileGraphics, TileMeshData };
 
 
 // Fire events that cause map to populate
 pub(crate) fn add_tiles_from_map(
     tiled_map: &tiled::Map,
     mut graphics_events: EventWriter<AddTileGraphicsEvent>,
+    flip_y: bool
 ) {
     // For all group layers in the root...
     for root_layer in tiled_map.layers() {
@@ -33,7 +34,8 @@ pub(crate) fn add_tiles_from_map(
                     &terrain_layers,
                     offset,
                     tiled_map,
-                    &mut graphics_events
+                    &mut graphics_events,
+                    flip_y
                 );
             },
             _ => panic!("All root layers must be group layers")
@@ -43,11 +45,12 @@ pub(crate) fn add_tiles_from_map(
 
 
 fn add_tiles_from_group_layer(
-    m_layers: &[MetaLayer],                                 // Group meta layers
-    t_layers: &[TileLayer],                                 // Group terrain layers
-    offset: Vec2,                                           // Group offset
-    map: &Map,                                              // Map itself
-    graphics_events: &mut EventWriter<AddTileGraphicsEvent> // Graphics event publisher
+    m_layers: &[MetaLayer],                                     // Group meta layers
+    t_layers: &[TileLayer],                                     // Group terrain layers
+    offset: Vec2,                                               // Group offset
+    map: &Map,                                                  // Map itself
+    graphics_events: &mut EventWriter<AddTileGraphicsEvent>,    // Graphics event publisher
+    flip_y: bool
 ) {
     // For all columns in the group...
     let (w, h) = (map.width as usize, map.height as usize);
@@ -77,7 +80,8 @@ fn add_tiles_from_group_layer(
                 map,
                 &mut geom_climber,
                 &mut coll_climber,
-                graphics_events
+                graphics_events,
+                flip_y
             );
         }
     }
@@ -90,6 +94,7 @@ fn add_tiles<'map>(
     geom_climber: &mut Climber,
     coll_climber: &mut Climber,
     graphics_events: &mut EventWriter<AddTileGraphicsEvent>,
+    flip_y: bool
 ) {
 
     // Gets the geom/coll types of current meta tile and uses it to "climb" with both climbers
@@ -107,20 +112,15 @@ fn add_tiles<'map>(
     for t_tile in terrain_tiles {
 
         // Finds tileset, and computes uvs
-        let tileset_index = tilesets
-            .iter()
-            .position(|tileset| &tileset.name == &t_tile.tileset.name)
-            .unwrap();
-        let tileset = &tilesets[tileset_index];
-        let (size, uv1, uv2) = get_tile_size_and_uvs(&tileset, t_tile.id);
+        let tileset_index = t_tile.tileset_index();
+        let tileset = t_tile.get_tileset();
+        let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id, flip_y);
 
         // Fire graphics event
         let event = AddTileGraphicsEvent(TileGraphics {
             tileset_index: tileset_index as u32,
             position: geom_pos,
-            size,
-            uv1,
-            uv2,
+            mesh_data: tile_mesh_data,
             shape: geom_shape
         });
 
@@ -275,21 +275,55 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
     }
 }
 
-fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32) -> (Vec2, Vec2, Vec2) {
-    let tsm = tileset.margin as f32;
-    let tss = tileset.spacing as f32;
-    let (tsr, tsc) = ((tileset.tilecount/tileset.columns) as f32, tileset.columns as f32);
-    let (tw, th) = (tileset.tile_width as f32, tileset.tile_height as f32);
-    let (tx, ty) = (tile_id % tileset.columns, tile_id / tileset.columns);
-    let (spx, spy) = ((tx*tileset.spacing) as f32, (ty*tileset.spacing) as f32);
-    let (tx, ty) = (tx as f32 * tw, ty as f32 * th);
-    let tssize = Vec2::new(
-        tsm*2.0   +   tsc*tw   +   tss*f32::max(tsc-1.0, 0.0),
-        tsm*2.0   +   tsr*th   +   tss*f32::max(tsr-1.0, 0.0)
+fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
+    let ts = tileset;                                                       // Tileset (renamed for brevity)
+    let tsm = tileset.margin as f32;                                        // Tileset margin
+    let tss = tileset.spacing as f32;                                       // Tileset spacing
+    let (tsr, tsc) = ((ts.tilecount/ts.columns) as f32, ts.columns as f32); // Tileset rows / columns (ints)
+    let (tiw, tih) = (ts.tile_width as f32, ts.tile_height as f32);         // Tile width / height
+    let (tix, tiy) = (tile_id % ts.columns, tile_id / ts.columns);          // Tile x / y (ints)
+    let (tisx, tisy) = ((tix*ts.spacing) as f32, (tiy*ts.spacing) as f32);  // Tile spacing x / y
+    let (tix, tiy) = (tix as f32 * tiw, tiy as f32 * tih);                  // Tile x / y (floats)
+    let tssize = Vec2::new(                                                 // Tileset size in pixels (floats)
+        tsm*2.0   +   tsc*tiw   +   tss*f32::max(tsc-1.0, 0.0),
+        tsm*2.0   +   tsr*tih   +   tss*f32::max(tsr-1.0, 0.0)
     );
-    let uv1 = Vec2::new(tsm, tsm) + Vec2::new(tx, ty) + Vec2::new(spx, spy);
-    let uv2 = uv1 + Vec2::new(tw, th);
-    (Vec2::new(tw, th), uv1 / tssize, uv2 / tssize)
+
+    // Creates UV coords
+    let (uv1, uv2, uv3, uv4) = if flip_y {
+        let uv1 =
+            Vec2::new(tix, tiy) +
+            Vec2::new(tsm, tsm) +
+            Vec2::new(tisx, tisy) +
+            Vec2::new(0.0, tssize.y) -
+            Vec2::new(0.0, tsm) * 2.0 -
+            Vec2::new(0.0, tih);
+        let uv2 = uv1 + Vec2::new(tiw, 0.0);
+        let uv3 = uv1 + Vec2::new(tiw, tih);
+        let uv4 = uv1 + Vec2::new(0.0, tih);
+        (uv1, uv2, uv3, uv4)
+    }
+    else {
+        let uv1 = 
+            Vec2::new(tix, tiy) +
+            Vec2::new(tsm, tsm) +
+            Vec2::new(tisx, tisy);
+        let uv2 = uv1 + Vec2::new(0.0, tih);
+        let uv3 = uv1 + Vec2::new(tiw, tih);
+        let uv4 = uv1 + Vec2::new(tiw, 0.0);
+        (uv1, uv2, uv3, uv4)
+    };
+    let uv2 = uv1 + Vec2::new(tiw, tih);
+
+    // Done
+    //(Vec2::new(tiw,tih), uv1/tssize, uv2/tssize)
+    TileMeshData {
+        size: Vec2::new(tix, tiy),
+        uv1,
+        uv2,
+        uv3,
+        uv4
+    }
 }
 
 // A Group layer that has has been parsed (split between the terrain layers and the optional meta layers)

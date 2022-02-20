@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use log::debug;
 use crate::map::{ TileGraphics, GeomShape };
 
 /// Staging resource for the graphics of a loading tiled map
@@ -26,7 +27,7 @@ impl CurrentMapGraphics {
         let key = ChunkKey { x, y, z, tileset_index };
         let chunk = self.chunks.entry(key).or_default();
         chunk.add_tile(tile);
-        log::debug!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.position, key);
+        debug!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.position, key);
     }
 }
 
@@ -50,7 +51,7 @@ impl Chunk {
     fn add_tile(&mut self, tile: TileGraphics) {
         let p = &mut self.positions;
         let n = &mut self.normals;
-        let u = &mut self.uvs;
+        let uvs = &mut self.uvs;
         let i = &mut self.indices;
         let ilen = i.len() as u32;
 
@@ -69,8 +70,9 @@ impl Chunk {
                 let up = Vec3::new(0.0, 1.0, 0.0);
                 for _ in 0..4 { n.push(up); }
 
-                // Normals
-                //u.push()
+                // UVs
+                self.uvs.push(tile.uv1);
+                self.uvs.push(tile.uv1);
 
                 // Indices
                 i.push(ilen); i.push(ilen+1); i.push(ilen+2); i.push(ilen+2); i.push(ilen+3); i.push(ilen);

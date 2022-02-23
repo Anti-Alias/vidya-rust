@@ -77,6 +77,6 @@ fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
     
     // Starts the app
     log::debug!("Entered system 'load_map'");
-    emitter.send(LoadMapEvent("maps/tmx/map_simple.tmx".to_string()));
+    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
     log::debug!("Sent LoadMapEvent event");
 }

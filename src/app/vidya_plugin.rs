@@ -5,6 +5,7 @@ use std::sync::{ Mutex };
 
 use crate::app::climb::add_tiles_from_map;
 use crate::map::*;
+pub use crate::camera::*;
 use crate::extensions::*;
 
 use bevy::asset::{ AssetServerSettings, LoadState };
@@ -37,6 +38,10 @@ impl Plugin for VidyaPlugin {
             // App systems
             .add_startup_system(start_app)
 
+            // Camera systems
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .with_system(camera_rotate)
+            )
 
             // Map systems
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
@@ -83,7 +88,7 @@ fn map_listen(
     asset_server: Res<AssetServer>,
     mut commands: Commands
 ) {
-    log::debug!("Entered system 'on_load_map_event'");
+    log::trace!("Entered system 'on_load_map_event'");
     if let Some(event) = events.iter().next() {
 
         // Begins loading map and stores the handle for later use
@@ -284,6 +289,7 @@ fn map_spawn_graphics_entities(
                 metallic: 0.0,
                 reflectance: 0.0,
                 unlit: true,
+                alpha_mode: AlphaMode::Blend,
                 ..Default::default()
             };
 
@@ -305,6 +311,9 @@ fn map_spawn_graphics_entities(
     // Spawns camera
     let cam_width = 800.0;
     let cam_height = 450.0;
+    let cam_pos = Vec3::new(16.0*10.0, 500.0, 500.0-10.0*16.0);
+    let cam_target = Vec3::new(cam_pos.x, 0.0, cam_pos.z - cam_pos.y);
+    let cam_up = Vec3::new(0.0, 1.0, 0.0);
     let mut cam_bundle = OrthographicCameraBundle::new_3d();
     let proj = &mut cam_bundle.orthographic_projection;
     proj.scaling_mode = ScalingMode::None;
@@ -314,10 +323,19 @@ fn map_spawn_graphics_entities(
     proj.top = cam_height /2.0;
     proj.near = 0.1;
     proj.far = 1000.0;
-    cam_bundle.transform = Transform::from_translation(Vec3::new(0.0, 500.0, 500.0))
-        .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0))
+    cam_bundle.transform = Transform::from_translation(cam_pos)
+        .looking_at(cam_target, cam_up)
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
-    commands.spawn_bundle(cam_bundle);
+    commands
+        .spawn_bundle(cam_bundle)
+        .insert(CameraTarget {
+            target: cam_target,
+            distance: 500.0
+        })
+        .insert(CameraTimer {
+            timer: 0.0,
+            speed: 1.0/120.0
+        });
     log::debug!("Done spawning map graphics entities...");
 }
 

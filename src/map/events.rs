@@ -5,3 +5,6 @@ pub struct LoadMapEvent(pub String);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddTileGraphicsEvent(pub TileGraphics);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpawnMapEntitiesEvent;

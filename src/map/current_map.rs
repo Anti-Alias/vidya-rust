@@ -1,9 +1,14 @@
-use bevy::prelude::*;
+use std::sync::{ Mutex };
+
 use crate::map::VidyaMap;
+
+use bevy::prelude::*;
+
 
 #[derive(Debug)]
 pub struct CurrentMap {
-    pub file: String,                                       // Name of the file the map came from
-    pub map_handle: Handle<VidyaMap>,                       // Map handle
-    pub map_entity: Entity                                  // Parent entity of map's chunks
+    pub file: String,                   // Name of the file the map came from
+    pub map_handle: Handle<VidyaMap>,   // Map handle
+    pub map_entity: Entity,             // Parent entity of map's chunks
+    pub counter: Mutex<u32>             // Multi-purpose counter used for scheduling phases during map loading
 }

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use log::debug;
 use tiled::*;
 
 use crate::map::{ GeomShape, TileType, AddTileGraphicsEvent, TileGraphics, TileMeshData };
@@ -24,10 +23,10 @@ pub(crate) fn add_tiles_from_map(
 
 
                 // Populate tiles from group layer
-                debug!("Processing group layer {}", &root_layer.name());
+                log::trace!("Processing group layer {}", &root_layer.name());
                 let offset = Vec2::new(
                     root_layer.offset_x(),
-                    root_layer.offset_y()
+                    -root_layer.offset_y()
                 );
                 add_tiles_from_group_layer(
                     &meta_layers,
@@ -58,8 +57,9 @@ fn add_tiles_from_group_layer(
     for x in 0..w {
 
         // Make climbers at the bottom of the vertical strip...
-        let mut geom_climber = Climber::new(offset, tile_size.y);
-        let mut coll_climber = Climber::new(offset, tile_size.y);
+        let c_pos = Vec2::new(x as f32, 0.0) * tile_size + offset;
+        let mut geom_climber = Climber::new(c_pos, tile_size.y);
+        let mut coll_climber = Climber::new(c_pos, tile_size.y);
 
         // Traverse the strip from bottom to top
         let x = x as i32;
@@ -124,7 +124,7 @@ fn add_tiles<'map>(
         });
 
         // Send event for adding tile's graphics
-        debug!("Fired event {:?}", event);
+        log::trace!("Fired event {:?}", event);
         graphics_events.send(event);
     }
 }
@@ -277,46 +277,35 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
 fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
     let ts = tileset;                                                       // Tileset (renamed for brevity)
     let tsm = tileset.margin as f32;                                        // Tileset margin
-    let tss = tileset.spacing as f32;                                       // Tileset spacing
+    let tssp = tileset.spacing as f32;                                      // Tileset spacing
     let (tsr, tsc) = ((ts.tilecount/ts.columns) as f32, ts.columns as f32); // Tileset rows / columns (ints)
     let (tiw, tih) = (ts.tile_width as f32, ts.tile_height as f32);         // Tile width / height
-    let (tix, tiy) = (tile_id % ts.columns, tile_id / ts.columns);          // Tile x / y (ints)
-    let (tisx, tisy) = ((tix*ts.spacing) as f32, (tiy*ts.spacing) as f32);  // Tile spacing x / y
-    let (tix, tiy) = (tix as f32 * tiw, tiy as f32 * tih);                  // Tile x / y (floats)
-    let tssize = Vec2::new(                                                 // Tileset size in pixels (floats)
-        tsm*2.0   +   tsc*tiw   +   tss*f32::max(tsc-1.0, 0.0),
-        tsm*2.0   +   tsr*tih   +   tss*f32::max(tsr-1.0, 0.0)
+    let (tixi, tiyi) = (tile_id % ts.columns, tile_id / ts.columns);        // Tile x / y (ints)
+    let (tix, tiy) = (tixi as f32 * tiw, tiyi as f32 * tih);                // Tile x / y (floats)
+    let tss = Vec2::new(                                                    // Tileset size in pixels (floats)
+        tsm*2.0   +   tsc*tiw   +   tssp*f32::max(tsc-1.0, 0.0),
+        tsm*2.0   +   tsr*tih   +   tssp*f32::max(tsr-1.0, 0.0)
     );
 
     // Creates UV coords
+    let tsm = Vec2::new(tsm, tsm);          // Tileset margin
     let (uv1, uv2, uv3, uv4) = if flip_y {
-        let uv1 =
-            Vec2::new(tix, tiy) +
-            Vec2::new(tsm, tsm) +
-            Vec2::new(tisx, tisy) +
-            Vec2::new(0.0, tssize.y) -
-            Vec2::new(0.0, tsm) * 2.0 -
-            Vec2::new(0.0, tih);
+        let tip = Vec2::new(tix, tiy) + Vec2::new(0.0, tih);     // Tile position
+        let tisp = Vec2::new(tixi as f32, tiyi as f32) * tssp;   // Tile spacing
+        let uv1 = tip + tsm + tisp;
         let uv2 = uv1 + Vec2::new(tiw, 0.0);
-        let uv3 = uv1 + Vec2::new(tiw, tih);
-        let uv4 = uv1 + Vec2::new(0.0, tih);
+        let uv3 = uv1 + Vec2::new(tiw, -tih);
+        let uv4 = uv1 + Vec2::new(0.0, -tih);
         (uv1, uv2, uv3, uv4)
     }
     else {
-        let uv1 = 
-            Vec2::new(tix, tiy) +
-            Vec2::new(tsm, tsm) +
-            Vec2::new(tisx, tisy);
-        let uv2 = uv1 + Vec2::new(0.0, tih);
-        let uv3 = uv1 + Vec2::new(tiw, tih);
-        let uv4 = uv1 + Vec2::new(tiw, 0.0);
-        (uv1, uv2, uv3, uv4)
+        panic!("Not yet implemented");
     };
+    let (uv1, uv2, uv3, uv4) = (uv1/tss, uv2/tss, uv3/tss, uv4/tss);
 
-    // Done
-    //(Vec2::new(tiw,tih), uv1/tssize, uv2/tssize)
+    log::info!("Tileset size is {:?}", tss);
     TileMeshData {
-        size: Vec2::new(tix, tiy),
+        size: Vec2::new(tiw, tih),
         uv1,
         uv2,
         uv3,

@@ -1,14 +1,17 @@
-use bevy::prelude::*;
+use std::f32::consts::SQRT_2;
+
+use bevy::{ prelude::* };
 use bevy::utils::HashMap;
-use log::debug;
 use crate::map::{ TileGraphics, GeomShape };
+
+use super::TileMeshData;
 
 /// Staging resource for the graphics of a loading tiled map
 #[derive(Default)]
 pub struct CurrentMapGraphics {
-    pub tileset_image_handles: HashMap<String, Handle<Image>>,  // Tileset name -> image
-    pub chunk_size: Vec3,                                       // Width, height and depth of chunks
-    pub chunks: HashMap<ChunkKey, Chunk>                        // Chunked mesh data
+    pub tileset_image_handles: Vec<Option<Handle<Image>>>,  // Tileset name -> image
+    pub chunk_size: Vec3,                                   // Width, height and depth of chunks
+    pub chunks: HashMap<ChunkKey, Chunk>                    // Chunked mesh data
 }
 
 impl CurrentMapGraphics {
@@ -27,7 +30,7 @@ impl CurrentMapGraphics {
         let key = ChunkKey { x, y, z, tileset_index };
         let chunk = self.chunks.entry(key).or_default();
         chunk.add_tile(tile);
-        debug!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.position, key);
+        log::trace!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.position, key);
     }
 }
 
@@ -41,51 +44,150 @@ pub struct ChunkKey {
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Chunk {
-    positions: Vec<Vec3>,
-    normals: Vec<Vec3>,
-    uvs: Vec<Vec2>,
-    indices: Vec<u32>
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub uvs: Vec<[f32; 2]>,
+    pub indices: Vec<u32>
 }
 
 impl Chunk {
     fn add_tile(&mut self, tile: TileGraphics) {
+
+        // Splits and borrows members
         let p = &mut self.positions;
         let n = &mut self.normals;
         let uvs = &mut self.uvs;
         let i = &mut self.indices;
-        let ilen = i.len() as u32;
 
-        let mut tp = tile.position;
+        // Adds position, normal and 
+        let mut tp = tile.position.to_array();
         let md = tile.mesh_data;
-        let ts = md.size;
+        let (tw, th) = (md.size.x, md.size.y);
+        let (x, y, z) = (0, 1, 2);
         match tile.shape {
             GeomShape::Floor => {
-
-                // Position
-                p.push(tp); tp.x += ts.x;
-                p.push(tp); tp.z -= ts.y;
-                p.push(tp); tp.x -= ts.x;
+                // Positions (4)
                 p.push(tp);
-
-                // Normals
-                let norm = Vec3::new(0.0, 1.0, 0.0);
+                tp[x] += tw;
+                p.push(tp);
+                tp[z] -= th;
+                p.push(tp);
+                tp[x] -= tw;
+                p.push(tp);
+                log::debug!("Positions: {:?}", p);
+                // Normals (4)
+                let norm = [0.0, 1.0, 0.0];
                 for _ in 0..4 { n.push(norm); }
-
-                // UVs
-                uvs.push(md.uv1);
-                uvs.push(md.uv2);
-                uvs.push(md.uv3);
-                uvs.push(md.uv4);
-
-                // Indices
-                i.push(ilen); i.push(ilen+1); i.push(ilen+2); i.push(ilen+2); i.push(ilen+3); i.push(ilen);
+                log::debug!("Normals: {:?}", n);
+                // UVs and indices
+                push_uv_indices_4(&md, uvs, i);
+                log::debug!("Uvs: {:?}", uvs);
+                log::info!("Indices: {:?}", i);
             },
             GeomShape::Wall => {
-
+                // Positions (4)
+                p.push(tp);
+                tp[x] += tw;
+                p.push(tp);
+                tp[y] += th;
+                p.push(tp);
+                tp[x] -= tw;
+                p.push(tp);
+                // Normals (4)
+                let norm = [0.0, 0.0, -1.0];
+                for _ in 0..4 { n.push(norm); }
+                // UVs and indices
+                push_uv_indices_4(&md, uvs, i);
             },
+            GeomShape::WallStartSE => {
+                // Vertices (6)
+                p.push(tp);
+                tp[x] += tw;
+                p.push(tp);
+                tp[z] -= th;
+                p.push(tp);
+                p.push(tp);
+                tp[x] -= tw;
+                tp[y] += th;
+                p.push(tp);
+                tp[y] -= th;
+                p.push(tp);
+                // Normals (6)
+                let up = [0.0, 1.0, 0.0];
+                let se = [1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                n.push(up);
+                n.push(up);
+                n.push(up);
+                n.push(se);
+                n.push(se);
+                n.push(se);
+                // UVs and indices
+                push_uv_indices_6(&md, uvs, i);
+            }
+            GeomShape::WallStartSW => {
+                // Vertices
+                tp[x] += tw;
+                p.push(tp);
+                p.push(tp); tp[x] -= tw; tp[y] -= th;
+                p.push(tp); tp[z] += th;
+                p.push(tp);
+                // Normals
+                let up = [0.0, 1.0, 0.0];
+                let se = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                n.push(up);
+                n.push(up);
+                n.push(up);
+                n.push(se);
+                n.push(se);
+                n.push(se);
+                // UVs and indices
+                push_uv_indices_6(&md, uvs, i);
+            }
             _ => {
                 //panic!("Unsupported tile shape '{:?}'", tile.shape);
             }
         }
     }
+}
+
+// Pushes 4 uv values and 6 indices (4 vertices)
+fn push_uv_indices_4(
+    mesh_data: &TileMeshData,
+    uvs: &mut Vec<[f32; 2]>,
+    indices: &mut Vec<u32>
+) {
+    uvs.push(mesh_data.uv1.to_array());
+    uvs.push(mesh_data.uv2.to_array());
+    uvs.push(mesh_data.uv3.to_array());
+    uvs.push(mesh_data.uv4.to_array());
+
+    let ilen = indices.len() as u32;
+    indices.push(ilen);
+    indices.push(ilen+1);
+    indices.push(ilen+2);
+    indices.push(ilen+2);
+    indices.push(ilen+3);
+    indices.push(ilen);
+}
+
+// Pushes 6 uv values and 6 indices (6 vertices where positions and uvs are assumed to be duplicates at 2,3 and 0,5)
+fn push_uv_indices_6(
+    mesh_data: &TileMeshData,
+    uvs: &mut Vec<[f32; 2]>,
+    indices: &mut Vec<u32>
+) {
+    uvs.push(mesh_data.uv1.to_array());
+    uvs.push(mesh_data.uv2.to_array());
+    uvs.push(mesh_data.uv3.to_array());
+    uvs.push(mesh_data.uv3.to_array());
+    uvs.push(mesh_data.uv4.to_array());
+    uvs.push(mesh_data.uv1.to_array());
+
+    let ilen = indices.len() as u32;
+    indices.push(ilen);
+    indices.push(ilen+1);
+    indices.push(ilen+2);
+    indices.push(ilen+3);
+    indices.push(ilen+4);
+    indices.push(ilen+5);
 }

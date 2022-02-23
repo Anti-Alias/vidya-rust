@@ -69,12 +69,14 @@ fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(VidyaPlugin)
-        .add_system_set(SystemSet::on_enter(AppState::Running).with_system(load_map))
+        .add_system_set(SystemSet::on_enter(AppState::AppRunning).with_system(load_map))
         .run();
 }
 
 fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
+    
     // Starts the app
-    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
+    log::debug!("Entered system 'load_map'");
+    emitter.send(LoadMapEvent("maps/tmx/map_simple.tmx".to_string()));
     log::debug!("Sent LoadMapEvent event");
 }

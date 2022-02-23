@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="1" height="1" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="1">
+<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="8" height="8" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="1">
  <tileset firstgid="1" source="../tsx/debug-terrain.tsx"/>
  <group id="2" name="floor">
-  <layer id="1" name="terrain" width="1" height="1">
+  <layer id="1" name="terrain" width="8" height="8">
    <data encoding="csv">
-2
+0,0,34,0,34,0,0,0,
+2,0,0,0,0,0,34,0,
+0,0,2,0,34,0,0,0,
+34,0,0,0,0,0,34,0,
+0,0,34,0,2,0,0,0,
+34,0,0,0,0,0,34,0,
+0,0,34,0,34,0,0,0,
+34,0,0,0,0,0,2,0
 </data>
   </layer>
  </group>

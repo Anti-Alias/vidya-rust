@@ -30,7 +30,8 @@ impl Plugin for VidyaPlugin {
                     (16*16) as f32,
                     (16*16) as f32,
                     (16*16) as f32
-                )
+                ),
+                flip_y: false
             })
 
             // App systems
@@ -193,7 +194,8 @@ fn map_fire_events(
     current_map: Res<CurrentMap>,
     vidya_map: Res<Assets<VidyaMap>>,
     graphics_events: EventWriter<AddTileGraphicsEvent>,
-    mut state: ResMut<State<AppState>>
+    mut state: ResMut<State<AppState>>,
+    config: Res<MapConfig>
 ) {
     log::debug!("Entered system 'fire_map_events'");
     // Gets tiled map
@@ -203,7 +205,7 @@ fn map_fire_events(
         .tiled_map;
 
     // "Climbs" all group layers of map and fires events
-    add_tiles_from_map(&tiled_map, graphics_events, true);
+    add_tiles_from_map(&tiled_map, graphics_events, config.flip_y);
 
     // Goes to state that waits for map graphics to finish loading
     state.set(AppState::MapHandlingEvents).unwrap();
@@ -352,5 +354,6 @@ pub enum AppState {
 /// Map configuration resource
 #[derive(Debug, PartialEq)]
 pub struct MapConfig {
-    pub chunk_size: Vec3
+    pub chunk_size: Vec3,
+    pub flip_y: bool
 }

@@ -64,6 +64,7 @@ impl Chunk {
         let md = tile.mesh_data;
         let (tw, th) = (md.size.x, md.size.y);
         let (x, y, z) = (0, 1, 2);
+        let vlen = p.len() as u32;
         match tile.shape {
             GeomShape::Floor => {
                 // Positions (4)
@@ -80,7 +81,7 @@ impl Chunk {
                 for _ in 0..4 { n.push(norm); }
                 log::debug!("Normals: {:?}", n);
                 // UVs and indices
-                push_uv_indices_4(&md, uvs, i);
+                push_uv_indices_4(&md, uvs, i, vlen);
                 log::debug!("Uvs: {:?}", uvs);
                 log::info!("Indices: {:?}", i);
             },
@@ -97,7 +98,7 @@ impl Chunk {
                 let norm = [0.0, 0.0, -1.0];
                 for _ in 0..4 { n.push(norm); }
                 // UVs and indices
-                push_uv_indices_4(&md, uvs, i);
+                push_uv_indices_4(&md, uvs, i, vlen);
             },
             GeomShape::WallStartSE => {
                 // Vertices (6)
@@ -122,7 +123,7 @@ impl Chunk {
                 n.push(se);
                 n.push(se);
                 // UVs and indices
-                push_uv_indices_6(&md, uvs, i);
+                push_uv_indices_6(&md, uvs, i, vlen);
             }
             GeomShape::WallStartSW => {
                 // Vertices
@@ -141,7 +142,7 @@ impl Chunk {
                 n.push(se);
                 n.push(se);
                 // UVs and indices
-                push_uv_indices_6(&md, uvs, i);
+                push_uv_indices_6(&md, uvs, i, vlen);
             }
             _ => {
                 //panic!("Unsupported tile shape '{:?}'", tile.shape);
@@ -154,27 +155,28 @@ impl Chunk {
 fn push_uv_indices_4(
     mesh_data: &TileMeshData,
     uvs: &mut Vec<[f32; 2]>,
-    indices: &mut Vec<u32>
+    indices: &mut Vec<u32>,
+    vlen: u32
 ) {
     uvs.push(mesh_data.uv1.to_array());
     uvs.push(mesh_data.uv2.to_array());
     uvs.push(mesh_data.uv3.to_array());
     uvs.push(mesh_data.uv4.to_array());
 
-    let ilen = indices.len() as u32;
-    indices.push(ilen);
-    indices.push(ilen+1);
-    indices.push(ilen+2);
-    indices.push(ilen+2);
-    indices.push(ilen+3);
-    indices.push(ilen);
+    indices.push(vlen);
+    indices.push(vlen+1);
+    indices.push(vlen+2);
+    indices.push(vlen+2);
+    indices.push(vlen+3);
+    indices.push(vlen);
 }
 
 // Pushes 6 uv values and 6 indices (6 vertices where positions and uvs are assumed to be duplicates at 2,3 and 0,5)
 fn push_uv_indices_6(
     mesh_data: &TileMeshData,
     uvs: &mut Vec<[f32; 2]>,
-    indices: &mut Vec<u32>
+    indices: &mut Vec<u32>,
+    vlen: u32
 ) {
     uvs.push(mesh_data.uv1.to_array());
     uvs.push(mesh_data.uv2.to_array());
@@ -183,11 +185,10 @@ fn push_uv_indices_6(
     uvs.push(mesh_data.uv4.to_array());
     uvs.push(mesh_data.uv1.to_array());
 
-    let ilen = indices.len() as u32;
-    indices.push(ilen);
-    indices.push(ilen+1);
-    indices.push(ilen+2);
-    indices.push(ilen+3);
-    indices.push(ilen+4);
-    indices.push(ilen+5);
+    indices.push(vlen);
+    indices.push(vlen+1);
+    indices.push(vlen+2);
+    indices.push(vlen+3);
+    indices.push(vlen+4);
+    indices.push(vlen+5);
 }

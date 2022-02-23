@@ -289,7 +289,7 @@ fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileM
 
     // Creates UV coords
     let tsm = Vec2::new(tsm, tsm);          // Tileset margin
-    let (uv1, uv2, uv3, uv4) = if flip_y {
+    let (uv1, uv2, uv3, uv4) = if !flip_y {
         let tip = Vec2::new(tix, tiy) + Vec2::new(0.0, tih);     // Tile position
         let tisp = Vec2::new(tixi as f32, tiyi as f32) * tssp;   // Tile spacing
         let uv1 = tip + tsm + tisp;

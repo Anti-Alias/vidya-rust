@@ -75,15 +75,11 @@ impl Chunk {
                 p.push(tp);
                 tp[x] -= tw;
                 p.push(tp);
-                log::debug!("Positions: {:?}", p);
                 // Normals (4)
                 let norm = [0.0, 1.0, 0.0];
                 for _ in 0..4 { n.push(norm); }
-                log::debug!("Normals: {:?}", n);
                 // UVs and indices
                 push_uv_indices_4(&md, uvs, i, vlen);
-                log::debug!("Uvs: {:?}", uvs);
-                log::info!("Indices: {:?}", i);
             },
             GeomShape::Wall => {
                 // Positions (4)
@@ -110,9 +106,11 @@ impl Chunk {
                 p.push(tp);
                 tp[x] -= tw;
                 tp[y] += th;
+                tp[z] += th;
                 p.push(tp);
                 tp[y] -= th;
                 p.push(tp);
+
                 // Normals (6)
                 let up = [0.0, 1.0, 0.0];
                 let se = [1.0/SQRT_2, 0.0, 1.0/SQRT_2];
@@ -122,27 +120,191 @@ impl Chunk {
                 n.push(se);
                 n.push(se);
                 n.push(se);
+
                 // UVs and indices
-                push_uv_indices_6(&md, uvs, i, vlen);
+                uvs.push(md.uv1.to_array());
+                uvs.push(md.uv2.to_array());
+                uvs.push(md.uv3.to_array());
+                uvs.push(md.uv3.to_array());
+                uvs.push(md.uv4.to_array());
+                uvs.push(md.uv1.to_array());
+
+                // Indices
+                i.push(vlen);
+                i.push(vlen+1);
+                i.push(vlen+2);
+                i.push(vlen+3);
+                i.push(vlen+4);
+                i.push(vlen+5);
             }
             GeomShape::WallStartSW => {
-                // Vertices
+                // Vertices (6)
+                tp[z] -= th;
+                p.push(tp);
+                tp[z] += th;
+                p.push(tp);
                 tp[x] += tw;
                 p.push(tp);
-                p.push(tp); tp[x] -= tw; tp[y] -= th;
-                p.push(tp); tp[z] += th;
                 p.push(tp);
-                // Normals
+                tp[y] += th;
+                p.push(tp);
+                tp[x] -= tw;
+                tp[y] -= th;
+                tp[z] -= th;
+                p.push(tp);
+
+                // Normals (6)
                 let up = [0.0, 1.0, 0.0];
-                let se = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                let sw = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
                 n.push(up);
                 n.push(up);
                 n.push(up);
-                n.push(se);
-                n.push(se);
-                n.push(se);
+                n.push(sw);
+                n.push(sw);
+                n.push(sw);
+
+                // UVs
+                uvs.push(md.uv4.to_array());
+                uvs.push(md.uv1.to_array());
+                uvs.push(md.uv2.to_array());
+                uvs.push(md.uv2.to_array());
+                uvs.push(md.uv3.to_array());
+                uvs.push(md.uv4.to_array());
+
+                // Indices
+                i.push(vlen);
+                i.push(vlen+1);
+                i.push(vlen+2);
+                i.push(vlen+3);
+                i.push(vlen+4);
+                i.push(vlen+5);
+            }
+            GeomShape::WallSE => {
+                // Vertices (4)
+                p.push(tp);
+                tp[x] += tw;
+                tp[y] -= th;
+                tp[z] -= th;
+                p.push(tp);
+                tp[y] += th;
+                p.push(tp);
+                tp[x] -= tw;
+                tp[y] += th;
+                tp[z] += th;
+                p.push(tp);
+                // Normals (4)
+                let norm = [1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                for _ in 0..4 {
+                    n.push(norm);
+                }
                 // UVs and indices
-                push_uv_indices_6(&md, uvs, i, vlen);
+                push_uv_indices_4(&md, uvs, i, vlen);
+            }
+            GeomShape::WallSW => {
+                // Vertices (4)
+                tp[y] -= th;
+                tp[z] -= th;
+                p.push(tp);
+                tp[x] += tw;
+                tp[y] += th;
+                tp[z] += th;
+                p.push(tp);
+                tp[y] += th;
+                p.push(tp);
+                tp[x] -= tw;
+                tp[y] -= th;
+                tp[z] -= th;
+                p.push(tp);
+                // Normals (4)
+                let norm = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                for _ in 0..4 {
+                    n.push(norm);
+                }
+                // UVs and indices
+                push_uv_indices_4(&md, uvs, i, vlen);
+            }
+            GeomShape::WallEndSE => {
+                // Vertices (6)
+                p.push(tp);
+                tp[x] += tw;
+                tp[y] -= th;
+                tp[z] -= th;
+                p.push(tp);
+                tp[y] += th;
+                p.push(tp);
+                p.push(tp);
+                tp[x] -= tw;
+                p.push(tp);
+                tp[z] += th;
+                p.push(tp);
+
+                // Normals (6)
+                let up = [0.0, 1.0, 0.0];
+                let se = [1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                n.push(se);
+                n.push(se);
+                n.push(se);
+                n.push(up);
+                n.push(up);
+                n.push(up);
+
+                // UVs
+                uvs.push(md.uv1.to_array());
+                uvs.push(md.uv2.to_array());
+                uvs.push(md.uv3.to_array());
+                uvs.push(md.uv3.to_array());
+                uvs.push(md.uv4.to_array());
+                uvs.push(md.uv1.to_array());
+
+                // Indices
+                i.push(vlen);
+                i.push(vlen+1);
+                i.push(vlen+2);
+                i.push(vlen+3);
+                i.push(vlen+4);
+                i.push(vlen+5);
+            }
+            GeomShape::WallEndSW => {
+                // Vertices (6)
+                tp[z] -= th;
+                p.push(tp);
+                tp[y] -= th;
+                p.push(tp);
+                tp[x] += tw;
+                tp[y] += th;
+                tp[z] += th;
+                p.push(tp);
+                p.push(tp);
+                tp[z] -= th;
+                p.push(tp);
+                tp[x] -= th;
+                p.push(tp);
+
+                // Normals (6)
+                let up = [0.0, 1.0, 0.0];
+                let sw = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
+                n.push(sw);
+                n.push(sw);
+                n.push(sw);
+                n.push(up);
+                n.push(up);
+                n.push(up);
+
+                // UVs
+                uvs.push(md.uv4.to_array());
+                uvs.push(md.uv1.to_array());
+                uvs.push(md.uv2.to_array());
+                uvs.push(md.uv2.to_array());
+                uvs.push(md.uv3.to_array());
+                uvs.push(md.uv4.to_array());
+
+                // Indices
+                i.push(vlen);
+                i.push(vlen+1);
+                i.push(vlen+2);
+                i.push(vlen+3);
+                i.push(vlen+4);
+                i.push(vlen+5);
             }
             _ => {
                 //panic!("Unsupported tile shape '{:?}'", tile.shape);

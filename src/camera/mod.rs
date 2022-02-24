@@ -20,10 +20,12 @@ impl CameraTimer {
     }
 }
 
+type RotatingCamera<'a> = (&'a mut Transform, &'a CameraTarget, &'a mut CameraTimer);
+
 pub fn camera_rotate(
-    mut camera: Query<(&mut Transform, &mut CameraTarget, &mut CameraTimer)>
+    mut camera: Query<RotatingCamera>
 ) {
-    for (mut transform, mut target, mut timer) in camera.iter_mut() {
+    for (mut transform, target, mut timer) in camera.iter_mut() {
         let pos = target.target;
         let dist = target.distance;
         let rad = timer.advance() * std::f32::consts::PI;

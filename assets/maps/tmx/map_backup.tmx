@@ -4,7 +4,11 @@
  <tileset firstgid="673" source="../tsx/collision.tsx"/>
  <tileset firstgid="737" source="../tsx/spring-forest-tree-tops.tsx"/>
  <tileset firstgid="750" source="../tsx/debug-terrain.tsx"/>
+<<<<<<< HEAD
  <group id="10" name="platforms" locked="1">
+=======
+ <group id="10" name="platforms">
+>>>>>>> new
   <layer id="13" name="platforms" width="28" height="19">
    <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

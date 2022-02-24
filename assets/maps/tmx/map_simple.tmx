@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="8" height="8" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="1">
+<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="8" height="8" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="1">
  <tileset firstgid="1" source="../tsx/debug-terrain.tsx"/>
+ <tileset firstgid="65" source="../tsx/collision.tsx"/>
  <group id="2" name="floor">
   <layer id="1" name="terrain" width="8" height="8">
    <data encoding="csv">
+<<<<<<< HEAD
 34,34,34,34,34,34,34,34,
 34,34,34,34,34,34,34,34,
 34,34,34,34,34,34,34,34,
@@ -12,6 +14,31 @@
 34,34,34,34,34,34,34,34,
 34,34,34,34,34,34,34,34,
 34,34,34,34,34,34,34,34
+=======
+34,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0
+</data>
+  </layer>
+  <layer id="3" name=":geom_coll:" width="8" height="8">
+   <properties>
+    <property name="type" value="geom_coll"/>
+   </properties>
+   <data encoding="csv">
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0
+>>>>>>> new
 </data>
   </layer>
  </group>

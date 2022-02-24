@@ -4,12 +4,26 @@ use tiled::*;
 use crate::map::{ GeomShape, TileType, AddTileGraphicsEvent, TileGraphics, TileMeshData };
 
 
+macro_rules! climb_panic {
+    ($tile_type:expr, $prev_status:expr, $group_layer_name:expr, $x:expr, $y:expr) => {
+        panic!(
+            "Encountered a {:?} tile while in climb status {:?} on group layer '{}' at {}, {}",
+            $tile_type,
+            $prev_status,
+            $group_layer_name,
+            $x,
+            $y
+        );
+    }
+}
+
+
 // Fire events that cause map to populate
 pub(crate) fn add_tiles_from_map(
     tiled_map: &tiled::Map,
     mut graphics_events: EventWriter<AddTileGraphicsEvent>,
     flip_y: bool
-) {
+) -> Result<(), ClimbingError> {
     // For all group layers in the root...
     for root_layer in tiled_map.layers() {
         match &root_layer.layer_type() {
@@ -34,12 +48,14 @@ pub(crate) fn add_tiles_from_map(
                     offset,
                     tiled_map,
                     &mut graphics_events,
-                    flip_y
-                );
+                    flip_y,
+                    root_layer.name()
+                )?;
             },
-            _ => panic!("All root layers must be group layers")
+            _ => return Err(ClimbingError("All root layers must be group layers".to_owned()))
         }
     }
+    Ok(())
 }
 
 
@@ -49,8 +65,9 @@ fn add_tiles_from_group_layer(
     offset: Vec2,                                               // Group offset
     map: &Map,                                                  // Map itself
     graphics_events: &mut EventWriter<AddTileGraphicsEvent>,    // Graphics event publisher
-    flip_y: bool
-) {
+    flip_y: bool,
+    group_layer_name: &str
+) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
     let tile_size = Vec2::new(map.tile_width as f32, map.tile_height as f32);
@@ -67,45 +84,56 @@ fn add_tiles_from_group_layer(
 
             // Gets meta tile (optional) and terrain tiles at (x, y)
             let y = y as i32;
-            let meta_tile = m_layers
-                .iter()
-                .next()
-                .and_then(|gc_layer| gc_layer.get_tile(x, y));
-            let t_tiles = t_layers
-                .iter()
-                .flat_map(|t_layer| t_layer.get_tile(x, y));
 
             // "Climb" the current tile at x, y
             add_tiles(
-                meta_tile,
-                t_tiles,
+                m_layers,
+                t_layers,
+                x,
+                y,
                 &mut geom_climber,
                 &mut coll_climber,
                 graphics_events,
-                flip_y
-            );
+                flip_y,
+                group_layer_name
+            )?;
         }
     }
+    Ok(())
 }
 
 fn add_tiles<'map>(
-    meta_tile: Option<MetaTile<'map>>,
-    terrain_tiles: impl Iterator<Item=LayerTile<'map>>,
+    meta_layers: &[MetaLayer<'map>],
+    terrain_layers: &[TileLayer],
+    tile_x: i32,
+    tile_y: i32,
     geom_climber: &mut Climber,
     coll_climber: &mut Climber,
     graphics_events: &mut EventWriter<AddTileGraphicsEvent>,
-    flip_y: bool
-) {
+    flip_y: bool,
+    group_layer_name: &str
+) -> Result<(), ClimbingError> {
 
-    // Gets the geom/coll types of current meta tile and uses it to "climb" with both climbers
+    // Gets first meta and terrain tiles found at tile_x, tile_y
+    let meta_tile = meta_layers
+        .iter()
+        .next()
+        .and_then(|m_layer| m_layer.get_tile(tile_x, tile_y));
+    let terrain_tiles = terrain_layers
+        .iter()
+        .flat_map(|layer| layer.get_tile(tile_x, tile_y));
+
+    // Gets the geom/coll types of current meta tile and uses it to "climb" both the collision and geometry
     let (geom_type, coll_type) = meta_tile
         .map(|tile| tile.get_types())
         .unwrap_or((TileType::Floor, TileType::Floor));
     let geom_pos = geom_climber.position;
+
     //let coll_pos = coll_climber.position;
-    geom_climber.climb(geom_type);
-    coll_climber.climb(coll_type);
-    let geom_shape = geom_climber.climb_status.to_geom_shape();
+    let prev_geom_status = geom_climber.climb_status;
+    geom_climber.climb(geom_type, tile_x, tile_y, group_layer_name);
+    coll_climber.climb(coll_type, tile_x, tile_y, group_layer_name);
+    let geom_shape = geom_climber.geom_shape(prev_geom_status)?;
 
     // For all terrain layers belonging to the same layer group in the same position...
     for t_tile in terrain_tiles {
@@ -124,9 +152,10 @@ fn add_tiles<'map>(
         });
 
         // Send event for adding tile's graphics
-        log::trace!("Fired event {:?}", event);
+        log::debug!("Fired event {:?}", event);
         graphics_events.send(event);
     }
+    Ok(())
 }
 
 fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLayer<'map>{
@@ -171,11 +200,19 @@ enum ClimbStatus {
     FinishedClimbing
 }
 
+
+
 impl ClimbStatus {
     
     /// Takes into account the climb status of the previous tile and the type of the current tile to determine the
     /// climb status for the current tile.
-    fn next(prev_status: ClimbStatus, tile_type: TileType) -> Self {
+    fn next(
+        prev_status: ClimbStatus,
+        tile_type: TileType,
+        tile_x: i32,
+        tile_y: i32,
+        group_layer_name: &str
+    ) -> Self {
         // What should the resulting climb status be, considering the current collision tile and the previous climb status?
         // Yes, this is ugly and no, I'm not going to fix it...
         if tile_type == TileType::Floor {
@@ -186,7 +223,8 @@ impl ClimbStatus {
                 prev_status == Self::ClimbingWallSW ||
                 prev_status == Self::FinishedClimbing;
             if !is_status_valid {
-                panic!("Encountered a {:?} tile while in climb status {:?}", tile_type, prev_status)
+                //climb_panic!(tile_type, prev_status, tile_x, tile_y, group_layer_name);
+                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
             }
             Self::NotClimbing
         }
@@ -212,7 +250,7 @@ impl ClimbStatus {
                 prev_status == Self::NotClimbing ||
                 prev_status == Self::FinishedClimbing;
             if !is_status_valid {
-                panic!("Encountered a {:?} tile while in climb status {:?}", tile_type, prev_status)
+                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
             }
             Self::ClimbingWallSE
         }
@@ -221,25 +259,25 @@ impl ClimbStatus {
                 prev_status == Self::NotClimbing ||
                 prev_status == Self::FinishedClimbing;
             if !is_status_valid {
-                panic!("Encountered a {:?} tile while in climb status {:?}", tile_type, prev_status)
+                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
             }
             Self::ClimbingWallSW
         }
         else if tile_type == TileType::WallEndSE {
             if prev_status != Self::ClimbingWallSE {
-                panic!("Encountered a {:?} tile while in climb status {:?}", tile_type, prev_status)
+                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
             }
             Self::NotClimbing
         }
         else if tile_type == TileType::WallEndSW {
             if prev_status != Self::ClimbingWallSW {
-                panic!("Encountered a {:?} tile while in climb status {:?}", tile_type, prev_status)
+                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
             }
             Self::NotClimbing
         }
         else if tile_type.is_lip() {
             if !(prev_status.is_climbing_wall() || prev_status == Self::NotClimbing) {
-                panic!("Encountered a {:?} tile while in climb status {:?}", tile_type, prev_status)
+                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
             }
             Self::FinishedClimbing
         }
@@ -254,16 +292,6 @@ impl ClimbStatus {
         self == Self::ClimbingWallSE ||
         self == Self::ClimbingWallSW
     }
-
-    fn to_geom_shape(self) -> GeomShape {
-        match self {
-            Self::NotClimbing => GeomShape::Floor,
-            Self::FinishedClimbing => GeomShape::Floor,
-            Self::ClimbingWallS => GeomShape::Wall,
-            Self::ClimbingWallSE => GeomShape::WallSE,
-            Self::ClimbingWallSW => GeomShape::WallSW
-        }
-    }
 }
 
 // Helper function that assumes a property is a string
@@ -276,16 +304,13 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
 
 fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
     let ts = tileset;                                                       // Tileset (renamed for brevity)
+    let img = ts.image.as_ref().expect("Tileset must have a single image");
     let tsm = tileset.margin as f32;                                        // Tileset margin
     let tssp = tileset.spacing as f32;                                      // Tileset spacing
-    let (tsr, tsc) = ((ts.tilecount/ts.columns) as f32, ts.columns as f32); // Tileset rows / columns (ints)
     let (tiw, tih) = (ts.tile_width as f32, ts.tile_height as f32);         // Tile width / height
     let (tixi, tiyi) = (tile_id % ts.columns, tile_id / ts.columns);        // Tile x / y (ints)
     let (tix, tiy) = (tixi as f32 * tiw, tiyi as f32 * tih);                // Tile x / y (floats)
-    let tss = Vec2::new(                                                    // Tileset size in pixels (floats)
-        tsm*2.0   +   tsc*tiw   +   tssp*f32::max(tsc-1.0, 0.0),
-        tsm*2.0   +   tsr*tih   +   tssp*f32::max(tsr-1.0, 0.0)
-    );
+    let tss = Vec2::new(img.width as f32, img.height as f32);
 
     // Creates UV coords
     let tsm = Vec2::new(tsm, tsm);          // Tileset margin
@@ -301,9 +326,9 @@ fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileM
     else {
         panic!("Not yet implemented");
     };
+    log::debug!("uv1: {:?}, uv2: {:?}, uv3: {:?}, uv4: {:?}", uv1, uv2, uv3, uv4);
     let (uv1, uv2, uv3, uv4) = (uv1/tss, uv2/tss, uv3/tss, uv4/tss);
 
-    log::info!("Tileset size is {:?}", tss);
     TileMeshData {
         size: Vec2::new(tiw, tih),
         uv1,
@@ -318,6 +343,15 @@ struct SplitGroupLayer<'map> {
     terrain_layers: Vec<TileLayer<'map>>,
     meta_layers: Vec<MetaLayer<'map>>
 }
+
+#[derive(Debug, Clone)]
+pub(crate) struct ClimbingError(String);
+impl std::fmt::Display for ClimbingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
+    }
+}
+
 
 // Holds meta tiles that are either:
 // 1) All geom (Tiles represent geometry, which is the shape of the terrain tiles in the graphics engine)
@@ -347,9 +381,9 @@ impl<'map> MetaLayer<'map> {
 
 // Tile from a `MetaLayer`
 enum MetaTile<'map> {
-    GeomColl(&'map Tile),
-    Geom(&'map Tile),
-    Coll(&'map Tile)
+    GeomColl(Tile<'map>),
+    Geom(Tile<'map>),
+    Coll(Tile<'map>)
 }
 
 impl<'map> MetaTile<'map> {
@@ -358,17 +392,17 @@ impl<'map> MetaTile<'map> {
     fn get_types(&self) -> (TileType, TileType) {
         match self {
             MetaTile::GeomColl(tile) => {
-                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (t_type, t_type)
             }
             MetaTile::Geom(tile) => {
-                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (t_type, TileType::Floor)
             }
             MetaTile::Coll(tile) => {
-                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (TileType::Floor, t_type)
             }
@@ -396,8 +430,14 @@ impl Climber {
     }
 
     /// Compares current climb status and the next tile encountered, and "climbs" appropriately.
-    fn climb(&mut self, tile_type: TileType) {
-        self.climb_status = ClimbStatus::next(self.climb_status, tile_type);
+    fn climb(
+        &mut self,
+        tile_type: TileType,
+        tile_x: i32,
+        tile_y: i32,
+        group_layer_name: &str
+    ) {
+        self.climb_status = ClimbStatus::next(self.climb_status, tile_type, tile_x, tile_y, group_layer_name);
         if self.climb_status == ClimbStatus::NotClimbing {
             self.position.z -= self.tile_height;
         }
@@ -408,6 +448,31 @@ impl Climber {
             let ydiff = self.position.y - self.offset.y;
             self.position.y = self.offset.y;
             self.position.z -= ydiff + self.tile_height;
+        }
+    }
+
+    fn geom_shape(&self, prev_status: ClimbStatus) -> Result<GeomShape, ClimbingError> {
+        match self.climb_status {
+            ClimbStatus::NotClimbing => match prev_status {
+                ClimbStatus::ClimbingWallS | ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(GeomShape::Floor),
+                ClimbStatus::ClimbingWallSE => Ok(GeomShape::WallEndSE),
+                ClimbStatus::ClimbingWallSW => Ok(GeomShape::WallEndSW)
+            }
+            ClimbStatus::ClimbingWallS => Ok(GeomShape::Wall),
+            ClimbStatus::ClimbingWallSE => match prev_status {
+                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(GeomShape::WallStartSE),
+                ClimbStatus::ClimbingWallSE => Ok(GeomShape::WallSE),
+                _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status)))
+            },
+            ClimbStatus::ClimbingWallSW => match prev_status {
+                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(GeomShape::WallStartSW),
+                ClimbStatus::ClimbingWallSW => Ok(GeomShape::WallSW),
+                _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status)))
+            },
+            ClimbStatus::FinishedClimbing => match prev_status {
+                ClimbStatus::FinishedClimbing => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status))),
+                _ => Ok(GeomShape::Floor)
+            }
         }
     }
 }

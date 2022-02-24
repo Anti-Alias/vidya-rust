@@ -8,7 +8,6 @@ use crate::map::*;
 use crate::extensions::*;
 
 use bevy::asset::{ AssetServerSettings, LoadState };
-use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
@@ -20,6 +19,7 @@ impl Plugin for VidyaPlugin {
 
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(DefaultPlugins)
             .add_state(AppState::AppStarting)
             .add_event::<LoadMapEvent>()
             .add_event::<AddTileGraphicsEvent>()
@@ -205,7 +205,7 @@ fn map_fire_events(
         .tiled_map;
 
     // "Climbs" all group layers of map and fires events
-    add_tiles_from_map(&tiled_map, graphics_events, config.flip_y);
+    add_tiles_from_map(&tiled_map, graphics_events, config.flip_y).unwrap();
 
     // Goes to state that waits for map graphics to finish loading
     state.set(AppState::MapHandlingEvents).unwrap();
@@ -305,19 +305,48 @@ fn map_spawn_graphics_entities(
     // Spawns camera
     let cam_width = 800.0;
     let cam_height = 450.0;
+<<<<<<< Updated upstream
+=======
+    let cam_up = Vec3::new(0.0, 1.0, 0.0);
+    /*
+    let cam_pos = Vec3::new(16.0*10.0, 500.0, 500.0-5.0*16.0);
+>>>>>>> Stashed changes
     let mut cam_bundle = OrthographicCameraBundle::new_3d();
     let proj = &mut cam_bundle.orthographic_projection;
     proj.scaling_mode = ScalingMode::None;
-    proj.left = -cam_width / 2.0;
-    proj.right = cam_width / 2.0;
-    proj.bottom = -cam_height / 2.0;
-    proj.top = cam_height /2.0;
+    proj.left = -cam_width / 2.0 / 2.0;
+    proj.right = cam_width / 2.0 / 2.0;
+    proj.bottom = -cam_height / 2.0 / 2.0;
+    proj.top = cam_height / 2.0 / 2.0;
     proj.near = 0.1;
     proj.far = 1000.0;
+<<<<<<< Updated upstream
     cam_bundle.transform = Transform::from_translation(Vec3::new(0.0, 500.0, 500.0))
         .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0))
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
     commands.spawn_bundle(cam_bundle);
+=======
+    */
+
+    let cam_pos = Vec3::new(16.0*50.0, 200.0, 100.0);
+    let cam_target = Vec3::new(cam_pos.x, -100.0, cam_pos.z - cam_pos.y);
+    let mut cam_bundle = PerspectiveCameraBundle {
+        transform: Transform::from_translation(cam_pos)
+            .looking_at(cam_target, Vec3::Y),
+            //.with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
+        ..Default::default()
+    };
+    commands
+        .spawn_bundle(cam_bundle)
+        .insert(CameraTarget {
+            target: Vec3::ZERO,
+            distance: 200.0
+        })
+        .insert(CameraTimer {
+            timer: 0.0,
+            speed: 1.0/800.0
+        });
+>>>>>>> Stashed changes
     log::debug!("Done spawning map graphics entities...");
 }
 

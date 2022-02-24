@@ -67,7 +67,6 @@ fn main() {
             mode: WindowMode::Windowed,
             transparent: false,
         })
-        .add_plugins(DefaultPlugins)
         .add_plugin(VidyaPlugin)
         .add_system_set(SystemSet::on_enter(AppState::AppRunning).with_system(load_map))
         .run();

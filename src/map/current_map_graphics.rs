@@ -91,7 +91,7 @@ impl Chunk {
                 tp[x] -= tw;
                 p.push(tp);
                 // Normals (4)
-                let norm = [0.0, 0.0, -1.0];
+                let norm = [0.0, 0.0, 1.0];
                 for _ in 0..4 { n.push(norm); }
                 // UVs and indices
                 push_uv_indices_4(&md, uvs, i, vlen);
@@ -331,26 +331,4 @@ fn push_uv_indices_4(
     indices.push(vlen+2);
     indices.push(vlen+3);
     indices.push(vlen);
-}
-
-// Pushes 6 uv values and 6 indices (6 vertices where positions and uvs are assumed to be duplicates at 2,3 and 0,5)
-fn push_uv_indices_6(
-    mesh_data: &TileMeshData,
-    uvs: &mut Vec<[f32; 2]>,
-    indices: &mut Vec<u32>,
-    vlen: u32
-) {
-    uvs.push(mesh_data.uv1.to_array());
-    uvs.push(mesh_data.uv2.to_array());
-    uvs.push(mesh_data.uv3.to_array());
-    uvs.push(mesh_data.uv3.to_array());
-    uvs.push(mesh_data.uv4.to_array());
-    uvs.push(mesh_data.uv1.to_array());
-
-    indices.push(vlen);
-    indices.push(vlen+1);
-    indices.push(vlen+2);
-    indices.push(vlen+3);
-    indices.push(vlen+4);
-    indices.push(vlen+5);
 }

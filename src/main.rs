@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{ WindowMode, WindowResizeConstraints };
-use vidya_rust::app::{ AppState, VidyaPlugin };
+use vidya_rust::app::{ AppState, VidyaPlugins };
 use vidya_rust::map::{ LoadMapEvent };
 
 /*
@@ -67,7 +67,7 @@ fn main() {
             mode: WindowMode::Windowed,
             transparent: false,
         })
-        .add_plugin(VidyaPlugin)
+        .add_plugins(VidyaPlugins)
         .add_system_set(SystemSet::on_enter(AppState::AppRunning).with_system(load_map))
         .run();
 }

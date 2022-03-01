@@ -1,4 +1,18 @@
-pub use bevy::prelude::*;
+use bevy::prelude::*;
+
+use crate::app::AppState;
+
+
+pub struct CameraPlugin;
+impl Plugin for CameraPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .with_system(camera_rotate)
+        )
+        ;
+    }
+}
 
 #[derive(Component)]
 pub struct CameraTarget {

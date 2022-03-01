@@ -211,7 +211,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
   </layer>
-  <layer id="9" name="geom_coll" width="32" height="36" visible="0">
+  <layer id="9" name=":geom_coll:" width="32" height="36" visible="0" locked="1">
    <properties>
     <property name="type" value="geom_coll"/>
    </properties>
@@ -254,9 +254,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
   </layer>
-  <layer id="10" name="geom" width="32" height="36" visible="0">
+  <layer id="10" name=":geom:" width="32" height="36" visible="0">
    <properties>
-    <property name="type" value="geom"/>
+    <property name="type" value="geom_coll"/>
    </properties>
    <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

@@ -117,8 +117,8 @@ fn add_tiles<'map>(
     // Gets first meta and terrain tiles found at tile_x, tile_y
     let meta_tile = meta_layers
         .iter()
-        .next()
-        .and_then(|m_layer| m_layer.get_tile(tile_x, tile_y));
+        .flat_map(|m_layer| m_layer.get_tile(tile_x, tile_y))
+        .next();
     let terrain_tiles = terrain_layers
         .iter()
         .flat_map(|layer| layer.get_tile(tile_x, tile_y));

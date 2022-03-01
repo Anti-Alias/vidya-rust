@@ -1,5 +1,9 @@
-pub use crate::camera::CameraPlugin;
-pub use crate::map::MapPlugin;
+pub use crate:: {
+    camera::CameraPlugin,
+    map::MapPlugin,
+    debug::DebugPlugin,
+    physics::PhysicsPlugin,
+};
 
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
@@ -10,6 +14,8 @@ impl PluginGroup for VidyaPlugins {
         builder.add(VidyaPlugin);
         builder.add(MapPlugin);
         builder.add(CameraPlugin);
+        builder.add(PhysicsPlugin);
+        builder.add(DebugPlugin);
     }
 }
 
@@ -22,7 +28,6 @@ impl Plugin for VidyaPlugin {
             .add_plugins(DefaultPlugins)
             .add_state(AppState::AppStarting)
             .add_startup_system(start_app)
-            
         ;
     }
     fn name(&self) -> &str { "vidya_plugin" }

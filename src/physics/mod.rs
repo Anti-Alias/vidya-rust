@@ -15,17 +15,16 @@ impl Plugin for PhysicsPlugin {
     }
 }
 
-/// Represents an axis-aligned bounding box
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
-pub struct Position(Vec3);
+pub struct Position(pub Vec3);
 
 /// Velocity of an entity
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
-pub struct Velocity(Vec3);
+pub struct Velocity(pub Vec3);
 
 /// Friction of an entity
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
-pub struct Friction(f32);
+pub struct Friction(pub f32);
 
 /// Computed boundary of an [`AABB`].
 pub struct Bounds {
@@ -67,7 +66,12 @@ pub fn apply_velocity(mut query: Query<(&mut Position, &Velocity)>) {
 
 // Synchronizes an Transformwith an [`AABB`]'s center.
 pub fn sync_transform(mut query: Query<(&Position, &mut Transform)>) {
-    for (position, mut transform) in query.iter_mut() {
-        *transform = transform.with_translation(position.0);
+for (position, mut transform) in query.iter_mut() {
+        let position = Vec3::new(
+            position.0.x.round(),
+            position.0.y.round(),
+            position.0.z.round()
+        );
+        *transform = transform.with_translation(position);
     }
 }

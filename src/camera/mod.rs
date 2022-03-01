@@ -34,10 +34,8 @@ impl CameraTimer {
     }
 }
 
-type RotatingCamera<'a> = (&'a mut Transform, &'a CameraTarget, &'a mut CameraTimer);
-
 pub fn camera_rotate(
-    mut camera: Query<RotatingCamera>
+    mut camera: Query<(&mut Transform, &CameraTarget, &mut CameraTimer)>
 ) {
     for (mut transform, target, mut timer) in camera.iter_mut() {
         let pos = target.target;

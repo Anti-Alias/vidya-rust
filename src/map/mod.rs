@@ -11,7 +11,9 @@ use std::path::PathBuf;
 use std::sync::{ Mutex };
 
 pub use crate::app::{ AppLabel, AppState };
+pub use crate::physics::{ Position, Velocity, Friction };
 pub use crate::camera::CameraPlugin;
+pub use crate::debug::Floater;
 use crate::extensions::*;
 
 use climb::add_tiles_from_map;
@@ -330,8 +332,14 @@ fn map_spawn_graphics_entities(
     cam_bundle.transform = Transform::from_translation(cam_pos)
         .looking_at(cam_target, cam_up)
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
+
+    // Spawns camera
     commands
         .spawn_bundle(cam_bundle)
+        .insert(Position(cam_pos))
+        .insert(Friction(0.8))
+        .insert(Velocity(Vec3::ZERO))
+        .insert(Floater { speed: 2.0 })
     ;
 
     log::debug!("Done spawning map graphics entities...");

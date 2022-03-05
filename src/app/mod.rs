@@ -29,6 +29,7 @@ impl Plugin for VidyaPlugin {
         app
             .add_plugins(DefaultPlugins)
             .add_state(AppState::AppStarting)
+            .insert_resource(AppConfig { side: Side::Client })
             .add_startup_system(start_app)
         ;
     }
@@ -60,11 +61,25 @@ pub enum AppState {
     /// Application stopped. No systems should run
     AppStopped,
 
+    /// TMX file is being loaded
     MapLoadingFile,
     MapFiringEvents,
     MapHandlingEvents,
     MapSpawningEntities,
     MapFinishing
+}
+
+/// Side the application is on
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Side {
+    Server,
+    Client
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+/// Configuration of the application as a whole
+pub struct AppConfig {
+    pub side: Side
 }
 
 fn start_app(mut app_state: ResMut<State<AppState>>) {

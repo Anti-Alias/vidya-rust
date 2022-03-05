@@ -8,7 +8,6 @@ mod climb;
 use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
 use std::path::PathBuf;
-use std::sync::{ Mutex };
 
 pub use crate::app::{ AppLabel, AppState };
 pub use crate::physics::{ Position, Velocity, Friction };
@@ -46,12 +45,17 @@ impl Plugin for MapPlugin {
                 ),
                 flip_y: false
             })
+            // Listens for "LoadMapEvent" and kicks off map loading
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
                 .with_system(map_listen)
             )
+
+            // Halts further progress until map is loaded
             .add_system_set(SystemSet::on_update(AppState::MapLoadingFile)
-                .with_system(map_finish_loading_file_client)                    // Sets counter to 2
+                .with_system(map_finish_loading_file_client)
             )
+
+            // 
             .add_system_set(SystemSet::on_enter(AppState::MapFiringEvents)
                 .with_system(map_fire_events)
             )
@@ -94,8 +98,7 @@ fn map_listen(
         commands.insert_resource(CurrentMap {
             file: map_file.to_string(),
             map_handle,
-            map_entity: map_parent_entity,
-            counter: Mutex::new(0)
+            map_entity: map_parent_entity
         });
 
         state.push(AppState::MapLoadingFile).unwrap()
@@ -118,20 +121,11 @@ fn map_finish_loading_file_client(
     match load_state {
         LoadState::Loaded => {
 
-            // Sets the counter to 2, so we wait for both the collision and graphics to spawn
-            {
-                let mut counter = current_map.counter.lock().unwrap();
-                *counter = 2;
-                log::debug!("Counter is {}", counter);
-            }
-
-            // Gets parent directory of tmx map file
+            // Gets staged map and created its graphics
             let tiled_map = &vidya_maps
                 .get(&current_map.map_handle)
                 .unwrap()
                 .tiled_map;
-
-            // Creates initial map graphics resource
             let mut current_map_graphics = CurrentMapGraphics {
                 chunk_size: map_config.chunk_size,
                 ..Default::default()
@@ -177,11 +171,6 @@ fn finish_loading_map_file_server(
     log::debug!("Entered system 'finish_loading_map_file_server'");
     if asset_server.get_load_state(&current_map.map_handle) == LoadState::Loaded {
         log::debug!("Map {} finished loading", &current_map.file);
-        {
-            let mut counter = current_map.counter.lock().unwrap();
-            *counter = 1;
-            log::debug!("Counter is {}", counter);
-        }
         state.set(AppState::MapFiringEvents).unwrap();
     }
 }
@@ -224,7 +213,6 @@ fn map_handle_events(mut map_state: ResMut<State<AppState>>) {
 }
 
 fn map_finish_loading_assets(
-    current_map: Res<CurrentMap>,
     current_map_graphics: Option<Res<CurrentMapGraphics>>,
     asset_server: Res<AssetServer>,
     mut state: ResMut<State<AppState>>,
@@ -240,10 +228,7 @@ fn map_finish_loading_assets(
             .map(|handle| { handle.id });
         if asset_server.get_group_load_state(handle_ids) == LoadState::Loaded {
             commands.remove_resource::<CurrentMapGraphics>();
-            let mut counter = current_map.counter.lock().unwrap();
-            *counter -= 1;
             state.pop().unwrap();
-            log::debug!("Counter is {}", counter);
         }
     }
 }
@@ -347,10 +332,7 @@ fn map_spawn_graphics_entities(
 
 // TODO
 fn map_spawn_collision_entities(current_map: Res<CurrentMap>) {
-    let mut counter = current_map.counter.lock().unwrap();
-    *counter -= 1;
     log::debug!("In system 'spawn_map_collision_entities'");
-    log::debug!("Counter is {}", counter);
 }
 
 fn map_goto_finishing(mut state: ResMut<State<AppState>>) {

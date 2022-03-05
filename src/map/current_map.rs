@@ -9,6 +9,5 @@ use bevy::prelude::*;
 pub struct CurrentMap {
     pub file: String,                   // Name of the file the map came from
     pub map_handle: Handle<VidyaMap>,   // Map handle
-    pub map_entity: Entity,             // Parent entity of map's chunks
-    pub counter: Mutex<u32>             // Multi-purpose counter used for scheduling phases during map loading
+    pub map_entity: Entity              // Parent entity of map's chunks
 }

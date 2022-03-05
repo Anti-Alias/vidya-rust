@@ -64,9 +64,9 @@ fn add_tiles_from_group_layer(
     t_layers: &[TileLayer],                                     // Group terrain layers
     offset: Vec2,                                               // Group offset
     map: &Map,                                                  // Map itself
-    graphics_events: &mut EventWriter<AddTileGraphicsEvent>,    // Graphics event publisher
     flip_y: bool,
-    group_layer_name: &str
+    group_layer_name: &str,
+    results: &mut Vec<TileInfo>
 ) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
@@ -109,9 +109,9 @@ fn add_tiles<'map>(
     tile_y: i32,
     geom_climber: &mut Climber,
     coll_climber: &mut Climber,
-    graphics_events: &mut EventWriter<AddTileGraphicsEvent>,
     flip_y: bool,
-    group_layer_name: &str
+    group_layer_name: &str,
+    results: &mut Vec<TileInfo>,
 ) -> Result<(), ClimbingError> {
 
     // Gets first meta and terrain tiles found at tile_x, tile_y
@@ -129,7 +129,6 @@ fn add_tiles<'map>(
         .unwrap_or((TileType::Floor, TileType::Floor));
     let geom_pos = geom_climber.position;
 
-    //let coll_pos = coll_climber.position;
     let prev_geom_status = geom_climber.climb_status;
     geom_climber.climb(geom_type, tile_x, tile_y, group_layer_name);
     coll_climber.climb(coll_type, tile_x, tile_y, group_layer_name);
@@ -143,17 +142,15 @@ fn add_tiles<'map>(
         let tileset = t_tile.get_tileset();
         let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id(), flip_y);
 
-        // Fire graphics event
-        let event = AddTileGraphicsEvent(TileGraphics {
-            tileset_index: tileset_index as u32,
-            position: geom_pos,
-            mesh_data: tile_mesh_data,
-            shape: geom_shape
+        // Add tile info to results
+        results.push(TileInfo {
+            graphics: TileGraphics {
+                tileset_index: tileset_index as u32,
+                position: geom_pos,
+                mesh_data: tile_mesh_data,
+                shape: geom_shape
+            }
         });
-
-        // Send event for adding tile's graphics
-        log::debug!("Fired event {:?}", event);
-        graphics_events.send(event);
     }
     Ok(())
 }
@@ -182,6 +179,12 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
 
     // Returns split data
     SplitGroupLayer { terrain_layers, meta_layers }
+}
+
+
+/// Information about a tile that was just climbed in the map
+pub struct TileInfo {
+    pub graphics: TileGraphics
 }
 
 /// Determines the status of a climb.
@@ -326,7 +329,6 @@ fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileM
     else {
         panic!("Not yet implemented");
     };
-    log::debug!("uv1: {:?}, uv2: {:?}, uv3: {:?}, uv4: {:?}", uv1, uv2, uv3, uv4);
     let (uv1, uv2, uv3, uv4) = (uv1/tss, uv2/tss, uv3/tss, uv4/tss);
 
     TileMeshData {

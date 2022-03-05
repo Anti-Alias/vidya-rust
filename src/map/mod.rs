@@ -34,7 +34,7 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<LoadMapEvent>()
-            .add_event::<AddTileGraphicsEvent>()
+            .add_event::<AddTileEvent>()
             .add_asset::<VidyaMap>()
             .init_asset_loader::<VidyaMapLoader>()
             .insert_resource(MapConfig {
@@ -61,7 +61,7 @@ impl Plugin for MapPlugin {
             )
             .add_system_set(SystemSet::on_enter(AppState::MapHandlingEvents)
                 .with_system(map_handle_events)
-                .with_system(map_handle_graphics_events)
+                .with_system(map_handle_tile_events)
             )
             .add_system_set(SystemSet::on_enter(AppState::MapSpawningEntities)
                 .with_system(map_spawn_graphics_entities)
@@ -179,7 +179,7 @@ fn finish_loading_map_file_server(
 fn map_fire_events(
     current_map: Res<CurrentMap>,
     vidya_map: Res<Assets<VidyaMap>>,
-    graphics_events: EventWriter<AddTileGraphicsEvent>,
+    mut tile_events: EventWriter<AddTileEvent>,
     mut state: ResMut<State<AppState>>,
     config: Res<MapConfig>
 ) {
@@ -190,20 +190,21 @@ fn map_fire_events(
         .unwrap()
         .tiled_map;
 
-    // "Climbs" all group layers of map and fires events
-    add_tiles_from_map(&tiled_map, graphics_events, config.flip_y).unwrap();
+    // "Climbs" all group layers of map and gets tile infos
+    add_tiles_from_map(&tiled_map, config.flip_y, &mut tile_events).unwrap();
 
     // Goes to state that waits for map graphics to finish loading
     state.set(AppState::MapHandlingEvents).unwrap();
 }
 
-fn map_handle_graphics_events(
-    mut graphics_events: EventReader<AddTileGraphicsEvent>,
+fn map_handle_tile_events(
+    mut tile_events: EventReader<AddTileEvent>,
     mut current_map_graphics: ResMut<CurrentMapGraphics>
 ) {
     log::debug!("Entered system 'handle_map_graphics'");
-    for event in graphics_events.iter() {
-        current_map_graphics.add_tile(event.0);
+    for event in tile_events.iter() {
+        let tile_info = event.0;
+        current_map_graphics.add_tile(tile_info.graphics);
     }
 }
 

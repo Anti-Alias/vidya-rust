@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use tiled::*;
 
-use crate::map::{ GeomShape, TileType, AddTileGraphicsEvent, TileGraphics, TileMeshData };
+use crate::map::{ GeomShape, TileType, AddTileEvent, TileGraphics, TileMeshData };
 
 
 macro_rules! climb_panic {
@@ -21,8 +21,8 @@ macro_rules! climb_panic {
 // Fire events that cause map to populate
 pub(crate) fn add_tiles_from_map(
     tiled_map: &tiled::Map,
-    mut graphics_events: EventWriter<AddTileGraphicsEvent>,
-    flip_y: bool
+    flip_y: bool,
+    results: &mut EventWriter<AddTileEvent>
 ) -> Result<(), ClimbingError> {
     // For all group layers in the root...
     for root_layer in tiled_map.layers() {
@@ -47,9 +47,9 @@ pub(crate) fn add_tiles_from_map(
                     &terrain_layers,
                     offset,
                     tiled_map,
-                    &mut graphics_events,
                     flip_y,
-                    root_layer.name()
+                    root_layer.name(),
+                    results
                 )?;
             },
             _ => return Err(ClimbingError("All root layers must be group layers".to_owned()))
@@ -66,7 +66,7 @@ fn add_tiles_from_group_layer(
     map: &Map,                                                  // Map itself
     flip_y: bool,
     group_layer_name: &str,
-    results: &mut Vec<TileInfo>
+    results: &mut EventWriter<AddTileEvent>
 ) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
@@ -93,9 +93,9 @@ fn add_tiles_from_group_layer(
                 y,
                 &mut geom_climber,
                 &mut coll_climber,
-                graphics_events,
                 flip_y,
-                group_layer_name
+                group_layer_name,
+                results
             )?;
         }
     }
@@ -111,7 +111,7 @@ fn add_tiles<'map>(
     coll_climber: &mut Climber,
     flip_y: bool,
     group_layer_name: &str,
-    results: &mut Vec<TileInfo>,
+    results: &mut EventWriter<AddTileEvent>
 ) -> Result<(), ClimbingError> {
 
     // Gets first meta and terrain tiles found at tile_x, tile_y
@@ -143,14 +143,14 @@ fn add_tiles<'map>(
         let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id(), flip_y);
 
         // Add tile info to results
-        results.push(TileInfo {
+        results.send(AddTileEvent(TileInfo {
             graphics: TileGraphics {
                 tileset_index: tileset_index as u32,
                 position: geom_pos,
                 mesh_data: tile_mesh_data,
                 shape: geom_shape
             }
-        });
+        }));
     }
     Ok(())
 }
@@ -183,13 +183,14 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
 
 
 /// Information about a tile that was just climbed in the map
+#[derive(Debug, Copy, Clone)]
 pub struct TileInfo {
     pub graphics: TileGraphics
 }
 
 /// Determines the status of a climb.
 /// Used in conjunction with `Climber`
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum ClimbStatus {
     /// Tile is treated as a floor. Next tile is 1 farther (z)
     NotClimbing,
@@ -202,8 +203,6 @@ enum ClimbStatus {
     // Just encountered a "lip" tile. Tile is treated as floor. Next tile is N tiles below (y) and N tiles farther (z), where N represents how high we were in tiles
     FinishedClimbing
 }
-
-
 
 impl ClimbStatus {
     

@@ -8,6 +8,7 @@ pub use crate:: {
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 
+// Default plugins
 pub struct VidyaPlugins;
 impl PluginGroup for VidyaPlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
@@ -20,6 +21,7 @@ impl PluginGroup for VidyaPlugins {
 }
 
 
+// Core plugin
 #[derive(Default)]
 pub struct VidyaPlugin;
 impl Plugin for VidyaPlugin {
@@ -33,6 +35,7 @@ impl Plugin for VidyaPlugin {
     fn name(&self) -> &str { "vidya_plugin" }
 }
 
+/// Labels used for scheduling the timing of systems in a single tick
 #[derive(SystemLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum AppLabel {
     Input,
@@ -43,24 +46,28 @@ pub enum AppLabel {
     PhysicsSync
 }
 
-fn start_app(mut app_state: ResMut<State<AppState>>) {
-    log::debug!("Entered system 'start_app'");
-    app_state.set(AppState::AppRunning).unwrap();
-}
-
-/// High-level state of the application as a whole
+/// State of the application as a whole.
+/// Dictates what systems run and when.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
 
-    // App events
+    /// No systems should run, as the application is starting
     AppStarting,
+
+    /// App is in a free state
     AppRunning,
+
+    /// Application stopped. No systems should run
     AppStopped,
 
-    // Map events
     MapLoadingFile,
     MapFiringEvents,
     MapHandlingEvents,
     MapSpawningEntities,
     MapFinishing
+}
+
+fn start_app(mut app_state: ResMut<State<AppState>>) {
+    log::debug!("Entered system 'start_app'");
+    app_state.set(AppState::AppRunning).unwrap();
 }

@@ -1,6 +1,6 @@
 use std::f32::consts::SQRT_2;
 
-use bevy::{ prelude::* };
+use bevy::{prelude::*, asset::LoadState};
 use bevy::utils::HashMap;
 use crate::map::{ TileGraphics, GeomShape };
 
@@ -20,6 +20,15 @@ impl CurrentMapGraphics {
             chunk_size,
             ..Default::default()
         }
+    }
+
+    pub fn get_load_state(&self, assets: &AssetServer) -> LoadState {
+        let handle_ids = self
+            .tileset_image_handles
+            .iter()
+            .flatten()
+            .map(|handle| { handle.id });
+        assets.get_group_load_state(handle_ids)
     }
 
     pub fn add_tile(&mut self, tile: TileGraphics) {

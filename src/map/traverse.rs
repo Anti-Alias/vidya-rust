@@ -19,7 +19,7 @@ macro_rules! climb_panic {
 
 
 // Fire events that cause map to populate
-pub(crate) fn add_tiles_from_map(
+pub(crate) fn traverse_map(
     tiled_map: &tiled::Map,
     flip_y: bool,
     results: &mut EventWriter<AddTileEvent>
@@ -42,7 +42,7 @@ pub(crate) fn add_tiles_from_map(
                     root_layer.offset_x(),
                     -root_layer.offset_y()
                 );
-                add_tiles_from_group_layer(
+                traverse_group_layer(
                     &meta_layers,
                     &terrain_layers,
                     offset,
@@ -59,7 +59,7 @@ pub(crate) fn add_tiles_from_map(
 }
 
 
-fn add_tiles_from_group_layer(
+fn traverse_group_layer(
     m_layers: &[MetaLayer],                                     // Group meta layers
     t_layers: &[TileLayer],                                     // Group terrain layers
     offset: Vec2,                                               // Group offset

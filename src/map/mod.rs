@@ -3,7 +3,7 @@ mod vidya_map;
 mod current_map;
 mod current_map_graphics;
 mod tile;
-mod climb;
+mod traverse;
 
 use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
@@ -15,7 +15,7 @@ pub use crate::camera::CameraPlugin;
 pub use crate::debug::Floater;
 use crate::extensions::*;
 
-use climb::add_tiles_from_map;
+use traverse::traverse_map;
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
@@ -52,7 +52,7 @@ impl Plugin for MapPlugin {
 
             // Halts further progress until map is loaded
             .add_system_set(SystemSet::on_update(AppState::MapLoadingFile)
-                .with_system(map_finish_loading_file_client)
+                .with_system(map_finish_loading)
             )
 
             // 
@@ -63,13 +63,8 @@ impl Plugin for MapPlugin {
                 .with_system(map_handle_events)
                 .with_system(map_handle_tile_events)
             )
-            .add_system_set(SystemSet::on_enter(AppState::MapSpawningEntities)
-                .with_system(map_spawn_graphics_entities)
-                .with_system(map_spawn_collision_entities)                      // Decrements counter
-                .with_system(map_goto_finishing)
-            )
-            .add_system_set(SystemSet::on_update(AppState::MapFinishing)
-                .with_system(map_finish_loading_assets)                         // Decrements counter
+            .add_system_set(SystemSet::on_update(AppState::MapSpawningEntities)
+                .with_system(map_spawn_entities)
             )
         ;
     }
@@ -107,7 +102,7 @@ fn map_listen(
 
 // 1) When in LoadingMapState, checks if map finished loading
 // 2) If so, loads tileset images, sets counter to 1 and goes to FiringEvents state
-fn map_finish_loading_file_client(
+fn map_finish_loading(
     map_config: Res<MapConfig>,
     current_map: Res<CurrentMap>,
     asset_server: Res<AssetServer>,
@@ -160,21 +155,6 @@ fn map_finish_loading_file_client(
     }
 }
 
-// 1) When in LoadingMapState, checks if map finished loading
-// 2) If so, loads tileset images, sets counter to 2 and goes to FiringEvents state
-#[allow(dead_code)]
-fn finish_loading_map_file_server(
-    current_map: Res<CurrentMap>,
-    asset_server: Res<AssetServer>,
-    mut state: ResMut<State<AppState>>
-) {
-    log::debug!("Entered system 'finish_loading_map_file_server'");
-    if asset_server.get_load_state(&current_map.map_handle) == LoadState::Loaded {
-        log::debug!("Map {} finished loading", &current_map.file);
-        state.set(AppState::MapFiringEvents).unwrap();
-    }
-}
-
 // Fire events that cause map to populate
 fn map_fire_events(
     current_map: Res<CurrentMap>,
@@ -190,8 +170,8 @@ fn map_fire_events(
         .unwrap()
         .tiled_map;
 
-    // "Climbs" all group layers of map and gets tile infos
-    add_tiles_from_map(&tiled_map, config.flip_y, &mut tile_events).unwrap();
+    // Traverses the map and fires events based on its contents
+    traverse_map(&tiled_map, config.flip_y, &mut tile_events).unwrap();
 
     // Goes to state that waits for map graphics to finish loading
     state.set(AppState::MapHandlingEvents).unwrap();
@@ -213,83 +193,72 @@ fn map_handle_events(mut map_state: ResMut<State<AppState>>) {
     map_state.set(AppState::MapSpawningEntities).unwrap();
 }
 
-fn map_finish_loading_assets(
-    current_map_graphics: Option<Res<CurrentMapGraphics>>,
-    asset_server: Res<AssetServer>,
+fn map_spawn_entities(
+    current_map: Res<CurrentMap>,
+    current_map_graphics: ResMut<CurrentMapGraphics>,
+    assets: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut state: ResMut<State<AppState>>,
     mut commands: Commands
 ) {
-    log::debug!("Entered system 'map_finish_loading_graphics'");
-    if let Some(current_map_graphics) = current_map_graphics {
-        // If tileset images have finished loading, go into spawning state
-        let handle_ids = current_map_graphics
-            .tileset_image_handles
-            .iter()
-            .flatten()
-            .map(|handle| { handle.id });
-        if asset_server.get_group_load_state(handle_ids) == LoadState::Loaded {
-            commands.remove_resource::<CurrentMapGraphics>();
-            state.pop().unwrap();
-        }
-    }
-}
-
-#[allow(dead_code)]
-fn map_spawn_graphics_entities(
-    current_map: Res<CurrentMap>,
-    current_map_graphics: Res<CurrentMapGraphics>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut commands: Commands
-) {
     log::debug!("Entered system 'spawn_map_graphics_entities'");
-    let map_entity = current_map.map_entity;
-    let image_handles = &current_map_graphics.tileset_image_handles;
+
+    // Quits if graphics haven't finished loading yet
+    let current_map_graphics = current_map_graphics.into_inner();
+    if current_map_graphics.get_load_state(&assets) != LoadState::Loaded {
+        return
+    }
 
     // Spawns chunks as PBRBundles
+    let map_entity = current_map.map_entity;
+    let image_handles = &current_map_graphics.tileset_image_handles;
     for (key, chunk) in &current_map_graphics.chunks {
 
         // Try to get texture for current chunk
-        if let Some(image_handle) = &image_handles[key.tileset_index] {
+        let image_handle = match &image_handles[key.tileset_index] {
+            Some(handle) => handle,
+            None => return
+        };
 
-            // Creates mesh
-            let chunk_size = current_map_graphics.chunk_size;
-            let chunk_pos = Vec3::new(key.x as f32, key.y as f32, key.z as f32) * chunk_size;
-            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-            mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, chunk.positions.clone());
-            mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, chunk.normals.clone());
-            mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, chunk.uvs.clone());
-            mesh.set_indices(Some(Indices::U32(chunk.indices.clone())));
+        // Creates mesh
+        let chunk_size = current_map_graphics.chunk_size;
+        let chunk_pos = Vec3::new(key.x as f32, key.y as f32, key.z as f32) * chunk_size;
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, chunk.positions.clone());
+        mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, chunk.normals.clone());
+        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, chunk.uvs.clone());
+        mesh.set_indices(Some(Indices::U32(chunk.indices.clone())));
 
-            // Creates material
-            let material = StandardMaterial {
-                base_color_texture: Some(image_handle.clone()),
-                metallic: 0.0,
-                reflectance: 0.0,
-                perceptual_roughness: 1.0,
-                alpha_mode: AlphaMode::Mask(0.5),
-                ..Default::default()
-            };
+        // Creates material
+        let material = StandardMaterial {
+            base_color_texture: Some(image_handle.clone()),
+            metallic: 0.0,
+            reflectance: 0.0,
+            perceptual_roughness: 1.0,
+            alpha_mode: AlphaMode::Mask(0.5),
+            ..Default::default()
+        };
 
-            // Turns mesh and material into handles
-            let mesh_handle = meshes.add(mesh);
-            let material_handle = materials.add(material);
+        // Turns mesh and material into handles
+        let mesh_handle = meshes.add(mesh);
+        let material_handle = materials.add(material);
 
-            // Spawns chunk as PbrBundle and attaches it to the map entity
-            let chunk_entity = commands.spawn_bundle(PbrBundle {
+        // Spawns chunk as PbrBundle and attaches it to the map entity
+        let chunk_entity = commands
+            .spawn_bundle(PbrBundle {
                 mesh: mesh_handle,
                 material: material_handle,
                 transform: Transform::from_translation(chunk_pos),
                 ..Default::default()
-            }).id();
-            commands.entity(map_entity).push_children(&[chunk_entity]);
-        }
+            })
+            .id();
+        commands
+            .entity(map_entity)
+            .push_children(&[chunk_entity]);
     }
 
     // Spawns/configures lights
-    //ambient_light.color = Color::WHITE;
-    //ambient_light.brightness = 3.0; 
-
     commands.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
             color: Color::WHITE,
@@ -318,26 +287,17 @@ fn map_spawn_graphics_entities(
     cam_bundle.transform = Transform::from_translation(cam_pos)
         .looking_at(cam_target, cam_up)
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
-
-    // Spawns camera
     commands
         .spawn_bundle(cam_bundle)
         .insert(Position(cam_pos))
         .insert(Friction(0.8))
         .insert(Velocity(Vec3::ZERO))
-        .insert(Floater { speed: 2.0 })
-    ;
+        .insert(Floater { speed: 2.0 });
+
+    // Finishes map loading
+    state.pop().unwrap();
 
     log::debug!("Done spawning map graphics entities...");
-}
-
-// TODO
-fn map_spawn_collision_entities(current_map: Res<CurrentMap>) {
-    log::debug!("In system 'spawn_map_collision_entities'");
-}
-
-fn map_goto_finishing(mut state: ResMut<State<AppState>>) {
-    state.set(AppState::MapFinishing).unwrap();
 }
 
 /// Map configuration resource

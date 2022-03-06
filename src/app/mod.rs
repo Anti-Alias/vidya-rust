@@ -65,8 +65,7 @@ pub enum AppState {
     MapLoadingFile,
     MapFiringEvents,
     MapHandlingEvents,
-    MapSpawningEntities,
-    MapFinishing
+    MapSpawningEntities
 }
 
 /// Side the application is on

@@ -1,4 +1,4 @@
-use super::climb::TileInfo;
+use super::traverse::TileInfo;
 
 #[derive(Debug, Clone)]
 pub struct LoadMapEvent(pub String);

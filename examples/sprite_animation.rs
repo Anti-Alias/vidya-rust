@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use vidya_rust::app::VidyaCorePlugin;
@@ -54,9 +52,7 @@ fn spawn_sprite(
             material: materials.add(material),
             transform: Transform::from_xyz(200.0, 0.0, 0.0),
             global_transform: GlobalTransform::default()
-        })
-        .insert(Timer::new(Duration::from_secs(3), false))
-    ;
+        });
 
     // Spawns camera
     let mut camera = OrthographicCameraBundle::new_3d();

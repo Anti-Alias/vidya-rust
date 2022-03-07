@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{prelude::*};
-use bevy::asset::{LoadState, HandleId};
+use bevy::asset::HandleId;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};
 
@@ -26,13 +26,6 @@ pub struct Rect {
     pub max: Vec2,
 }
 
-/// Resource that stores a mapping of material handles to meshes
-#[derive(Default)]
-pub struct BatchRenderer {
-    /// Mapping of material id to mesh id
-    pub mesh_infos: HashMap<HandleId, MeshInfo>
-}
-
 pub struct MeshInfo {
     /// Entity that holds the mesh handle
     pub entity: Entity,
@@ -49,6 +42,14 @@ pub struct DrawQuadCommand {
     pub transform: GlobalTransform,
     pub size: Vec2,
     pub uv_region: Rect
+}
+
+
+/// Resource that stores a mapping of material handles to meshes
+#[derive(Default)]
+pub struct BatchRenderer {
+    /// Mapping of material id to mesh id
+    pub mesh_infos: HashMap<HandleId, MeshInfo>
 }
 
 impl BatchRenderer {
@@ -73,10 +74,9 @@ impl BatchRenderer {
                 let mesh_handle = meshes.add(mesh);
                 let entity = commands.spawn_bundle(PbrBundle {
                     mesh: mesh_handle.clone(),
-                    material: mat_handle.as_weak(),
+                    material: mat_handle.clone_weak(),
                     ..Default::default()
                 }).id();
-                log::info!("Created mesh info!");
                 MeshInfo {
                     mesh_handle,
                     entity,
@@ -131,10 +131,10 @@ impl BatchRenderer {
             uv_data.clear();
             for command in &mesh_info.draw_quad_commands {
                 let reg = command.uv_region;
-                let uv1 = [reg.min.x, reg.min.y];
-                let uv2 = [reg.min.x, reg.max.y];
-                let uv3 = [reg.max.x, reg.max.y];
-                let uv4 = [reg.max.x, reg.min.y];
+                let uv1 = [reg.min.x, reg.max.y];
+                let uv2 = [reg.max.x, reg.max.y];
+                let uv3 = [reg.max.x, reg.min.y];
+                let uv4 = [reg.min.x, reg.min.y];
                 uv_data.extend_from_slice(&[uv1, uv2, uv3, uv4]);
             }
 
@@ -155,16 +155,16 @@ impl BatchRenderer {
 
     pub fn refresh(
         &mut self,
-        assets: &mut AssetServer,
+        materials: &Assets<StandardMaterial>,
         commands: &mut Commands
     ) {
         // Removes entries belonging to materials that are unloaded
         self.mesh_infos.retain(|mat_handle, mesh_info| {
-            let is_unloaded = assets.get_load_state(*mat_handle) == LoadState::Unloaded;
-            if is_unloaded {
+            let is_loaded = materials.contains(*mat_handle);
+            if !is_loaded {
                 commands.entity(mesh_info.entity).despawn();
             }
-            !is_unloaded
+            is_loaded
         });
     }
 }
@@ -191,12 +191,12 @@ pub struct Sprite3DBundle {
 fn draw_sprites(
     sprite_query: Query<(&Sprite3D, &Handle<StandardMaterial>, &GlobalTransform)>,
     mut meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
     mut batch_renderer: ResMut<BatchRenderer>,
-    mut assets: ResMut<AssetServer>,
     mut commands: Commands
 ) {
     // Clears mesh handles that are no longer loaded and despawns their entities
-    batch_renderer.refresh(&mut assets, &mut commands);
+    batch_renderer.refresh(&materials, &mut commands);
 
     // For all sprites...
     for (sprite, mat_handle, transform) in sprite_query.iter() {

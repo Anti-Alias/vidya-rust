@@ -66,6 +66,9 @@ impl Plugin for MapPlugin {
             .add_system_set(SystemSet::on_update(AppState::MapSpawningEntities)
                 .with_system(map_spawn_entities)
             )
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .with_system(manip_vertices)
+            )
         ;
     }
 }
@@ -294,10 +297,29 @@ fn map_spawn_entities(
         .insert(Velocity(Vec3::ZERO))
         .insert(Floater { speed: 2.0 });
 
+    // Removes staging resources
+    commands.remove_resource::<CurrentMap>();
+    commands.remove_resource::<CurrentMapGraphics>();
+
     // Finishes map loading
     state.pop().unwrap();
 
     log::debug!("Done spawning map graphics entities...");
+}
+
+fn manip_vertices(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mesh_handles: Query<&Handle<Mesh>>,
+    mut count: Local<u32>
+) {
+    if *count > 120 {
+        for mesh_handle in mesh_handles.iter() {
+            let new_indices = Vec::new();
+            let mesh = meshes.get_mut(mesh_handle.id).unwrap();
+            mesh.set_indices(Some(Indices::U32(new_indices)));
+        }
+    }
+    *count += 1;
 }
 
 /// Map configuration resource

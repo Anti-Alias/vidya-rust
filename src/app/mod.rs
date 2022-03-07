@@ -1,3 +1,4 @@
+use crate::animation::AnimationPlugin;
 pub use crate:: {
     camera::CameraPlugin,
     map::MapPlugin,
@@ -12,7 +13,8 @@ use bevy::prelude::*;
 pub struct VidyaPlugins;
 impl PluginGroup for VidyaPlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
-        builder.add(VidyaPlugin);
+        builder.add(VidyaCorePlugin);
+        builder.add(AnimationPlugin);
         builder.add(MapPlugin);
         builder.add(CameraPlugin);
         builder.add(PhysicsPlugin);
@@ -23,8 +25,8 @@ impl PluginGroup for VidyaPlugins {
 
 // Core plugin
 #[derive(Default)]
-pub struct VidyaPlugin;
-impl Plugin for VidyaPlugin {
+pub struct VidyaCorePlugin;
+impl Plugin for VidyaCorePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(DefaultPlugins)

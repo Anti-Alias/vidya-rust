@@ -3,6 +3,7 @@ use crate::map::VidyaMap;
 use bevy::prelude::*;
 
 
+// Staging resource for a map that is being loaded
 #[derive(Debug)]
 pub struct CurrentMap {
     pub file: String,                   // Name of the file the map came from

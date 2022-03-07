@@ -6,7 +6,7 @@ use crate::map::{ TileGraphics, GeomShape };
 
 use super::TileMeshData;
 
-/// Staging resource for the graphics of a loading tiled map
+/// Staging resource for the graphics of map being loaded
 #[derive(Default)]
 pub struct CurrentMapGraphics {
     pub tileset_image_handles: Vec<Option<Handle<Image>>>,  // Tileset name -> image

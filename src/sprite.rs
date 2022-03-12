@@ -7,8 +7,9 @@ use bevy::render::mesh::{VertexAttributeValues, Indices};
 
 use crate::map::AppState;
 
-pub struct GraphicsPlugin;
-impl Plugin for GraphicsPlugin {
+/// Plugin dedicated to rendering plain sprites in 3D
+pub struct SpritePlugin;
+impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<BatchRenderer>()
@@ -19,36 +20,31 @@ impl Plugin for GraphicsPlugin {
 
 /// Rectangular region used for UV mapping
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Rect {
-    /// The beginning point of the rect
+pub struct Region {
     pub min: Vec2,
-    /// The ending point of the rect
     pub max: Vec2,
 }
 
+/// Place to buffer sprite commands and deposit them to entities with a mesh
 pub struct MeshInfo {
-    /// Entity that holds the mesh handle
     pub entity: Entity,
-
-    /// Mesh handle itself
     pub mesh_handle: Handle<Mesh>,
-
-    /// Draw command enqueued to the mesh
     pub draw_quad_commands: Vec<DrawQuadCommand>
 }
 
+/// Command to send to a MeshInfo for drawing textured quads
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct DrawQuadCommand {
     pub transform: GlobalTransform,
     pub size: Vec2,
-    pub uv_region: Rect
+    pub uv_region: Region
 }
 
 
-/// Resource that stores a mapping of material handles to meshes
+/// Resource used for drawing textured sprites in a 3D space
 #[derive(Default)]
 pub struct BatchRenderer {
-    /// Mapping of material id to mesh id
+    /// Mapping of material id to mesh info
     pub mesh_infos: HashMap<HandleId, MeshInfo>
 }
 
@@ -169,17 +165,14 @@ impl BatchRenderer {
     }
 }
 
-/// Component that contains sprite data to be rendered with SpriteBatch3D
+/// Component representing a 3D sprite quad to be drawn
 #[derive(Component, Debug, Clone)]
 pub struct Sprite3D {
-
-    /// Width / height of the sprite
     pub size: Vec2,
-
-    // UV region of the sprite's material
-    pub region: Rect,
+    pub region: Region,
 }
 
+/// Components necessary to draw a sprite quad
 #[derive(Bundle, Clone, Debug)]
 pub struct Sprite3DBundle {
     pub sprite: Sprite3D,
@@ -188,6 +181,7 @@ pub struct Sprite3DBundle {
     pub global_transform: GlobalTransform
 }
 
+/// System that collects sprite information from entities, and draws them to the proper mesh entities
 fn draw_sprites(
     sprite_query: Query<(&Sprite3D, &Handle<StandardMaterial>, &GlobalTransform)>,
     mut meshes: ResMut<Assets<Mesh>>,

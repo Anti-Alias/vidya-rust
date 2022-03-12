@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use vidya_rust::app::VidyaCorePlugin;
-use vidya_rust::graphics::{GraphicsPlugin, Sprite3D, Rect, Sprite3DBundle};
+use vidya_rust::sprite::{SpritePlugin, Sprite3D, Region, Sprite3DBundle};
 use vidya_rust::map::AppState;
 
 fn main() {
     App::new()
         .add_plugin(VidyaCorePlugin)
-        .add_plugin(GraphicsPlugin)
+        .add_plugin(SpritePlugin)
         .add_system_set(SystemSet::on_exit(AppState::AppStarting)
             .with_system(spawn_sprite)
         )
@@ -22,7 +22,6 @@ fn spawn_sprite(
 
     // Loads image
     let image_handle = assets.load("player/char_a_p1_0bas_demn_v01.png");
-    //let image_handle = assets.load("images/wood.png");
 
     // Creates from image
     log::info!("Mat count: {}", materials.len());
@@ -39,13 +38,13 @@ fn spawn_sprite(
     // Makes sprite that will cut out a slice of the material
     let sprite = Sprite3D {
         size: Vec2::new(64.0, 64.0),
-        region: Rect {
+        region: Region {
             min: Vec2::new(0.0/8.0, 0.0/8.0),
             max: Vec2::new(1.0/8.0, 1.0/8.0)
         }
     };
 
-    // Creates resources necessary for the sprite
+    // Spawns entity from bundle
     commands
         .spawn_bundle(Sprite3DBundle {
             sprite,

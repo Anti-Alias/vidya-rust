@@ -18,8 +18,24 @@ impl Plugin for SpritePlugin {
     }
 }
 
+/// Component representing a 3D sprite quad to be drawn
+#[derive(Component, Debug, Clone, Default)]
+pub struct Sprite3D {
+    pub size: Vec2,
+    pub region: Region,
+}
+
+/// Components necessary to draw a sprite quad
+#[derive(Bundle, Clone, Debug)]
+pub struct Sprite3DBundle {
+    pub sprite: Sprite3D,
+    pub material: Handle<StandardMaterial>,
+    pub transform: Transform,
+    pub global_transform: GlobalTransform
+}
+
 /// Rectangular region used for UV mapping
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Region {
     pub min: Vec2,
     pub max: Vec2,
@@ -31,15 +47,6 @@ pub struct MeshInfo {
     pub mesh_handle: Handle<Mesh>,
     pub draw_quad_commands: Vec<DrawQuadCommand>
 }
-
-/// Command to send to a MeshInfo for drawing textured quads
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct DrawQuadCommand {
-    pub transform: GlobalTransform,
-    pub size: Vec2,
-    pub uv_region: Region
-}
-
 
 /// Resource used for drawing textured sprites in a 3D space
 #[derive(Default)]
@@ -165,20 +172,12 @@ impl BatchRenderer {
     }
 }
 
-/// Component representing a 3D sprite quad to be drawn
-#[derive(Component, Debug, Clone)]
-pub struct Sprite3D {
+/// Command to send to a MeshInfo for drawing textured quads
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct DrawQuadCommand {
+    pub transform: GlobalTransform,
     pub size: Vec2,
-    pub region: Region,
-}
-
-/// Components necessary to draw a sprite quad
-#[derive(Bundle, Clone, Debug)]
-pub struct Sprite3DBundle {
-    pub sprite: Sprite3D,
-    pub material: Handle<StandardMaterial>,
-    pub transform: Transform,
-    pub global_transform: GlobalTransform
+    pub uv_region: Region
 }
 
 /// System that collects sprite information from entities, and draws them to the proper mesh entities
@@ -189,6 +188,7 @@ fn draw_sprites(
     mut batch_renderer: ResMut<BatchRenderer>,
     mut commands: Commands
 ) {
+
     // Clears mesh handles that are no longer loaded and despawns their entities
     batch_renderer.refresh(&materials, &mut commands);
 

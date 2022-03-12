@@ -2,7 +2,7 @@ use std::fmt::{self, Formatter};
 
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{app::AppState, sprite::{Region, Sprite3D}};
+use crate::{app::AppState, sprite::{Region, Sprite3D, Sprite3DBundle}};
 
 /// Plugin that plays/loops entities with animation components
 pub struct AnimationPlugin;
@@ -11,53 +11,6 @@ impl Plugin for AnimationPlugin {
         app.add_system_set(SystemSet::on_update(AppState::AppRunning).with_system(update_animations));
     }
 }
-
-/// Frame in an animation
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Frame {
-    // Size of frame in pixels
-    pub size: Vec2,
-    // UV region
-    pub region: Region
-}
-
-/// A set of frames
-#[derive(Debug, Clone, PartialEq)]
-pub struct SpriteAnimation(pub Vec<Frame>);
-impl SpriteAnimation {
-
-    // Constructs a [`SpriteAnimation`] an image, assuming that the sprites are aligned from left to right, top to bottom with no spacing between.
-    pub fn from_grid(width: u32, height: u32, image_width: u32, image_height: u32) -> Self {
-        let cap = (image_width / width) * (image_height/height);
-        let mut frames = Vec::with_capacity(cap as usize);
-        let mut y = 0;
-        let sprite_size = Vec2::new(width as f32, height as f32);
-        while y + height <= image_height {
-            let mut x = 0;
-            let v = y as f32 / image_height as f32;
-            let v2 = (y + height) as f32 / image_height as f32;
-            while x + width <= image_width {
-                let u = x as f32 / image_width as f32;
-                let u2 = (x + width) as f32 / image_width as f32;
-                let frame = Frame {
-                    size: sprite_size,
-                    region: Region {
-                        min: Vec2::new(u, v),
-                        max: Vec2::new(u2, v2)
-                    }
-                };
-                frames.push(frame);
-                x += width;
-            }
-            y += height;
-        }
-        Self(frames)
-    }
-}
-
-/// Represents a handle to a [`SpriteAnimation`] in a [`SpriteAnimationSet`]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct AnimationHandle(u32);
 
 /// A component consisting of a set of indexed sprite animations
 #[derive(Component, Debug, Clone)]
@@ -174,6 +127,102 @@ impl SpriteAnimationSet {
 #[derive(Component)]
 pub struct AnimationTimer(pub Timer);
 
+#[derive(Bundle)]
+pub struct SpriteAnimationBundle {
+    pub animation_set: SpriteAnimationSet,
+    pub timer: AnimationTimer,
+    #[bundle]
+    pub sprite_bundle: Sprite3DBundle
+}
+impl SpriteAnimationBundle {
+    pub fn new(
+        animation_set: SpriteAnimationSet,
+        timer: AnimationTimer,
+        material: Handle<StandardMaterial>,
+        transform: Transform,
+        global_transform: GlobalTransform
+    ) -> Self {
+        Self {
+            animation_set,
+            timer,
+            sprite_bundle: Sprite3DBundle {
+                sprite: Sprite3D::default(),
+                material,
+                transform,
+                global_transform,
+            }
+        }
+    }
+}
+
+/// Frame in an animation
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Frame {
+    // Size of frame in pixels
+    pub size: Vec2,
+    // UV region
+    pub region: Region
+}
+
+/// A set of frames
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpriteAnimation(pub Vec<Frame>);
+impl SpriteAnimation {
+
+    // Constructs a [`SpriteAnimation`] an image, assuming that the sprites are aligned from left to right, top to bottom with no spacing between.
+    pub fn from_grid(
+        start_x: u32,
+        start_y: u32,
+        frame_width: u32,
+        frame_height: u32,
+        image_width: u32,
+        image_height: u32,
+        total_frames: u32
+    ) -> Self {
+
+        // Simple case
+        if total_frames == 0 {
+            return Self(Vec::new());
+        }
+
+        // Accumultes frames
+        let cap = (image_width / frame_width) * (image_height/frame_height);
+        let mut frames = Vec::with_capacity(cap as usize);
+        let mut y = start_y;
+        let sprite_size = Vec2::new(frame_width as f32, frame_height as f32);
+        while y + frame_height <= image_height {
+            let mut x = start_x;
+            let v = y as f32 / image_height as f32;
+            let v2 = (y + frame_height) as f32 / image_height as f32;
+            while x + frame_width <= image_width {
+                let u = x as f32 / image_width as f32;
+                let u2 = (x + frame_width) as f32 / image_width as f32;
+                let frame = Frame {
+                    size: sprite_size,
+                    region: Region {
+                        min: Vec2::new(u, v),
+                        max: Vec2::new(u2, v2)
+                    }
+                };
+                frames.push(frame);
+
+                // If we're past our capacity for frames, quit early with the frames we have
+                if frames.len() == total_frames as usize {
+                    return Self(frames);
+                }
+                x += frame_width;
+            }
+            y += frame_height;
+        }
+
+        // Done
+        Self(frames)
+    }
+}
+
+/// Represents a handle to a [`SpriteAnimation`] in a [`SpriteAnimationSet`]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct AnimationHandle(u32);
 
 /// Updates animation entities
 fn update_animations(
@@ -187,8 +236,8 @@ fn update_animations(
         if times_finished > 0 {
             anim_set.advance(times_finished as usize);
             if let Some(frame) = anim_set.current_frame() {
+                sprite.size = frame.size;
                 sprite.region = frame.region;
-                log::info!("Set animation frame!!!");
             }
         }
     }
@@ -210,7 +259,6 @@ impl fmt::Display for AnimationError {
         Ok(())
     }
 }
-
 
 
 #[test]

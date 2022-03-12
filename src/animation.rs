@@ -1,3 +1,5 @@
+use std::fmt::{self, Formatter};
+
 use bevy::{prelude::*, utils::HashMap};
 
 use crate::{app::AppState, sprite::{Region, Sprite3D}};
@@ -61,7 +63,7 @@ pub struct AnimationHandle(u32);
 #[derive(Component, Debug, Clone)]
 pub struct SpriteAnimationSet {
     animations: HashMap<AnimationHandle, SpriteAnimation>,  // All animations stored
-    current_handle: AnimationHandle,                     // Current animation playing/looping
+    current_handle: AnimationHandle,                        // Handle to current animation playing/looping
     frame_index: usize,                                     // Current frame in the animation playing/looping
     handle_counter: u32                                     // Counter used for generating unique handle
 }
@@ -95,8 +97,9 @@ impl SpriteAnimationSet {
     /// Advances the animation the specified number of frames
     pub fn advance(&mut self, frames: usize) {
         if frames == 0 { return; }
-        let anim = &self.animations[&self.current_handle];
-        self.frame_index = (self.frame_index + frames) % anim.0.len();
+        if let Some(anim) = self.current_animation() {
+            self.frame_index = (self.frame_index + frames) % anim.0.len();
+        }
     }
 
     /// Sets frame index to 0.
@@ -192,10 +195,23 @@ fn update_animations(
 }
 
 
+/// Various animation-related errors
+#[derive(Debug, Clone)]
 pub enum AnimationError {
     NoSuchAnimation,
     FrameOutOfBounds
 }
+impl fmt::Display for AnimationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::NoSuchAnimation => write!(f, "No such animation")?,
+            Self::FrameOutOfBounds => write!(f, "Frame out of bounds")?
+        }
+        Ok(())
+    }
+}
+
+
 
 #[test]
 fn test_from_grid() {

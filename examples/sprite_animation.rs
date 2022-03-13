@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use vidya_rust::animation::{SpriteAnimationBundle, SpriteAnimationSet, SpriteAnimation, AnimationTimer, AnimationPlugin};
 use vidya_rust::app::VidyaCorePlugin;
-use vidya_rust::sprite::{SpritePlugin, Sprite3D, Region, Sprite3DBundle};
+use vidya_rust::sprite::SpritePlugin;
 use vidya_rust::map::AppState;
 
 fn main() {

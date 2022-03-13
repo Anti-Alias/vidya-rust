@@ -24,7 +24,10 @@ pub struct Velocity(pub Vec3);
 
 /// Friction of an entity
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
-pub struct Friction(pub f32);
+pub struct Friction {
+    pub xz: f32,
+    pub y: f32
+}
 
 /// Computed boundary of an [`AABB`].
 pub struct Bounds {
@@ -53,7 +56,10 @@ impl Bounds {
 // Applies friction to entities
 pub fn apply_friction(mut query: Query<(&mut Velocity, &Friction), With<Position>>) {
     for (mut velocity, friction) in query.iter_mut() {
-        velocity.0 *= friction.0;
+        let vel = &mut velocity.0;
+        vel.x *= friction.xz;
+        vel.z *= friction.xz;
+        vel.y *= friction.y;
     }
 }
 

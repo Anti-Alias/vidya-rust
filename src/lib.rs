@@ -1,5 +1,6 @@
 pub mod app;
 pub mod animation;
+pub mod player;
 pub mod sprite;
 pub mod map;
 pub mod camera;

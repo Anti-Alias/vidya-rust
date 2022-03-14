@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::map::Velocity;
-
 /// Plugin for "Being" behavior
 pub struct BeingPlugin;
 impl Plugin for BeingPlugin {
@@ -12,6 +10,7 @@ impl Plugin for BeingPlugin {
 
 /// Component that allows an Entity to face a direction and hold state
 /// IE: Player, Creatures, etc
+#[derive(Component)]
 pub struct Being {
     /// Direction being is facing in radians
     pub direction: f32,
@@ -20,17 +19,61 @@ pub struct Being {
     pub state: State,
 }
 
-/// Explicit directions that can be faced
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum Direction {
-    N,
-    S,
-    E,
-    W,
-    NE,
-    NW,
-    SW,
-    SE
+impl Being {
+    pub fn direction(&self) -> Direction {
+        let pi = std::f32::consts::PI;
+        let pi2 = pi*2.0;
+        let slice = pi2/8.0;
+        let halfslice = slice / 2.0;
+        let direction = ((self.direction % pi2) + pi2) % pi + halfslice;
+        if direction < slice*1.0 {
+            Direction::E
+        }
+        else if direction < slice*2.0 {
+            Direction::NE
+        }
+        else if direction < slice*3.0 {
+            Direction::N
+        }
+        else if direction < slice*4.0 {
+            Direction::NW
+        }
+        else if direction < slice*5.0 {
+            Direction::W
+        }
+        else if direction < slice*6.0 {
+            Direction::SE
+        }
+        else if direction > slice*7.0 {
+            Direction::SE
+        }
+        else {
+            Direction::E
+        }
+    }
+
+    pub fn to_cardinal_direction(&self) -> CardinalDirection {
+        let pi = std::f32::consts::PI;
+        let pi2 = pi*2.0;
+        let slice = pi2/4.0;
+        let halfslice = slice / 2.0;
+        let direction = ((self.direction % pi2) + pi2) % pi + halfslice;
+        if direction < slice*1.0 {
+            CardinalDirection::E
+        }
+        else if direction < slice*2.0 {
+            CardinalDirection::N
+        }
+        else if direction < slice*3.0 {
+            CardinalDirection::W
+        }
+        else if direction < slice*4.0 {
+            CardinalDirection::S
+        }
+        else {
+            CardinalDirection::E
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -39,4 +82,52 @@ pub enum State {
     Running,
     Jumping,
     Attacking
+}
+
+/// Explicit directions that can be faced
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum Direction { E, NE, N, NW, W, SW, S, SE }
+impl Direction {
+    pub fn to_index(&self) -> usize {
+        match self {
+            Self::E => 0,
+            Self::NE => 1,
+            Self::N => 2,
+            Self::NW => 3,
+            Self::W => 4,
+            Self::SW => 5,
+            Self::S => 6,
+            Self::SE => 7
+        }
+    }
+    pub fn to_cardinal_direction(&self) -> Option<CardinalDirection> {
+        match self {
+            Self::E => Some(CardinalDirection::E),
+            Self::N => Some(CardinalDirection::N),
+            Self::W => Some(CardinalDirection::W),
+            Self::S => Some(CardinalDirection::S),
+            _ => None
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum CardinalDirection { E, N, W, S }
+impl CardinalDirection {
+    pub fn to_index(&self) -> usize {
+        match self {
+            Self::E => 0,
+            Self::N => 1,
+            Self::W => 2,
+            Self::S => 3
+        }
+    }
+    pub fn to_direction(&self) -> Direction {
+        match self {
+            Self::E => Direction::E,
+            Self::N => Direction::N,
+            Self::W => Direction::W,
+            Self::S => Direction::S
+        }
+    }
 }

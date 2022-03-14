@@ -8,6 +8,7 @@ impl Plugin for PhysicsPlugin {
         app
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
                 .with_system(apply_friction.label(AppLabel::PhysicsFriction))
+                .with_system(apply_gravity.label(AppLabel::PhysicsGravity).after(AppLabel::PhysicsFriction))
                 .with_system(apply_velocity.label(AppLabel::PhysicsVelocity).after(AppLabel::PhysicsFriction))
                 .with_system(sync_transform.label(AppLabel::PhysicsSync).after(AppLabel::PhysicsVelocity))
             )
@@ -49,6 +50,26 @@ impl Bounds {
     }
 }
 
+/// Determines how quickly an entity will fall
+#[derive(Component, Debug, Copy, Clone, PartialEq)]
+pub struct Weight {
+    pub weight: f32
+}
+impl Default for Weight {
+    fn default() -> Self {
+        Self {
+            weight: 1.0
+        }
+    }
+}
+
+
+/// Global resource that determines how fast entities with a [`Weight`] will fall.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Gravity {
+    pub gravity: f32
+}
+
 
 // ----------------- Systems -----------------
 
@@ -70,7 +91,7 @@ pub fn apply_velocity(mut query: Query<(&mut Position, &Velocity)>) {
     }
 }
 
-// Synchronizes an Transformwith an [`AABB`]'s center.
+// Synchronizes a [`Transform`] with a [`Position`].
 pub fn sync_transform(mut query: Query<(&Position, &mut Transform)>) {
 for (position, mut transform) in query.iter_mut() {
         let position = Vec3::new(
@@ -79,5 +100,15 @@ for (position, mut transform) in query.iter_mut() {
             position.0.z.round()
         );
         *transform = transform.with_translation(position);
+    }
+}
+
+pub fn apply_gravity(
+    gravity: Res<Gravity>,
+    mut entities: Query<(&Weight, &mut Velocity)>
+) {
+    for (weight, mut velocity) in entities.iter_mut() {
+        let vel = &mut velocity.0;
+        vel.y -= gravity.gravity * weight.weight;
     }
 }

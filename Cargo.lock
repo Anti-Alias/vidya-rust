@@ -2937,6 +2937,7 @@ dependencies = [
  "bevy",
  "log",
  "tiled",
+ "uuid",
 ]
 
 [[package]]

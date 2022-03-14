@@ -1,4 +1,4 @@
-use std::fmt::{self, Formatter};
+use std::fmt;
 
 use bevy::{prelude::*, utils::HashMap};
 
@@ -14,36 +14,44 @@ impl Plugin for AnimationPlugin {
 
 /// A component consisting of a set of indexed sprite animations
 #[derive(Component, Debug, Clone)]
-pub struct SpriteAnimationSet {
-    animations: HashMap<AnimationHandle, SpriteAnimation>,  // All animations stored
-    current_handle: AnimationHandle,                        // Handle to current animation playing/looping
-    frame_index: usize,                                     // Current frame in the animation playing/looping
-    handle_counter: u32                                     // Counter used for generating unique handle
+pub struct AnimationSet {
+    animations: Vec<Animation>,         // All animations stored
+    groups: Vec<Vec<AnimationHandle>>,  // All animation groups stored
+    current_animation: AnimationHandle, // Handle to current animation playing/looping
+    frame: usize                        // Current frame in the animation playing/looping
 }
 
-impl SpriteAnimationSet {
+impl AnimationSet {
 
     // Creates empty animation set
     pub fn new() -> Self {
         Self {
-            animations: HashMap::default(),
-            current_handle: AnimationHandle(0),
-            frame_index: 0,
-            handle_counter: 0
+            animations: Vec::new(),
+            groups: Vec::new(),
+            current_animation: AnimationHandle(0),
+            frame: 0
         }
     }
 
     /// Current frame index of current animation.
     /// 0 if there are no animations present.
-    pub fn frame_index(&self) -> usize { self.frame_index }
+    pub fn frame_index(&self) -> usize { self.frame }
 
     /// Sets frame index of current animation
     pub fn set_frame_index(&mut self, frame_index: usize) -> Result<(), AnimationError> {
-        let current_anim = &self.animations[&self.current_handle];
-        if frame_index > current_anim.0.len() {
-            return Err(AnimationError::FrameOutOfBounds);
+        match self.current_animation() {
+            Some(anim) => {
+                if frame_index >= anim.0.len() {
+                    return Err(AnimationError::FrameOutOfBounds);
+                }
+            },
+            None => {
+                if frame_index != 0 {
+                    return Err(AnimationError::FrameOutOfBounds);
+                }
+            }
         }
-        self.frame_index = frame_index;
+        self.frame = frame_index;
         Ok(())
     }
 
@@ -51,55 +59,59 @@ impl SpriteAnimationSet {
     pub fn advance(&mut self, frames: usize) {
         if frames == 0 { return; }
         if let Some(anim) = self.current_animation() {
-            self.frame_index = (self.frame_index + frames) % anim.0.len();
+            self.frame = (self.frame + frames) % anim.0.len();
         }
     }
 
     /// Sets frame index to 0.
     pub fn reset(&mut self) {
-        self.frame_index = 0;
+        self.frame = 0;
     }
 
     /// Adds an animation, and returns a handle to that animation
-    pub fn add_animation(&mut self, animation: SpriteAnimation) -> AnimationHandle {
-        let handle = AnimationHandle(self.handle_counter);
-        self.animations.insert(handle, animation);
-        self.handle_counter += 1;
-        handle
+    pub fn add_animation(&mut self, animation: Animation) -> AnimationHandle {
+        let len = self.animations.len();
+        self.animations.push(animation);
+        AnimationHandle(len)
     }
 
-    /// Removes an animation
-    pub fn remove_animation(&mut self, handle: AnimationHandle) -> Result<SpriteAnimation, AnimationError> {
-        if self.handle_counter < handle.0 {
-            return Err(AnimationError::NoSuchAnimation);
-        }
-        Ok(self.animations.remove(&handle).unwrap())
+    /// Adds a group of animations
+    pub fn add_animation_group(&mut self, group: &[Animation]) -> AnimationGroupHandle {
+        let start = self.animations.len();
+        let end = start + group.len();
+        let group_anim_handles: Vec<AnimationHandle> = (start..end)
+            .map(|idx| AnimationHandle(idx))
+            .collect();
+        self.animations.extend_from_slice(group);
+        let group_handle = AnimationGroupHandle(self.groups.len());
+        self.groups.push(group_anim_handles);
+        group_handle
     }
 
     /// Gets animation reference from handle
-    pub fn animation(&self, handle: AnimationHandle) -> Option<&SpriteAnimation> {
-        self.animations.get(&handle)
+    pub fn animation(&self, handle: AnimationHandle) -> Option<&Animation> {
+        self.animations.get(handle.0)
     }
 
     /// Gets mutable animation reference from handle
-    pub fn animation_mut(&mut self, handle: AnimationHandle) -> Option<&mut SpriteAnimation> {
-        self.animations.get_mut(&handle)
+    pub fn animation_mut(&mut self, handle: AnimationHandle) -> Option<&mut Animation> {
+        self.animations.get_mut(handle.0)
     }
 
     /// Gets animation reference from current handle
-    pub fn current_animation(&self) -> Option<&SpriteAnimation> {
-        self.animation(self.current_handle)
+    pub fn current_animation(&self) -> Option<&Animation> {
+        self.animation(self.current_animation)
     }
 
     /// Gets mutable animation reference from current handle
-    pub fn current_animation_mut(&mut self) -> Option<&mut SpriteAnimation> {
-        self.animation_mut(self.current_handle)
+    pub fn current_animation_mut(&mut self) -> Option<&mut Animation> {
+        self.animation_mut(self.current_animation)
     }
 
     /// Current frame of current animation
     pub fn current_frame(&self) -> Option<Frame> {
         let anim = self.current_animation()?;
-        Some(anim.0[self.frame_index])
+        Some(anim.0[self.frame])
     }
 
     /// Handle to current animation.
@@ -109,17 +121,56 @@ impl SpriteAnimationSet {
             None
         }
         else {
-            Some(self.current_handle)
+            Some(self.current_animation)
         }
     }
 
     /// Sets the current animation to be played/looped
     /// Sets frame to 0.
     pub fn set_animation(&mut self, handle: AnimationHandle) -> Result<(), AnimationError>  {
-        if self.handle_counter < handle.0 {
+        if handle.0 >= self.animations.len() {
             return Err(AnimationError::NoSuchAnimation);
         }
-        self.current_handle = handle;
+        self.frame = 0;
+        self.current_animation = handle;
+        Ok(())
+    }
+
+    /// Gets the animation handle of a grouped animation
+    pub fn get_grouped_animation_handle(&self, group_handle: AnimationGroupHandle, index: usize) -> Result<AnimationHandle, AnimationError> {
+        if group_handle.0 >= self.groups.len() {
+            return Err(AnimationError::NoSuchAnimation);
+        }
+        let group = &self.groups[group_handle.0];
+        if index >= group.len() {
+            return Err(AnimationError::NoSuchAnimation);
+        }
+        Ok(group[index])
+    }
+
+    /// Sets the current animation to be played/looped based on a group handle and index
+    /// Sets frame to 0.
+    pub fn set_grouped_animation(
+        &mut self,
+        group_handle: AnimationGroupHandle,
+        index: usize,
+        preserve_frame_index: bool
+    ) -> Result<(), AnimationError> {
+
+        self.current_animation = self.get_grouped_animation_handle(group_handle, index)?;
+
+        // Determines what to do with current frame index
+        if preserve_frame_index {
+            let current_anim = &self.animations[self.current_animation.0];
+            if self.frame > current_anim.0.len() {
+                self.frame = 0;
+            }
+        }
+        else {
+            self.frame = 0;
+        }
+
+        // Done
         Ok(())
     }
 }
@@ -129,14 +180,14 @@ pub struct AnimationTimer(pub Timer);
 
 #[derive(Bundle)]
 pub struct SpriteAnimationBundle {
-    pub animation_set: SpriteAnimationSet,
+    pub animation_set: AnimationSet,
     pub timer: AnimationTimer,
     #[bundle]
     pub sprite_bundle: Sprite3DBundle
 }
 impl SpriteAnimationBundle {
     pub fn new(
-        animation_set: SpriteAnimationSet,
+        animation_set: AnimationSet,
         timer: AnimationTimer,
         material: Handle<StandardMaterial>,
         transform: Transform,
@@ -166,8 +217,8 @@ pub struct Frame {
 
 /// A set of frames
 #[derive(Debug, Clone, PartialEq)]
-pub struct SpriteAnimation(pub Vec<Frame>);
-impl SpriteAnimation {
+pub struct Animation(pub Vec<Frame>);
+impl Animation {
 
     // Constructs a [`SpriteAnimation`] an image, assuming that the sprites are aligned from left to right, top to bottom with no spacing between.
     pub fn from_grid(
@@ -220,14 +271,18 @@ impl SpriteAnimation {
     }
 }
 
-/// Represents a handle to a [`SpriteAnimation`] in a [`SpriteAnimationSet`]
+/// Represents a handle to an [`Animation`] in an [`AnimationSet`]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct AnimationHandle(u32);
+pub struct AnimationHandle(usize);
+
+/// Represents a handle to a group of animation variants in an [`AnimationSet`]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct AnimationGroupHandle(usize);
 
 /// Updates animation entities
 fn update_animations(
     time: Res<Time>,
-    mut anim_entities: Query<(&mut Sprite3D, &mut SpriteAnimationSet, &mut AnimationTimer)>
+    mut anim_entities: Query<(&mut Sprite3D, &mut AnimationSet, &mut AnimationTimer)>
 ) {
     for (mut sprite, mut anim_set, mut anim_timer) in anim_entities.iter_mut() {
         let timer = &mut anim_timer.0;
@@ -263,33 +318,33 @@ impl fmt::Display for AnimationError {
 
 #[test]
 fn test_from_grid() {
-    let expected = SpriteAnimation(vec![Frame {
+    let expected = Animation(vec![Frame {
         size: Vec2::new(32.0, 32.0),
         region: Region {
             min: Vec2::new(0.0, 0.0),
             max: Vec2::new(1.0, 1.0)
         }
     }]);
-    let actual = SpriteAnimation::from_grid(32, 32, 32, 32);
+    let actual = Animation::from_grid(0, 0, 32, 32, 32, 32, 100);
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_from_grid_2() {
-    let expected = SpriteAnimation(vec![Frame {
+    let expected = Animation(vec![Frame {
         size: Vec2::new(32.0, 32.0),
         region: Region {
             min: Vec2::new(0.0, 0.0),
             max: Vec2::new(0.50793654, 0.50793654)
         }
     }]);
-    let actual = SpriteAnimation::from_grid(32, 32, 63, 63);
+    let actual = Animation::from_grid(0, 0, 32, 32, 63, 63, 100);
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_from_grid_3() {
-    let expected = SpriteAnimation(vec![
+    let expected = Animation(vec![
         Frame {
             size: Vec2::new(32.0, 32.0),
             region: Region {
@@ -319,6 +374,6 @@ fn test_from_grid_3() {
             }
         }
     ]);
-    let actual = SpriteAnimation::from_grid(32, 32, 64, 64);
+    let actual = Animation::from_grid(0, 0, 32, 32, 64, 64, 100);
     assert_eq!(expected, actual);
 }

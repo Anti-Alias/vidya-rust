@@ -8,3 +8,4 @@ bevy = { version = "0.6", features=["dynamic"] }
 tiled = { git = "https://github.com/mapeditor/rs-tiled", branch = "master" }  # Temporary until 1.0 release
 anyhow = "1.0"
 log = "0.4"
+uuid = "0.8.2"

@@ -44,6 +44,7 @@ pub enum AppLabel {
     Input,
     Logic,
     PostLogic,
+    PhysicsGravity,
     PhysicsFriction,
     PhysicsVelocity,
     PhysicsSync

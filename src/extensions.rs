@@ -1,5 +1,7 @@
 use std::path::{ Path, PathBuf };
 
+use bevy::{prelude::AssetServer, pbr::{StandardMaterial, AlphaMode}};
+
 pub trait PathExt {
     fn relativize(&self, parent: impl AsRef<Path>) -> PathBuf;
 }
@@ -36,6 +38,26 @@ impl PathExt for PathBuf {
         self.as_path().relativize(parent)
     }
 }
+
+pub trait StandardMaterialExt {
+    fn from_image(
+        image_file: &str,
+        alpha_mode: AlphaMode,
+        assets: &AssetServer
+    ) -> StandardMaterial {
+        let image_handle = assets.load(image_file);
+        StandardMaterial {
+            base_color_texture: Some(image_handle),
+            metallic: 0.0,
+            reflectance: 0.0,
+            perceptual_roughness: 1.0,
+            alpha_mode,
+            unlit: true,
+            ..Default::default()
+        }
+    }
+}
+impl StandardMaterialExt for StandardMaterial {}
 
 
 #[test]

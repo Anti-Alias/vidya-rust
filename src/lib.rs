@@ -1,6 +1,6 @@
 pub mod app;
 pub mod animation;
-pub mod player;
+pub mod being;
 pub mod sprite;
 pub mod map;
 pub mod camera;

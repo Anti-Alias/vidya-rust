@@ -272,7 +272,7 @@ fn map_spawn_entities(
     let cam_width = 800.0;
     let cam_height = 450.0;
     let cam_up = Vec3::new(0.0, 1.0, 0.0);
-    let cam_pos = Vec3::new(16.0*10.0, 500.0, 200.0);
+    let cam_pos = Vec3::new(16.0*10.0, 1000.0, 800.0);
     let cam_target = Vec3::new(cam_pos.x, 0.0, cam_pos.z - cam_pos.y);
     let mut cam_bundle = OrthographicCameraBundle::new_3d();
     let proj = &mut cam_bundle.orthographic_projection;

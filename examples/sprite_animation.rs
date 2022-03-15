@@ -3,9 +3,8 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use vidya_rust::animation::{SpriteAnimationBundle, AnimationTimer, AnimationPlugin, Animation, AnimationSet};
-use vidya_rust::app::VidyaCorePlugin;
+use vidya_rust::app::{AppState, VidyaCorePlugin};
 use vidya_rust::sprite::SpritePlugin;
-use vidya_rust::map::AppState;
 
 fn main() {
     App::new()

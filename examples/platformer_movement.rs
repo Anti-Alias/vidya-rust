@@ -3,28 +3,63 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 
+use bevy::window::{WindowResizeConstraints, WindowMode};
 use vidya_rust::extensions::*;
 use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer, AnimationPlugin};
-use vidya_rust::app::VidyaCorePlugin;
-use vidya_rust::being::{BeingPlugin, Platformer, Being};
+use vidya_rust::app::{VidyaCorePlugin, VidyaPlugins};
+use vidya_rust::map::LoadMapEvent;
+use vidya_rust::platformer::{PlatformerPlugin, Platformer};
+use vidya_rust::being::Being;
 use vidya_rust::physics::{PhysicsPlugin, Velocity, Friction, Position};
+use vidya_rust::player::{PlayerPlugin, Player};
 use vidya_rust::sprite::SpritePlugin;
 use vidya_rust::app::AppState;
 
+/*
 fn main() {
     App::new()
-        .add_plugin(VidyaCorePlugin)
-        .add_plugin(SpritePlugin)
-        .add_plugin(AnimationPlugin)
-        .add_plugin(PhysicsPlugin)
-        .add_plugin(BeingPlugin)
+        .add_plugins(VidyaPlugins)
         .add_system_set(SystemSet::on_exit(AppState::AppStarting)
-            .with_system(spawn_being)
+            .with_system(spawn_player)
+        )
+        .run();
+}
+*/
+
+fn main() {
+    App::new()
+        .insert_resource(WindowDescriptor {
+            title: "vidya".to_string(),
+            width: 800.0,
+            height: 450.0,
+            position: None,
+            resize_constraints: WindowResizeConstraints::default(),
+            scale_factor_override: None,
+            vsync: true,
+            resizable: true,
+            decorations: true,
+            cursor_locked: false,
+            cursor_visible: true,
+            mode: WindowMode::Windowed,
+            transparent: false,
+        })
+        .add_plugins(VidyaPlugins)
+        .add_system_set(SystemSet::on_enter(AppState::AppRunning)
+            .with_system(load_map)
+            .with_system(spawn_player)
         )
         .run();
 }
 
-fn spawn_being(
+fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
+    
+    // Starts the app
+    log::debug!("Entered system 'load_map'");
+    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
+    log::debug!("Sent LoadMapEvent event");
+}
+
+fn spawn_player(
     assets: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands
@@ -52,25 +87,17 @@ fn spawn_being(
                 animation_set,
                 AnimationTimer(Timer::new(Duration::from_millis(1000/15), true)),
                 materials.add(player_mat),
-                Transform::from_xyz(-128.0, -128.0, 0.0).with_scale(Vec3::new(4.0, 4.0, 1.0)),
+                Transform::default(),
                 GlobalTransform::default()
             ))
-            .insert(Position(Vec3::new(-128.0, -128.0, 0.0)))
+            .insert(Position(Vec3::new(0.0, -16.0, 10.0)))
             .insert(Velocity::default())
             .insert(Friction {
                 xz: 0.7,
                 y: 1.0
             })
+            .insert(Player)
             .insert(Being::default())
-            .insert(Platformer {
-                top_speed: 10.0
-            })
+            .insert(Platformer::new(10.0))
         ;
-    
-        // Spawns camera
-        let mut camera = OrthographicCameraBundle::new_3d();
-        camera.transform = Transform::from_xyz(0.0, 0.0, 100.0)
-            .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y);
-        camera.orthographic_projection.scaling_mode = ScalingMode::WindowSize;
-        commands.spawn_bundle(camera);
 }

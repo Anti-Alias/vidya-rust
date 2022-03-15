@@ -1,25 +1,10 @@
-use bevy::prelude::*;
-
-use crate::app::{AppState, AppLabel};
-use crate::physics::{Velocity, Friction};
-
-/// Plugin for "Being" behavior
-pub struct BeingPlugin;
-impl Plugin for BeingPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_system(update_platformers.label(AppLabel::Logic))
-            )
-        ;
-    }
-}
+pub use bevy::prelude::*;
 
 /// Component that allows an Entity to face a direction and hold state
 /// IE: Player, Creatures, etc
 #[derive(Component, Default)]
 pub struct Being {
-    /// Direction being is facing in radians
+    /// Direction being is facing in radians, rotating along the Y axis in a counter-clockwise motion
     pub direction: f32,
     /// Current high-level action that entity is doing.
     /// Used to control what behaviors an Entity can and can't be doing at any given moment
@@ -27,6 +12,8 @@ pub struct Being {
 }
 
 impl Being {
+
+    /// Rounded 8-way direction the [`Being`] is facing
     pub fn direction(&self) -> Direction {
         let pi = std::f32::consts::PI;
         let pi2 = pi*2.0;
@@ -59,6 +46,7 @@ impl Being {
         }
     }
 
+    /// Rounded 4-way direction the [`Being`] is facing
     pub fn to_cardinal_direction(&self) -> CardinalDirection {
         let pi = std::f32::consts::PI;
         let pi2 = pi*2.0;
@@ -83,42 +71,45 @@ impl Being {
     }
 }
 
-/// Tag component that lets the engine know that this is the player
-#[derive(Component, Debug, Copy, Clone)]
-pub struct Player;
-
-
-/// Signal that an entity can receive.
-/// Represents an instruction to carry out.
-/// Either converted from user input, or emitted directly from an AI.
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Signal {
-    Move { direction: f32, speed: f32 },
-    Jump { velocity: f32 }
-}
-
-#[derive(Component, Debug)]
-pub struct Platformer {
-    pub top_speed: f32
-}
-
-/// State a being is in
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum State {
-    Idle,
-    Running,
-    Jumping,
-    Attacking
-}
-
-impl Default for State {
-    fn default() -> Self { Self::Idle }
-}
-
 /// 8-way direction
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Direction { E, NE, N, NW, W, SW, S, SE }
 impl Direction {
+
+    pub fn from_keyboard(input: &Input<KeyCode>) -> Option<Self> {
+        let mut x = 0;
+        let mut y = 0;
+        if input.pressed(KeyCode::Up) { y += 1; }
+        if input.pressed(KeyCode::Down) { y -= 1; }
+        if input.pressed(KeyCode::Left) { x -= 1; }
+        if input.pressed(KeyCode::Right) { x += 1; }
+        match (x, y) {
+            (1, 0) => Some(Self::E),
+            (1, 1) => Some(Self::NE),
+            (0, 1) => Some(Self::N),
+            (-1, 1) => Some(Self::NW),
+            (-1, 0) => Some(Self::W),
+            (-1, -1) => Some(Self::SW),
+            (0, -1) => Some(Self::S),
+            (1, -1) => Some(Self::SE),
+            _ => None
+        }
+    }
+
+    pub fn to_radians(&self) -> f32 {
+        use std::f32::consts::PI;
+        match self {
+            Self::E => 0.0*PI,
+            Self::NE => 0.25*PI,
+            Self::N => 0.5*PI,
+            Self::NW => 0.75*PI,
+            Self::W => 1.0*PI,
+            Self::SW => 1.25*PI,
+            Self::S => 1.5*PI,
+            Self::SE => 1.75*PI
+        }
+    }
+
     pub fn to_index(&self) -> usize {
         match self {
             Self::E => 0,
@@ -164,15 +155,14 @@ impl CardinalDirection {
     }
 }
 
-fn update_platformers(mut platformer_entities: Query<(&Platformer, &mut Velocity, &Friction)>) {
-    for (platformer, mut velocity, friction) in platformer_entities.iter_mut() {
-        let speed = platformer.top_speed / friction.xz - platformer.top_speed;
-        velocity.0.x += speed;
-    }
+/// State a being is in
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum State {
+    Idle,
+    Running,
+    Jumping,
+    Attacking
 }
-
-// ts = 10
-// f = 0.9
-// (ts + s) * f = ts
-// ts + s = ts / f
-// s = ts/f - ts
+impl Default for State {
+    fn default() -> Self { Self::Idle }
+}

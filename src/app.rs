@@ -1,5 +1,7 @@
 use crate::animation::AnimationPlugin;
-use crate::being::BeingPlugin;
+use crate::platformer::PlatformerPlugin;
+use crate::player::PlayerPlugin;
+use crate::sprite::SpritePlugin;
 use crate:: {
     camera::CameraPlugin,
     map::MapPlugin,
@@ -16,11 +18,14 @@ impl PluginGroup for VidyaPlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
         builder.add(VidyaCorePlugin);
         builder.add(AnimationPlugin);
+        builder.add(SpritePlugin);
         builder.add(MapPlugin);
         builder.add(CameraPlugin);
         builder.add(PhysicsPlugin);
-        builder.add(BeingPlugin);
+        builder.add(PlatformerPlugin);
         builder.add(DebugPlugin);
+        builder.add(PlatformerPlugin);
+        builder.add(PlayerPlugin);
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::animation::AnimationPlugin;
-pub use crate:: {
+use crate::being::BeingPlugin;
+use crate:: {
     camera::CameraPlugin,
     map::MapPlugin,
     debug::DebugPlugin,
@@ -18,6 +19,7 @@ impl PluginGroup for VidyaPlugins {
         builder.add(MapPlugin);
         builder.add(CameraPlugin);
         builder.add(PhysicsPlugin);
+        builder.add(BeingPlugin);
         builder.add(DebugPlugin);
     }
 }

@@ -1,16 +1,23 @@
 use bevy::prelude::*;
 
+use crate::app::{AppState, AppLabel};
+use crate::physics::{Velocity, Friction};
+
 /// Plugin for "Being" behavior
 pub struct BeingPlugin;
 impl Plugin for BeingPlugin {
     fn build(&self, app: &mut App) {
-
+        app
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .with_system(update_platformers.label(AppLabel::Logic))
+            )
+        ;
     }
 }
 
 /// Component that allows an Entity to face a direction and hold state
 /// IE: Player, Creatures, etc
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Being {
     /// Direction being is facing in radians
     pub direction: f32,
@@ -76,6 +83,26 @@ impl Being {
     }
 }
 
+/// Tag component that lets the engine know that this is the player
+#[derive(Component, Debug, Copy, Clone)]
+pub struct Player;
+
+
+/// Signal that an entity can receive.
+/// Represents an instruction to carry out.
+/// Either converted from user input, or emitted directly from an AI.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Signal {
+    Move { direction: f32, speed: f32 },
+    Jump { velocity: f32 }
+}
+
+#[derive(Component, Debug)]
+pub struct Platformer {
+    pub top_speed: f32
+}
+
+/// State a being is in
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum State {
     Idle,
@@ -84,7 +111,11 @@ pub enum State {
     Attacking
 }
 
-/// Explicit directions that can be faced
+impl Default for State {
+    fn default() -> Self { Self::Idle }
+}
+
+/// 8-way direction
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Direction { E, NE, N, NW, W, SW, S, SE }
 impl Direction {
@@ -111,6 +142,7 @@ impl Direction {
     }
 }
 
+/// 4-way direction
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum CardinalDirection { E, N, W, S }
 impl CardinalDirection {
@@ -131,3 +163,16 @@ impl CardinalDirection {
         }
     }
 }
+
+fn update_platformers(mut platformer_entities: Query<(&Platformer, &mut Velocity, &Friction)>) {
+    for (platformer, mut velocity, friction) in platformer_entities.iter_mut() {
+        let speed = platformer.top_speed / friction.xz - platformer.top_speed;
+        velocity.0.x += speed;
+    }
+}
+
+// ts = 10
+// f = 0.9
+// (ts + s) * f = ts
+// ts + s = ts / f
+// s = ts/f - ts

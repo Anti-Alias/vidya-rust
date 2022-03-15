@@ -6,6 +6,7 @@ pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app
+            .insert_resource(Gravity::default())
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
                 .with_system(apply_friction.label(AppLabel::PhysicsFriction))
                 .with_system(apply_gravity.label(AppLabel::PhysicsGravity).after(AppLabel::PhysicsFriction))
@@ -16,11 +17,11 @@ impl Plugin for PhysicsPlugin {
     }
 }
 
-#[derive(Component, PartialEq, Debug, Copy, Clone)]
+#[derive(Component, PartialEq, Debug, Copy, Clone, Default)]
 pub struct Position(pub Vec3);
 
 /// Velocity of an entity
-#[derive(Component, PartialEq, Debug, Copy, Clone)]
+#[derive(Component, PartialEq, Debug, Copy, Clone, Default)]
 pub struct Velocity(pub Vec3);
 
 /// Friction of an entity
@@ -68,6 +69,9 @@ impl Default for Weight {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Gravity {
     pub gravity: f32
+}
+impl Default for Gravity {
+    fn default() -> Self { Self{ gravity: 1.0 }}
 }
 
 

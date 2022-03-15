@@ -5,7 +5,7 @@ use bevy::asset::HandleId;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};
 
-use crate::map::AppState;
+use crate::app::AppState;
 
 /// Plugin dedicated to rendering plain sprites in 3D
 pub struct SpritePlugin;

@@ -9,10 +9,9 @@ use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
 use std::path::PathBuf;
 
-pub use crate::app::{ AppLabel, AppState };
-pub use crate::physics::{ Position, Velocity, Friction };
-pub use crate::camera::CameraPlugin;
-pub use crate::debug::Floater;
+use crate::app::{ AppLabel, AppState };
+use crate::physics::{ Position, Velocity, Friction };
+use crate::debug::Floater;
 use crate::extensions::*;
 
 use traverse::traverse_map;

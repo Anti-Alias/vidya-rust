@@ -4,17 +4,19 @@ use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 
 use vidya_rust::extensions::*;
-use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer, AnimationPlugin, AnimationHandle};
+use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer, AnimationPlugin};
 use vidya_rust::app::VidyaCorePlugin;
-use vidya_rust::being::BeingPlugin;
+use vidya_rust::being::{BeingPlugin, Platformer, Being};
+use vidya_rust::physics::{PhysicsPlugin, Velocity, Friction, Position};
 use vidya_rust::sprite::SpritePlugin;
-use vidya_rust::map::AppState;
+use vidya_rust::app::AppState;
 
 fn main() {
     App::new()
         .add_plugin(VidyaCorePlugin)
         .add_plugin(SpritePlugin)
         .add_plugin(AnimationPlugin)
+        .add_plugin(PhysicsPlugin)
         .add_plugin(BeingPlugin)
         .add_system_set(SystemSet::on_exit(AppState::AppStarting)
             .with_system(spawn_being)
@@ -44,14 +46,26 @@ fn spawn_being(
         let walk_handle = animation_set.add_animation_group(&[walk_e, walk_n, walk_w, walk_s]);
     
         // Spawns entity from bundle
-        commands
-            .spawn_bundle(SpriteAnimationBundle::new(
+        let e = commands
+            .spawn()
+            .insert_bundle(SpriteAnimationBundle::new(
                 animation_set,
                 AnimationTimer(Timer::new(Duration::from_millis(1000/15), true)),
                 materials.add(player_mat),
                 Transform::from_xyz(-128.0, -128.0, 0.0).with_scale(Vec3::new(4.0, 4.0, 1.0)),
                 GlobalTransform::default()
-            ));
+            ))
+            .insert(Position(Vec3::new(-128.0, -128.0, 0.0)))
+            .insert(Velocity::default())
+            .insert(Friction {
+                xz: 0.7,
+                y: 1.0
+            })
+            .insert(Being::default())
+            .insert(Platformer {
+                top_speed: 10.0
+            })
+        ;
     
         // Spawns camera
         let mut camera = OrthographicCameraBundle::new_3d();

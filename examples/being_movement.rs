@@ -42,11 +42,11 @@ fn spawn_being(
         let walk_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6);
         let walk_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6);
         let walk_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6);
-        let idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
-        let walk_handle = animation_set.add_animation_group(&[walk_e, walk_n, walk_w, walk_s]);
+        let _idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
+        let _walk_handle = animation_set.add_animation_group(&[walk_e, walk_n, walk_w, walk_s]);
     
         // Spawns entity from bundle
-        let e = commands
+        commands
             .spawn()
             .insert_bundle(SpriteAnimationBundle::new(
                 animation_set,

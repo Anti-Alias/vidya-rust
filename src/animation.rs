@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::prelude::*;
 
 use crate::{app::AppState, sprite::{Region, Sprite3D, Sprite3DBundle}};
 

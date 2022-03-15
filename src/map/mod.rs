@@ -9,7 +9,7 @@ use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
 use std::path::PathBuf;
 
-use crate::app::{ AppLabel, AppState };
+use crate::app::AppState;
 use crate::physics::{ Position, Velocity, Friction };
 use crate::debug::Floater;
 use crate::extensions::*;

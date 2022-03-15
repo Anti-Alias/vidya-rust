@@ -262,6 +262,18 @@ fn map_spawn_entities(
         directional_light: DirectionalLight {
             color: Color::WHITE,
             illuminance: 27500.0,
+            shadow_projection: OrthographicProjection {
+                left: -8.0*16.0,
+                right: 8.0*16.0,
+                bottom: -8.0*16.0,
+                top: 8.0*16.0,
+                near: 0.1,
+                far: 10000.0,
+                ..Default::default()
+            },
+            shadow_depth_bias: 0.0,
+            shadow_normal_bias: 0.0,
+            shadows_enabled: true,
             ..Default::default()
         },
         transform: Transform::from_translation(Vec3::new(500.0, 1000.0, 1000.0)).looking_at(Vec3::new(500.0, -1.0, -1.0), Vec3::Y),

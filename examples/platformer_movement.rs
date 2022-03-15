@@ -90,7 +90,7 @@ fn spawn_player(
                 Transform::default(),
                 GlobalTransform::default()
             ))
-            .insert(Position(Vec3::new(0.0, -16.0, 10.0)))
+            .insert(Position(Vec3::new(0.0, 0.0, 0.0)))
             .insert(Velocity::default())
             .insert(Friction {
                 xz: 0.7,

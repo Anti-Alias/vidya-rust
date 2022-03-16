@@ -33,10 +33,6 @@ impl PluginGroup for VidyaPlugins {
     }
 }
 
-/// Because Bevy's Time struct is busted
-pub struct BetterTime(Instant);
-
-
 // Core plugin
 #[derive(Default)]
 pub struct VidyaCorePlugin;
@@ -49,7 +45,6 @@ impl Plugin for VidyaCorePlugin {
                 side: Side::Client,
                 ticks_per_second: 60
             })
-            .insert_resource(BetterTime(Instant::now()))
             .add_startup_system_set(SystemSet::new()
                 .with_system(start_app)
                 .with_system(configure_resources)
@@ -60,7 +55,17 @@ impl Plugin for VidyaCorePlugin {
 }
 
 /// Responsible for keeping track of in-game ticks at 60tps
-pub struct TickTimer(pub Timer);
+pub struct TickTimer(Timer);
+impl TickTimer {
+    pub fn times_finished(&self) -> u32 { self.0.times_finished() }
+    pub fn finished(&self) -> bool { self.0.finished() }
+    pub fn t(&self) -> f32 {
+        let duration = self.0.duration();
+        let elapsed = self.0.elapsed();
+        let t = elapsed.as_secs_f32() / duration.as_secs_f32();
+        t
+    }
+}
 
 /// Labels used for scheduling the timing of systems in a single tick
 #[derive(SystemLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -134,14 +139,7 @@ fn configure_resources(
 }
 
 /// Updates main tick timer
-fn update_tick_timer(mut time: ResMut<BetterTime>, mut tick_timer: ResMut<TickTimer>) {
-
-    // Comptues delta and updates time
-    let now = Instant::now();
-    let delta = now - time.0;
-    time.0 = now;
-
-    // Applies delta to timer
-    tick_timer.0.tick(delta);
-    log::info!("Delta: {:?}, Times finished: {}", delta, tick_timer.0.times_finished());
+fn update_tick_timer(time: Res<Time>, mut tick_timer: ResMut<TickTimer>) {
+    tick_timer.0.tick(time.delta());
+    //log::info!("Updated tick timer");
 }

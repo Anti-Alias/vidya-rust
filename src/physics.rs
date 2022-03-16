@@ -8,7 +8,7 @@ impl Plugin for PhysicsPlugin {
         app
             .insert_resource(Gravity::default())
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_system(apply_gravity.label(AppLabel::Logic).after(AppLabel::Input).after(AppLabel::Tick))
+                .with_system(apply_gravity.label(AppLabel::Logic).after(AppLabel::Input).after(AppLabel::Input))
                 .with_system(apply_friction.label(AppLabel::PhysicsFriction).after(AppLabel::Logic))
                 .with_system(apply_velocity.label(AppLabel::PhysicsVelocity).after(AppLabel::PhysicsFriction))
             )
@@ -103,7 +103,7 @@ pub fn apply_gravity(
     gravity: Res<Gravity>,
     mut entities: Query<(&Weight, &mut Velocity)>
 ) {
-    for _ in 0..tick_timer.0.times_finished() {
+    for _ in 0..tick_timer.times_finished() {
         for (weight, mut velocity) in entities.iter_mut() {
             let vel = &mut velocity.0;
             vel.y -= gravity.gravity * weight.0;
@@ -117,7 +117,7 @@ pub fn apply_friction(
     tick_timer: Res<TickTimer>,
     mut query: Query<(&mut Velocity, &Friction), With<Position>>
 ) {
-    for _ in 0..tick_timer.0.times_finished() {
+    for _ in 0..tick_timer.times_finished() {
         for (mut velocity, friction) in query.iter_mut() {
             let vel = &mut velocity.0;
             vel.x *= friction.xz;
@@ -132,8 +132,7 @@ pub fn apply_velocity(
     tick_timer: Res<TickTimer>,
     mut query: Query<(&mut Position, &mut PreviousPosition, &Velocity)>
 ) {
-    log::info!("Physics running: {}", tick_timer.0.times_finished() > 0);
-    for _ in 0..tick_timer.0.times_finished() {
+    for _ in 0..tick_timer.times_finished() {
         for (mut position, mut prev_position, velocity) in query.iter_mut() {
             prev_position.0 = position.0;
             position.0 += velocity.0;

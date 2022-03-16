@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::app::AppState;
+use crate::app::{AppState, TickTimer};
 use crate::physics::{ Velocity };
 
 pub struct DebugPlugin;
@@ -19,13 +19,16 @@ impl Plugin for DebugPlugin {
 pub struct Floater { pub speed: f32 }
 
 fn move_floater(
+    tick_timer: Res<TickTimer>,
     mut query: Query<(&mut Velocity, &Floater)>,
     keys: Res<Input<KeyCode>>
 ) {
-    for (mut velocity, floater) in query.iter_mut() {
-        if keys.pressed(KeyCode::W) { velocity.0.z -= floater.speed; }
-        if keys.pressed(KeyCode::A) { velocity.0.x -= floater.speed; }
-        if keys.pressed(KeyCode::S) { velocity.0.z += floater.speed; }
-        if keys.pressed(KeyCode::D) { velocity.0.x += floater.speed; }
+    for _ in 0..tick_timer.times_finished() {
+        for (mut velocity, floater) in query.iter_mut() {
+            if keys.pressed(KeyCode::W) { velocity.0.z -= floater.speed; }
+            if keys.pressed(KeyCode::A) { velocity.0.x -= floater.speed; }
+            if keys.pressed(KeyCode::S) { velocity.0.z += floater.speed; }
+            if keys.pressed(KeyCode::D) { velocity.0.x += floater.speed; }
+        }
     }
 }

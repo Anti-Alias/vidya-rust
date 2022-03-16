@@ -88,6 +88,6 @@ fn spawn_player(
             ))
             .insert(Player)
             .insert(Being::default())
-            .insert(Platformer::new(10.0))
+            .insert(Platformer::new(3.0))
         ;
 }

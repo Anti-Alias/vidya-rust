@@ -9,20 +9,9 @@ use vidya_rust::app::VidyaPlugins;
 use vidya_rust::map::LoadMapEvent;
 use vidya_rust::platformer::Platformer;
 use vidya_rust::being::Being;
-use vidya_rust::physics::{Velocity, Friction, Position};
+use vidya_rust::physics::{Velocity, Friction, Position, PhysicsBundle, Weight};
 use vidya_rust::player::Player;
 use vidya_rust::app::AppState;
-
-/*
-fn main() {
-    App::new()
-        .add_plugins(VidyaPlugins)
-        .add_system_set(SystemSet::on_exit(AppState::AppStarting)
-            .with_system(spawn_player)
-        )
-        .run();
-}
-*/
 
 fn main() {
     App::new()
@@ -88,12 +77,15 @@ fn spawn_player(
                 Transform::default(),
                 GlobalTransform::default()
             ))
-            .insert(Position(Vec3::new(256.0, -20.0, -256.0)))
-            .insert(Velocity::default())
-            .insert(Friction {
-                xz: 0.5,
-                y: 1.0
-            })
+            .insert_bundle(PhysicsBundle::new(
+                Position(Vec3::new(256.0, -20.0, -256.0)),
+                Velocity::default(),
+                Friction {
+                    xz: 0.5,
+                    y: 1.0,
+                },
+                Weight(0.0)
+            ))
             .insert(Player)
             .insert(Being::default())
             .insert(Platformer::new(3.0))

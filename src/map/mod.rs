@@ -10,6 +10,7 @@ use std::iter::Iterator;
 use std::path::PathBuf;
 
 use crate::app::AppState;
+use crate::camera::CameraBundle;
 use crate::physics::{ Position, Velocity, Friction };
 use crate::debug::Floater;
 use crate::extensions::*;
@@ -54,7 +55,6 @@ impl Plugin for MapPlugin {
                 .with_system(map_finish_loading)
             )
 
-            // 
             .add_system_set(SystemSet::on_enter(AppState::MapFiringEvents)
                 .with_system(map_fire_events)
             )
@@ -272,8 +272,8 @@ fn map_spawn_entities(
     let cam_width = 800.0;
     let cam_height = 450.0;
     let cam_pos = Vec3::new(16.0*10.0, 1000.0, 600.0);
-    let mut cam_bundle = OrthographicCameraBundle::new_3d();
-    let proj = &mut cam_bundle.orthographic_projection;
+    let mut ortho_bundle = OrthographicCameraBundle::new_3d();
+    let proj = &mut ortho_bundle.orthographic_projection;
     proj.scaling_mode = ScalingMode::None;
     proj.left = -cam_width / 2.0;
     proj.right = cam_width / 2.0;
@@ -281,14 +281,16 @@ fn map_spawn_entities(
     proj.top = cam_height / 2.0;
     proj.near = 1.0;
     proj.far = 10000.0;
-    cam_bundle.transform = Transform::from_translation(cam_pos)
+    ortho_bundle.transform = Transform::from_translation(cam_pos)
         .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
     commands
-        .spawn_bundle(cam_bundle)
-        .insert(Position(cam_pos))
-        .insert(Friction { xz: 0.8, y: 0.8 })
-        .insert(Velocity(Vec3::ZERO))
+        .spawn_bundle(CameraBundle::new(
+            ortho_bundle,
+            Position(cam_pos),
+            Velocity(Vec3::ZERO),
+            Friction { xz: 0.8, y: 0.8 }
+        ))
         .insert(Floater { speed: 2.0 });
 
     // Removes staging resources

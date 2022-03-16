@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::app::AppState;
+use crate::{app::AppState, physics::{Velocity, Friction, PreviousPosition, Position}};
 
 
 pub struct CameraPlugin;
@@ -9,8 +9,34 @@ impl Plugin for CameraPlugin {
         app
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
             .with_system(camera_rotate)
-        )
-        ;
+        );
+    }
+}
+
+/// Bundle of camera components
+#[derive(Bundle)]
+pub struct CameraBundle {
+    #[bundle]
+    ortho_bundle: OrthographicCameraBundle,
+    position: Position,
+    prev_position: PreviousPosition,
+    velocity: Velocity,
+    friction: Friction
+}
+impl CameraBundle {
+    pub fn new(
+        ortho_bundle: OrthographicCameraBundle,
+        position: Position,
+        velocity: Velocity,
+        friction: Friction
+    ) -> Self {
+        Self {
+            ortho_bundle,
+            position,
+            prev_position: PreviousPosition(position.0),
+            velocity,
+            friction
+        }
     }
 }
 

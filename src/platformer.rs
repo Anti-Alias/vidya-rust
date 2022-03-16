@@ -12,7 +12,7 @@ impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_system(process_signals.label(AppLabel::Logic))
+                .with_system(process_signals.label(AppLabel::Logic).after(AppLabel::Input))
             )
         ;
     }

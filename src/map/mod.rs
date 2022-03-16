@@ -262,30 +262,16 @@ fn map_spawn_entities(
         directional_light: DirectionalLight {
             color: Color::WHITE,
             illuminance: 27500.0,
-            shadow_projection: OrthographicProjection {
-                left: -8.0*16.0,
-                right: 8.0*16.0,
-                bottom: -8.0*16.0,
-                top: 8.0*16.0,
-                near: 0.1,
-                far: 10000.0,
-                ..Default::default()
-            },
-            shadow_depth_bias: 0.0,
-            shadow_normal_bias: 0.0,
-            shadows_enabled: true,
             ..Default::default()
         },
-        transform: Transform::from_translation(Vec3::new(500.0, 1000.0, 1000.0)).looking_at(Vec3::new(500.0, -1.0, -1.0), Vec3::Y),
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::Y),
         ..Default::default()
     });
 
     // Spawns camera
     let cam_width = 800.0;
     let cam_height = 450.0;
-    let cam_up = Vec3::new(0.0, 1.0, 0.0);
-    let cam_pos = Vec3::new(16.0*10.0, 1000.0, 800.0);
-    let cam_target = Vec3::new(cam_pos.x, 0.0, cam_pos.z - cam_pos.y);
+    let cam_pos = Vec3::new(16.0*10.0, 1000.0, 600.0);
     let mut cam_bundle = OrthographicCameraBundle::new_3d();
     let proj = &mut cam_bundle.orthographic_projection;
     proj.scaling_mode = ScalingMode::None;
@@ -296,7 +282,7 @@ fn map_spawn_entities(
     proj.near = 1.0;
     proj.far = 10000.0;
     cam_bundle.transform = Transform::from_translation(cam_pos)
-        .looking_at(cam_target, cam_up)
+        .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
     commands
         .spawn_bundle(cam_bundle)

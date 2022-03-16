@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy::asset::HandleId;
+use bevy::render::primitives::Aabb;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};
 
@@ -75,11 +76,17 @@ impl BatchRenderer {
                 mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, Vec::<[f32; 2]>::new());
                 mesh.set_indices(Some(Indices::U32(Vec::new())));
                 let mesh_handle = meshes.add(mesh);
-                let entity = commands.spawn_bundle(PbrBundle {
-                    mesh: mesh_handle.clone(),
-                    material: mat_handle.clone_weak(),
-                    ..Default::default()
-                }).id();
+                let entity = commands
+                    .spawn_bundle(PbrBundle {
+                        mesh: mesh_handle.clone(),
+                        material: mat_handle.clone_weak(),
+                        ..Default::default()
+                    })
+                    .insert(Aabb {
+                        center: Vec3::ZERO,
+                        half_extents: Vec3::new(f32::MAX, f32::MAX, f32::MAX)
+                    })
+                    .id();
                 MeshInfo {
                     mesh_handle,
                     entity,

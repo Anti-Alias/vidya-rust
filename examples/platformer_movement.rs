@@ -1,18 +1,16 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy::render::camera::ScalingMode;
 
 use bevy::window::{WindowResizeConstraints, WindowMode};
 use vidya_rust::extensions::*;
-use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer, AnimationPlugin};
-use vidya_rust::app::{VidyaCorePlugin, VidyaPlugins};
+use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer};
+use vidya_rust::app::VidyaPlugins;
 use vidya_rust::map::LoadMapEvent;
-use vidya_rust::platformer::{PlatformerPlugin, Platformer};
+use vidya_rust::platformer::Platformer;
 use vidya_rust::being::Being;
-use vidya_rust::physics::{PhysicsPlugin, Velocity, Friction, Position};
-use vidya_rust::player::{PlayerPlugin, Player};
-use vidya_rust::sprite::SpritePlugin;
+use vidya_rust::physics::{Velocity, Friction, Position};
+use vidya_rust::player::Player;
 use vidya_rust::app::AppState;
 
 /*
@@ -65,7 +63,7 @@ fn spawn_player(
     mut commands: Commands
 ) {
         // Loads material from single image
-        let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01.png", AlphaMode::Blend, &assets);
+        let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01.png", AlphaMode::Mask(0.5), &assets);
     
         // Creates animation set
         let mut animation_set = AnimationSet::new();
@@ -90,14 +88,14 @@ fn spawn_player(
                 Transform::default(),
                 GlobalTransform::default()
             ))
-            .insert(Position(Vec3::new(0.0, 0.0, 0.0)))
+            .insert(Position(Vec3::new(256.0, -20.0, -256.0)))
             .insert(Velocity::default())
             .insert(Friction {
-                xz: 0.7,
+                xz: 0.5,
                 y: 1.0
             })
             .insert(Player)
             .insert(Being::default())
-            .insert(Platformer::new(10.0))
+            .insert(Platformer::new(3.0))
         ;
 }

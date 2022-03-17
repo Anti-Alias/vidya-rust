@@ -17,8 +17,8 @@ fn main() {
     App::new()
         .insert_resource(WindowDescriptor {
             title: "vidya".to_string(),
-            width: 800.0,
-            height: 450.0,
+            width: 1600.0,
+            height: 900.0,
             position: None,
             resize_constraints: WindowResizeConstraints::default(),
             scale_factor_override: None,
@@ -88,6 +88,6 @@ fn spawn_player(
             ))
             .insert(Player)
             .insert(Being::default())
-            .insert(Platformer::new(3.0))
+            .insert(Platformer::new(2.0))
         ;
 }

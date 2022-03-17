@@ -1,13 +1,16 @@
-use bevy::prelude::*;
-use crate::app::{ AppState, AppLabel, TickTimer };
+use bevy::{prelude::*, core::FixedTimestep};
+use crate::app::{ AppState, AppLabel, AppConfig};
 
 
 pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
+        let app_config = app.world.get_resource::<AppConfig>().unwrap();
+        let timestep_secs = app_config.timestep_secs;
         app
             .insert_resource(Gravity::default())
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .with_run_criteria(FixedTimestep::step(timestep_secs))
                 .with_system(apply_gravity.label(AppLabel::Logic).after(AppLabel::Input).after(AppLabel::Input))
                 .with_system(apply_friction.label(AppLabel::PhysicsFriction).after(AppLabel::Logic))
                 .with_system(apply_velocity.label(AppLabel::PhysicsVelocity).after(AppLabel::PhysicsFriction))
@@ -99,43 +102,32 @@ impl Default for Gravity {
 
 
 pub fn apply_gravity(
-    tick_timer: Res<TickTimer>,
     gravity: Res<Gravity>,
     mut entities: Query<(&Weight, &mut Velocity)>
 ) {
-    for _ in 0..tick_timer.times_finished() {
-        for (weight, mut velocity) in entities.iter_mut() {
-            let vel = &mut velocity.0;
-            vel.y -= gravity.gravity * weight.0;
-        }
+    for (weight, mut velocity) in entities.iter_mut() {
+        let vel = &mut velocity.0;
+        vel.y -= gravity.gravity * weight.0;
     }
 }
 
 
 // Applies friction to entities
-pub fn apply_friction(
-    tick_timer: Res<TickTimer>,
-    mut query: Query<(&mut Velocity, &Friction), With<Position>>
-) {
-    for _ in 0..tick_timer.times_finished() {
-        for (mut velocity, friction) in query.iter_mut() {
-            let vel = &mut velocity.0;
-            vel.x *= friction.xz;
-            vel.z *= friction.xz;
-            vel.y *= friction.y;
-        }
+pub fn apply_friction(mut query: Query<(&mut Velocity, &Friction), With<Position>>) {
+    for (mut velocity, friction) in query.iter_mut() {
+        let vel = &mut velocity.0;
+        vel.x *= friction.xz;
+        vel.z *= friction.xz;
+        vel.y *= friction.y;
     }
 }
 
 // Moves an entity based on it's velocity
 pub fn apply_velocity(
-    tick_timer: Res<TickTimer>,
     mut query: Query<(&mut Position, &mut PreviousPosition, &Velocity)>
 ) {
-    for _ in 0..tick_timer.times_finished() {
-        for (mut position, mut prev_position, velocity) in query.iter_mut() {
-            prev_position.0 = position.0;
-            position.0 += velocity.0;
-        }
+    for (mut position, mut prev_position, velocity) in query.iter_mut() {
+        prev_position.0 = position.0;
+        position.0 += velocity.0;
     }
 }

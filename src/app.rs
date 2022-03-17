@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::animation::AnimationPlugin;
 use crate::graphics::GraphicsPlugin;
@@ -38,33 +38,21 @@ impl PluginGroup for VidyaPlugins {
 pub struct VidyaCorePlugin;
 impl Plugin for VidyaCorePlugin {
     fn build(&self, app: &mut App) {
+        let timestep_secs = 1.0/60.0;
         app
             .add_plugins(DefaultPlugins)
             .add_state(AppState::AppStarting)
             .insert_resource(AppConfig {
                 side: Side::Client,
-                ticks_per_second: 60
+                timestep_secs
             })
+            .insert_resource(PartialTicks::new(timestep_secs))
+            .add_system(update_partial_ticks.label(AppLabel::Tick))
             .add_startup_system_set(SystemSet::new()
                 .with_system(start_app)
-                .with_system(configure_resources)
-            )
-            .add_system(update_tick_timer.label(AppLabel::Tick));
+            );
     }
     fn name(&self) -> &str { "vidya_plugin" }
-}
-
-/// Responsible for keeping track of in-game ticks at 60tps
-pub struct TickTimer(Timer);
-impl TickTimer {
-    pub fn times_finished(&self) -> u32 { self.0.times_finished() }
-    pub fn finished(&self) -> bool { self.0.finished() }
-    pub fn t(&self) -> f32 {
-        let duration = self.0.duration();
-        let elapsed = self.0.elapsed();
-        let t = elapsed.as_secs_f32() / duration.as_secs_f32();
-        t
-    }
 }
 
 /// Labels used for scheduling the timing of systems in a single tick
@@ -117,11 +105,31 @@ pub enum Side {
     Client
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+
+/// Used in graphics to interpolate between previous and current state.
+/// Allows for variable refresh rates
+#[derive(Debug, Default, Clone)]
+pub struct PartialTicks { timer: Timer }
+impl PartialTicks {
+
+    /// Creates new PartialTicks struct
+    fn new(timestep_secs: f64) -> Self {
+        Self {
+            timer: Timer::new(Duration::from_secs_f64(timestep_secs), true)
+        }
+    }
+
+    /// T value between 0.0 and 1.0 used for lerping graphics
+    pub fn t(&self) -> f32 {
+        self.timer.elapsed().as_secs_f32() / self.timer.duration().as_secs_f32()
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 /// Configuration of the application as a whole
 pub struct AppConfig {
     pub side: Side,
-    pub ticks_per_second: u64
+    pub timestep_secs: f64
 }
 
 fn start_app(mut app_state: ResMut<State<AppState>>) {
@@ -129,17 +137,8 @@ fn start_app(mut app_state: ResMut<State<AppState>>) {
     app_state.set(AppState::AppRunning).unwrap();
 }
 
-/// Configures resources based on the configurations in the [`AppConfig`] resource
-fn configure_resources(
-    config: Res<AppConfig>,
-    mut commands: Commands
-) {
-    let tick_time_ms = Duration::from_millis(1000 / config.ticks_per_second);
-    commands.insert_resource(TickTimer(Timer::new(tick_time_ms, true)));
-}
-
-/// Updates main tick timer
-fn update_tick_timer(time: Res<Time>, mut tick_timer: ResMut<TickTimer>) {
-    tick_timer.0.tick(time.delta());
-    //log::info!("Updated tick timer");
+/// Updates the partial ticks value
+fn update_partial_ticks(time: Res<Time>, mut partial_ticks: ResMut<PartialTicks>) {
+    let delta = time.delta();
+    partial_ticks.timer.tick(delta);
 }

@@ -274,13 +274,14 @@ fn map_spawn_entities(
     let cam_pos = Vec3::new(16.0*10.0, 1000.0, 600.0);
     let mut ortho_bundle = OrthographicCameraBundle::new_3d();
     let proj = &mut ortho_bundle.orthographic_projection;
-    proj.scaling_mode = ScalingMode::None;
+    proj.scaling_mode = ScalingMode::WindowSize;
     proj.left = -cam_width / 2.0;
     proj.right = cam_width / 2.0;
     proj.bottom = -cam_height / 2.0;
     proj.top = cam_height / 2.0;
     proj.near = 1.0;
     proj.far = 10000.0;
+    proj.scale = 0.5;
     ortho_bundle.transform = Transform::from_translation(cam_pos)
         .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));

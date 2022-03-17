@@ -1,6 +1,7 @@
+use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 
-use crate::app::{AppState, AppLabel, TickTimer};
+use crate::app::{AppState, AppLabel, AppConfig};
 use crate::physics::{Velocity, Friction};
 use crate::being::Being;
 use crate::util::SignalQueue;
@@ -9,11 +10,13 @@ use crate::util::SignalQueue;
 pub struct PlatformerPlugin;
 impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
+        let app_config = app.world.get_resource::<AppConfig>().unwrap();
+        let timestep = app_config.timestep_secs;
         app
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .with_run_criteria(FixedTimestep::step(timestep))
                 .with_system(process_signals.label(AppLabel::Logic).after(AppLabel::Input))
-            )
-        ;
+            );
     }
 }
 
@@ -64,36 +67,27 @@ impl Default for State {
 }
 
 fn process_signals(
-    tick_timer: Res<TickTimer>,
     mut platformer_entities: Query<(&mut Platformer, &Friction, &mut Velocity, &mut Being)>
 ) {
-    for _ in 0..tick_timer.times_finished() {
-        // For all platformer entities...
-        for (mut platformer, friction, mut velocity, mut being) in platformer_entities.iter_mut() {
+    // For all platformer entities...
+    for (mut platformer, friction, mut velocity, mut being) in platformer_entities.iter_mut() {
 
-            // Process all queued signals
-            let mut next_signal = platformer.signals.pop();
-            while let Some(signal) = next_signal {
-                match signal {
-                    PlatformerSignal::Move { direction } => {
-                        let speed = platformer.top_speed / friction.xz - platformer.top_speed;
-                        let vel = speed * Vec2::new(f32::cos(direction), -f32::sin(direction));
-                        velocity.0.x += vel.x;
-                        velocity.0.z += vel.y;
-                        being.direction = direction;
-                    }
-                    PlatformerSignal::Jump => {
-                        log::info!("Jumping!!!");
-                    }
+        // Process all queued signals
+        let mut next_signal = platformer.signals.pop();
+        while let Some(signal) = next_signal {
+            match signal {
+                PlatformerSignal::Move { direction } => {
+                    let speed = platformer.top_speed / friction.xz - platformer.top_speed;
+                    let vel = speed * Vec2::new(f32::cos(direction), -f32::sin(direction));
+                    velocity.0.x += vel.x;
+                    velocity.0.z += vel.y;
+                    being.direction = direction;
                 }
-                next_signal = platformer.signals.pop();
+                PlatformerSignal::Jump => {
+                    log::info!("Jumping!!!");
+                }
             }
+            next_signal = platformer.signals.pop();
         }
     }
 }
-
-// ts = 10
-// f = 0.9
-// (ts + s) * f = ts
-// ts + s = ts / f
-// s = ts/f - ts

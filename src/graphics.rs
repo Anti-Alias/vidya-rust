@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{physics::{Position, PreviousPosition}, app::{AppState, TickTimer, AppLabel}};
+use crate::{physics::{Position, PreviousPosition}, app::{AppState, AppLabel, PartialTicks}};
 
 pub struct GraphicsPlugin;
 impl Plugin for GraphicsPlugin {
@@ -13,11 +13,15 @@ impl Plugin for GraphicsPlugin {
 }
 
 // Synchronizes a [`Transform`] with a [`Position`].
-pub fn sync_transform(tick_timer: Res<TickTimer>, mut query: Query<(&Position, &PreviousPosition, &mut Transform)>) {
+pub fn sync_transform(
+    partial_ticks: Res<PartialTicks>,
+    mut query: Query<(&Position, &PreviousPosition, &mut Transform)>
+) {
+    let t = partial_ticks.t();
     for (position, prev_position, mut transform) in query.iter_mut() {
         let a = prev_position.0;
         let b = position.0;
-        let lerped = a.lerp(b, tick_timer.t());
+        let lerped = a.lerp(b, t);
         let lerped = Vec3::new(
             lerped.x.round(),
             lerped.y.round(),

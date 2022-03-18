@@ -47,7 +47,7 @@ impl Plugin for VidyaCorePlugin {
                 timestep_secs
             })
             .insert_resource(PartialTicks::new(timestep_secs))
-            .add_system(update_partial_ticks.label(AppLabel::Tick))
+            .add_system(update_partial_ticks.label(AppLabel::TickStart))
             .add_startup_system_set(SystemSet::new()
                 .with_system(start_app)
             );
@@ -58,8 +58,8 @@ impl Plugin for VidyaCorePlugin {
 /// Labels used for scheduling the timing of systems in a single tick
 #[derive(SystemLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum AppLabel {
-    /// Updates tick timer
-    Tick,
+    /// Start of a tick.
+    TickStart,
 
     /// Processes input and converts to signals
     Input,
@@ -73,8 +73,11 @@ pub enum AppLabel {
     /// Applies velocity to position
     PhysicsVelocity,
 
-    /// Syncs position with graphics transforms
-    PhysicsSync
+    /// Apply animation logic
+    Animate,
+
+    /// End of tick. Prepare for next tick.
+    TickEnd
 }
 
 /// State of the application as a whole.

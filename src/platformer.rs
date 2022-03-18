@@ -1,9 +1,11 @@
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 
+use crate::animation::{AnimationGroupHandle, AnimationSet};
 use crate::app::{AppState, AppLabel, AppConfig};
 use crate::physics::{Velocity, Friction};
-use crate::being::Being;
+use crate::being::{Being, DirectionType};
+use crate::state::{StateHolder, State};
 use crate::util::SignalQueue;
 
 /// Plugin for "Being" behavior
@@ -16,6 +18,7 @@ impl Plugin for PlatformerPlugin {
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
                 .with_run_criteria(FixedTimestep::step(timestep))
                 .with_system(process_signals.label(AppLabel::Logic).after(AppLabel::Input))
+                .with_system(control_animations.label(AppLabel::Animate).after(AppLabel::PhysicsVelocity))
             );
     }
 }
@@ -38,6 +41,7 @@ impl From<PlatformerSignal> for u32 {
 }
 
 
+/// Controls on-ground movement, in-air movement, and jumping
 #[derive(Component, Debug)]
 pub struct Platformer {
     pub top_speed: f32,
@@ -53,24 +57,31 @@ impl Platformer {
     }
 }
 
-/// State a being is in
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum State {
-    Idle,
-    Running,
-    Jumping,
-    Attacking
+/// Holds animation groups that play/loop when the platformer performs certain actions
+#[derive(Component, Debug)]
+pub struct PlatformerAnimator {
+    pub direction_type: DirectionType,
+    pub idle_handle: AnimationGroupHandle,
+    pub run_handle: AnimationGroupHandle,
+    pub jump_handle: AnimationGroupHandle
 }
 
-impl Default for State {
-    fn default() -> Self { Self::Idle }
-}
 
-fn process_signals(
-    mut platformer_entities: Query<(&mut Platformer, &Friction, &mut Velocity, &mut Being)>
-) {
-    // For all platformer entities...
-    for (mut platformer, friction, mut velocity, mut being) in platformer_entities.iter_mut() {
+fn process_signals(mut platformer_entities: Query<(
+    &mut Platformer,
+    &Friction,
+    &mut Velocity,
+    &mut Being,
+    &mut StateHolder
+)>) {
+    for (
+        mut platformer,
+        friction,
+        mut velocity,
+        mut being,
+        mut state_holder
+    )
+    in platformer_entities.iter_mut() {
 
         // Process all queued signals
         let mut next_signal = platformer.signals.pop();
@@ -88,6 +99,47 @@ fn process_signals(
                 }
             }
             next_signal = platformer.signals.pop();
+        }
+
+        // Updates state based on velocity
+        const EPSILON: f32 = 0.1;
+        if velocity.0.length_squared() > EPSILON*EPSILON {
+            state_holder.0 = State::Running;
+        }
+        else {
+            state_holder.0 = State::Idle;
+        }
+    }
+}
+
+fn control_animations(mut platformer_entities: Query<
+    (&mut AnimationSet, &PlatformerAnimator, &Being, &StateHolder),
+    Changed<StateHolder>
+>) {
+    for (mut animation_set, animator, being, state_holder) in platformer_entities.iter_mut() {
+        match state_holder.0 {
+            State::Idle => {
+                animation_set.set_grouped_animation(
+                    animator.idle_handle,
+                    being.get_direction_index(animator.direction_type),
+                    false
+                ).unwrap();
+            },
+            crate::state::State::Running => {
+                animation_set.set_grouped_animation(
+                    animator.run_handle,
+                    being.get_direction_index(animator.direction_type),
+                    false
+                ).unwrap();
+            },
+            crate::state::State::Jumping => {
+                animation_set.set_grouped_animation(
+                    animator.jump_handle,
+                    being.get_direction_index(animator.direction_type),
+                    false
+                ).unwrap();
+            },
+            _ => {}
         }
     }
 }

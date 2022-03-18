@@ -1,4 +1,5 @@
 pub mod app;
+pub mod state;
 pub mod animation;
 pub mod being;
 pub mod platformer;

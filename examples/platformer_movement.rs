@@ -7,11 +7,12 @@ use vidya_rust::extensions::*;
 use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer};
 use vidya_rust::app::VidyaPlugins;
 use vidya_rust::map::LoadMapEvent;
-use vidya_rust::platformer::Platformer;
-use vidya_rust::being::Being;
+use vidya_rust::platformer::{Platformer, PlatformerAnimator};
+use vidya_rust::being::{Being, DirectionType};
 use vidya_rust::physics::{Velocity, Friction, Position, PhysicsBundle, Weight};
 use vidya_rust::player::Player;
 use vidya_rust::app::AppState;
+use vidya_rust::state::StateHolder;
 
 fn main() {
     App::new()
@@ -60,25 +61,30 @@ fn spawn_player(
         let idle_s = Animation::from_grid(0, 0*64, 64, 64, 512, 512, 1);
         let idle_e = Animation::from_grid(0, 2*64, 64, 64, 512, 512, 1);
         let idle_w = Animation::from_grid(0, 3*64, 64, 64, 512, 512, 1);
-        let walk_n = Animation::from_grid(0, 5*64, 64, 64, 512, 512, 6);
-        let walk_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6);
-        let walk_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6);
-        let walk_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6);
-        let _idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
-        let _walk_handle = animation_set.add_animation_group(&[walk_e, walk_n, walk_w, walk_s]);
+        let run_n = Animation::from_grid(0, 5*64, 64, 64, 512, 512, 6);
+        let run_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6);
+        let run_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6);
+        let run_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6);
+        let jump_n = Animation::from_grid(6*64, 1*64, 64, 64, 512, 512, 1);
+        let jump_s = Animation::from_grid(6*64, 0*64, 64, 64, 512, 512, 1);
+        let jump_e = Animation::from_grid(6*64, 2*64, 64, 64, 512, 512, 1);
+        let jump_w = Animation::from_grid(6*64, 3*64, 64, 64, 512, 512, 1);
+        let idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
+        let run_handle = animation_set.add_animation_group(&[run_e, run_n, run_w, run_s]);
+        let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
     
         // Spawns entity from bundle
         commands
             .spawn()
             .insert_bundle(SpriteAnimationBundle::new(
                 animation_set,
-                AnimationTimer(Timer::new(Duration::from_millis(1000/15), true)),
+                AnimationTimer::new(Duration::from_millis(1000/15)),
                 materials.add(player_mat),
                 Transform::default(),
                 GlobalTransform::default()
             ))
             .insert_bundle(PhysicsBundle::new(
-                Position(Vec3::new(256.0, -20.0, -256.0)),
+                Position(Vec3::new(256.0, -19.0, -256.0)),
                 Velocity::default(),
                 Friction {
                     xz: 0.5,
@@ -88,6 +94,13 @@ fn spawn_player(
             ))
             .insert(Player)
             .insert(Being::default())
+            .insert(StateHolder::default())
             .insert(Platformer::new(2.0))
+            .insert(PlatformerAnimator {
+                direction_type: DirectionType::FourWay,
+                idle_handle,
+                run_handle,
+                jump_handle
+            })
         ;
 }

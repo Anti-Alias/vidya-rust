@@ -9,7 +9,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_system(emit_platformer_signals.label(AppLabel::Input).after(AppLabel::Tick))
+                .with_system(emit_platformer_signals.label(AppLabel::Input).after(AppLabel::TickStart))
             )
         ;
     }
@@ -24,7 +24,6 @@ fn emit_platformer_signals(
     input: Res<Input<KeyCode>>,
     mut player_entities: Query<&mut Platformer, With<Player>>
 ) {
-    //log::info!("Processing input");
     for mut platformer in player_entities.iter_mut() {
         let direction = match Direction::from_keyboard(&input) {
             Some(direction) => direction,

@@ -44,7 +44,7 @@ fn spawn_sprite_animation(
         commands
             .spawn_bundle(SpriteAnimationBundle::new(
                 animation_set,
-                AnimationTimer(Timer::new(Duration::from_millis(1000/15), true)),
+                AnimationTimer::new(Duration::from_millis(1000/15)),
                 materials.add(material),
                 Transform::from_xyz(-128.0, -128.0, 0.0).with_scale(Vec3::new(4.0, 4.0, 1.0)),
                 GlobalTransform::default()

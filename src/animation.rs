@@ -1,8 +1,9 @@
-use std::fmt;
+use std::{fmt, time::Duration};
 
 use bevy::prelude::*;
 
-use crate::{app::AppState, sprite::{Region, Sprite3D, Sprite3DBundle}};
+use crate::app::AppState;
+use crate::sprite::{Region, Sprite3D, Sprite3DBundle};
 
 /// Plugin that plays/loops entities with animation components
 pub struct AnimationPlugin;
@@ -157,26 +158,33 @@ impl AnimationSet {
         preserve_frame_index: bool
     ) -> Result<(), AnimationError> {
 
-        self.current_animation = self.get_grouped_animation_handle(group_handle, index)?;
+        // Switches animation
+        let next_anim_handle = self.get_grouped_animation_handle(group_handle, index)?;
 
         // Determines what to do with current frame index
         if preserve_frame_index {
-            let current_anim = &self.animations[self.current_animation.0];
-            if self.frame > current_anim.0.len() {
+            let next_anim = &self.animations[next_anim_handle.0];
+            if self.frame > next_anim.0.len() {
                 self.frame = 0;
             }
         }
-        else {
+        else if next_anim_handle != self.current_animation {
             self.frame = 0;
         }
 
         // Done
+        self.current_animation = next_anim_handle;
         Ok(())
     }
 }
 
 #[derive(Component)]
-pub struct AnimationTimer(pub Timer);
+pub struct AnimationTimer(Timer);
+impl AnimationTimer {
+    pub fn new(frame_time: Duration) -> Self {
+        Self(Timer::new(frame_time, true))
+    }
+}
 
 #[derive(Bundle)]
 pub struct SpriteAnimationBundle {

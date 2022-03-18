@@ -6,20 +6,17 @@ pub use bevy::prelude::*;
 pub struct Being {
     /// Direction being is facing in radians, rotating along the Y axis in a counter-clockwise motion
     pub direction: f32,
-    /// Current high-level action that entity is doing.
-    /// Used to control what behaviors an Entity can and can't be doing at any given moment
-    pub state: State,
 }
 
 impl Being {
 
     /// Rounded 8-way direction the [`Being`] is facing
-    pub fn direction(&self) -> Direction {
+    pub fn to_direction(&self) -> Direction {
         let pi = std::f32::consts::PI;
         let pi2 = pi*2.0;
         let slice = pi2/8.0;
         let halfslice = slice / 2.0;
-        let direction = ((self.direction % pi2) + pi2) % pi + halfslice;
+        let direction = ((self.direction % pi2) + pi2) % pi2 + halfslice;
         if direction < slice*1.0 {
             Direction::E
         }
@@ -48,25 +45,31 @@ impl Being {
 
     /// Rounded 4-way direction the [`Being`] is facing
     pub fn to_cardinal_direction(&self) -> CardinalDirection {
+        const EPSILON: f32 = 0.00001;
         let pi = std::f32::consts::PI;
         let pi2 = pi*2.0;
         let slice = pi2/4.0;
         let halfslice = slice / 2.0;
-        let direction = ((self.direction % pi2) + pi2) % pi + halfslice;
-        if direction < slice*1.0 {
+        let direction = ((self.direction % pi2) + pi2) % pi2;
+        if direction < slice*1.0-halfslice || direction > slice*4.0-halfslice-EPSILON {
             CardinalDirection::E
         }
-        else if direction < slice*2.0 {
+        else if direction >= slice*1.0-halfslice && direction <= slice*2.0-halfslice-EPSILON {
             CardinalDirection::N
         }
-        else if direction < slice*3.0 {
+        else if direction > slice*2.0-halfslice-EPSILON && direction < slice*3.0-halfslice+EPSILON {
             CardinalDirection::W
         }
-        else if direction < slice*4.0 {
+        else {
             CardinalDirection::S
         }
-        else {
-            CardinalDirection::E
+    }
+
+    /// Determines group animation index to use for the direction of this being
+    pub fn get_direction_index(&self, direction_type: DirectionType) -> usize {
+        match direction_type {
+            DirectionType::EightWay => self.to_direction().to_index(),
+            DirectionType::FourWay => self.to_cardinal_direction().to_index()
         }
     }
 }
@@ -165,4 +168,11 @@ pub enum State {
 }
 impl Default for State {
     fn default() -> Self { Self::Idle }
+}
+
+/// Type of direction
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum DirectionType {
+    EightWay,
+    FourWay
 }

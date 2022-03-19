@@ -8,11 +8,12 @@ use crate::sprite::SpritePlugin;
 use crate:: {
     camera::CameraPlugin,
     map::MapPlugin,
-    debug::DebugPlugin,
+    //debug::DebugPlugin,
     physics::PhysicsPlugin,
 };
 
 use bevy::app::PluginGroupBuilder;
+use bevy::ecs::schedule::ShouldRun;
 use bevy::prelude::*;
 
 // Default plugins
@@ -27,7 +28,7 @@ impl PluginGroup for VidyaPlugins {
         builder.add(CameraPlugin);
         builder.add(PhysicsPlugin);
         builder.add(PlatformerPlugin);
-        builder.add(DebugPlugin);
+        //builder.add(DebugPlugin);
         builder.add(PlatformerPlugin);
         builder.add(PlayerPlugin);
     }
@@ -46,9 +47,11 @@ impl Plugin for VidyaCorePlugin {
                 side: Side::Client,
                 timestep_secs
             })
-            .insert_resource(PartialTicks::new(timestep_secs))
-            .add_system(update_partial_ticks.label(AppLabel::TickStart))
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .with_system(update_partial_ticks.label(AppLabel::TickStart))
+            )
             .add_startup_system_set(SystemSet::new()
+                .with_system(configure_app)
                 .with_system(start_app)
             );
     }
@@ -68,13 +71,21 @@ pub enum AppLabel {
     Logic,
 
     /// Applies friction to velocity
+    /// After Logic
     PhysicsFriction,
 
-    /// Applies velocity to position
-    PhysicsVelocity,
+    /// Sets previous physics states to current physics states, IE PrevPosition, PrevSize, etc.
+    /// After Logic
+    PhysicsSync,
 
-    /// Apply animation logic
-    Animate,
+    /// Applies velocity to position
+    PhysicsMove,
+
+    /// Graphics logic. Updates animations and syncs Transform with Position/PreviousPosition
+    Graphics,
+
+    /// Post graphics logic. Used for one last set of transformations on the camera
+    PostGraphics,
 
     /// End of tick. Prepare for next tick.
     TickEnd
@@ -108,6 +119,8 @@ pub enum Side {
     Client
 }
 
+pub struct TimestepTimer(Timer);
+
 
 /// Used in graphics to interpolate between previous and current state.
 /// Allows for variable refresh rates
@@ -135,6 +148,10 @@ pub struct AppConfig {
     pub timestep_secs: f64
 }
 
+fn configure_app(config: Res<AppConfig>,mut commands: Commands) {
+    commands.insert_resource(PartialTicks::new(config.timestep_secs));
+}
+
 fn start_app(mut app_state: ResMut<State<AppState>>) {
     log::debug!("Entered system 'start_app'");
     app_state.set(AppState::AppRunning).unwrap();
@@ -144,4 +161,18 @@ fn start_app(mut app_state: ResMut<State<AppState>>) {
 fn update_partial_ticks(time: Res<Time>, mut partial_ticks: ResMut<PartialTicks>) {
     let delta = time.delta();
     partial_ticks.timer.tick(delta);
+    if partial_ticks.timer.just_finished() {
+        log::info!("Tick!!!: {}", partial_ticks.timer.times_finished());
+    }
+}
+
+
+/// Run criteria for when a tick has elapsed
+pub fn tick_elapsed(partial_ticks: Res<PartialTicks>) -> ShouldRun {
+    if partial_ticks.timer.just_finished() {
+        ShouldRun::Yes
+    }
+    else {
+        ShouldRun::No
+    }
 }

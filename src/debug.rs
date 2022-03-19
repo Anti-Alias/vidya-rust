@@ -1,17 +1,14 @@
-use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 
-use crate::app::{AppState, AppConfig};
+use crate::app::{AppState, tick_elapsed};
 use crate::physics::{ Velocity };
 
 pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
-        let app_config = app.world.get_resource::<AppConfig>().unwrap();
-        let timestep_secs = app_config.timestep_secs;
         app
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_run_criteria(FixedTimestep::step(timestep_secs))
+                .with_run_criteria(tick_elapsed)
                 .with_system(move_floater)
             )
         ;

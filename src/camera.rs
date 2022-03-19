@@ -1,14 +1,25 @@
 use bevy::prelude::*;
 
-use crate::{app::AppState, physics::{Velocity, Friction, PreviousPosition, Position}};
+use crate::app::{AppState, AppLabel, tick_elapsed};
+use crate::physics::{Velocity, Friction, PreviousPosition, Position};
 
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
-            .with_system(camera_rotate)
+        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .with_run_criteria(tick_elapsed)
+            .label(AppLabel::Graphics)
+            .after(AppLabel::TickStart)
+            .after(AppLabel::PhysicsMove)
+            .with_system(camera_move)
+        );
+        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .with_run_criteria(tick_elapsed)
+            .label(AppLabel::PostGraphics)
+            .after(AppLabel::TickStart)
+            .after(AppLabel::Graphics)
+            .with_system(push_camera_back)
         );
     }
 }
@@ -21,54 +32,60 @@ pub struct CameraBundle {
     position: Position,
     prev_position: PreviousPosition,
     velocity: Velocity,
-    friction: Friction
+    friction: Friction,
+    settings: CameraTargetSettings
 }
 impl CameraBundle {
     pub fn new(
         ortho_bundle: OrthographicCameraBundle,
         position: Position,
         velocity: Velocity,
-        friction: Friction
+        friction: Friction,
+        settings: CameraTargetSettings
     ) -> Self {
         Self {
             ortho_bundle,
             position,
             prev_position: PreviousPosition(position.0),
             velocity,
-            friction
+            friction,
+            settings
         }
     }
 }
 
+/// Tag component that marks the entity as "targettable" by the camera.
+/// There should only be 1 entity with this marker.
 #[derive(Component)]
-pub struct CameraTarget {
-    pub target: Vec3,
+pub struct Targetable;
+
+#[derive(Component)]
+pub struct CameraTargetSettings {
     pub distance: f32
 }
 
-#[derive(Component)]
-pub struct CameraTimer {
-    pub timer: f32,
-    pub speed: f32
-}
-
-impl CameraTimer {
-    pub fn advance(&mut self) -> f32 {
-        let result = self.timer;
-        self.timer += self.speed;
-        result
-    }
-}
-
-pub fn camera_rotate(
-    mut camera: Query<(&mut Transform, &CameraTarget, &mut CameraTimer)>
+pub fn camera_move(
+    targetable: Query<&Position, (With<Targetable>, Without<Camera>)>,
+    mut camera: Query<&mut Position, With<Camera>>
 ) {
-    for (mut transform, target, mut timer) in camera.iter_mut() {
-        let pos = target.target;
-        let dist = target.distance;
-        let rad = timer.advance() * std::f32::consts::PI;
-        *transform = transform
-            .with_translation(pos + Vec3::new(f32::cos(rad)*dist, dist, f32::sin(rad)*dist))
-            .looking_at(pos, Vec3::new(0.0, 1.0, 0.0));
+
+    // Gets target and camera
+    let target_pos = match targetable.get_single() {
+        Ok(pos) => pos,
+        Err(_) => return
+    };
+    let mut camera_pos = match camera.get_single_mut() {
+        Ok(result) => result,
+        Err(_) => return
+    };
+    
+    // Sets camera's position as the target's position
+    camera_pos.0 = target_pos.0;
+}
+
+pub fn push_camera_back(mut camera: Query<(&mut Transform, &CameraTargetSettings), With<Camera>>) {
+    for (mut trans, settings) in camera.iter_mut() {
+        trans.translation += Vec3::new(0.0, 512.0, 512.0);
+        log::info!("Cam translation: {:?}", trans.translation);
     }
 }

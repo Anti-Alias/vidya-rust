@@ -2,14 +2,18 @@ use std::{fmt, time::Duration};
 
 use bevy::prelude::*;
 
-use crate::app::AppState;
+use crate::app::{AppState, AppLabel};
 use crate::sprite::{Region, Sprite3D, Sprite3DBundle};
 
 /// Plugin that plays/loops entities with animation components
 pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_update(AppState::AppRunning).with_system(update_animations));
+        app.add_system_set(
+            SystemSet::on_update(AppState::AppRunning)
+                .label(AppLabel::Graphics)
+                .with_system(update_animations)
+        );
     }
 }
 

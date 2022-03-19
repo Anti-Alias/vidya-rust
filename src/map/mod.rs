@@ -10,7 +10,7 @@ use std::iter::Iterator;
 use std::path::PathBuf;
 
 use crate::app::AppState;
-use crate::camera::CameraBundle;
+use crate::camera::{CameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction };
 use crate::debug::Floater;
 use crate::extensions::*;
@@ -290,7 +290,8 @@ fn map_spawn_entities(
             ortho_bundle,
             Position(cam_pos),
             Velocity(Vec3::ZERO),
-            Friction { xz: 0.8, y: 0.8 }
+            Friction { xz: 0.8, y: 0.8 },
+            CameraTargetSettings { distance: 512.0 }
         ))
         .insert(Floater { speed: 2.0 });
 

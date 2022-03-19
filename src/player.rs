@@ -7,11 +7,9 @@ use crate::platformer::{Platformer, PlatformerSignal};
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_system(emit_platformer_signals.label(AppLabel::Input).after(AppLabel::TickStart))
-            )
-        ;
+        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .with_system(emit_platformer_signals.label(AppLabel::Input).after(AppLabel::TickStart))
+        );
     }
 }
 

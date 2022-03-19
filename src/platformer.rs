@@ -1,8 +1,7 @@
-use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
-use crate::app::{AppState, AppLabel, AppConfig};
+use crate::app::{AppState, AppLabel};
 use crate::physics::{Velocity, Friction};
 use crate::being::{Being, DirectionType};
 use crate::state::{StateHolder, State};
@@ -12,13 +11,11 @@ use crate::util::SignalQueue;
 pub struct PlatformerPlugin;
 impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
-        let app_config = app.world.get_resource::<AppConfig>().unwrap();
-        let timestep = app_config.timestep_secs;
         app
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_run_criteria(FixedTimestep::step(timestep))
-                .with_system(process_signals.label(AppLabel::Logic).after(AppLabel::Input))
-                .with_system(control_animations.label(AppLabel::Animate).after(AppLabel::PhysicsVelocity))
+            .add_system_set(
+                SystemSet::on_update(AppState::AppRunning)
+                    .with_system(process_signals.label(AppLabel::Logic).after(AppLabel::Input).after(AppLabel::TickStart))
+                    .with_system(control_animations.label(AppLabel::Graphics).after(AppLabel::PhysicsMove))
             );
     }
 }

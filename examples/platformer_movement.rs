@@ -3,13 +3,14 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use bevy::window::{WindowResizeConstraints, WindowMode};
+use vidya_rust::camera::Targetable;
 use vidya_rust::extensions::*;
 use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer};
 use vidya_rust::app::VidyaPlugins;
 use vidya_rust::map::LoadMapEvent;
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
 use vidya_rust::being::{Being, DirectionType};
-use vidya_rust::physics::{Velocity, Friction, Position, PhysicsBundle, Weight};
+use vidya_rust::physics::{Friction, Position,  Size, PhysicsBundle, Weight};
 use vidya_rust::player::Player;
 use vidya_rust::app::AppState;
 use vidya_rust::state::StateHolder;
@@ -73,7 +74,7 @@ fn spawn_player(
         let run_handle = animation_set.add_animation_group(&[run_e, run_n, run_w, run_s]);
         let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
     
-        // Spawns entity from bundle
+        // Spawns platformer entity from bundle
         commands
             .spawn()
             .insert_bundle(SpriteAnimationBundle::new(
@@ -85,7 +86,7 @@ fn spawn_player(
             ))
             .insert_bundle(PhysicsBundle::new(
                 Position(Vec3::new(256.0, -19.0, -256.0)),
-                Velocity::default(),
+                Size(Vec3::new(64.0, 64.0, 0.0)),
                 Friction {
                     xz: 0.5,
                     y: 1.0,
@@ -102,5 +103,6 @@ fn spawn_player(
                 run_handle,
                 jump_handle
             })
+            .insert(Targetable)
         ;
 }

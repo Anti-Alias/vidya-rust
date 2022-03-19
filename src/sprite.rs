@@ -6,7 +6,7 @@ use bevy::render::primitives::Aabb;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};
 
-use crate::app::AppState;
+use crate::app::{AppState, AppLabel};
 
 /// Plugin dedicated to rendering plain sprites in 3D
 pub struct SpritePlugin;
@@ -14,7 +14,11 @@ impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<BatchRenderer>()
-            .add_system_set(SystemSet::on_update(AppState::AppRunning).with_system(draw_sprites))
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .label(AppLabel::Graphics)
+                .after(AppLabel::TickStart)
+                .after(AppLabel::PhysicsMove)
+                .with_system(draw_sprites))
         ;
     }
 }

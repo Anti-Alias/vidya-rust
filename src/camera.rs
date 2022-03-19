@@ -12,14 +12,7 @@ impl Plugin for CameraPlugin {
             .label(AppLabel::Graphics)
             .after(AppLabel::TickStart)
             .after(AppLabel::PhysicsMove)
-            .with_system(camera_move)
-        );
-        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
-            .with_run_criteria(tick_elapsed)
-            .label(AppLabel::PostGraphics)
-            .after(AppLabel::TickStart)
-            .after(AppLabel::Graphics)
-            .with_system(push_camera_back)
+            .with_system(camera_target)
         );
     }
 }
@@ -64,28 +57,20 @@ pub struct CameraTargetSettings {
     pub distance: f32
 }
 
-pub fn camera_move(
+pub fn camera_target(
     targetable: Query<&Position, (With<Targetable>, Without<Camera>)>,
-    mut camera: Query<&mut Position, With<Camera>>
+    mut camera: Query<(&mut Position, &CameraTargetSettings), With<Camera>>
 ) {
-
     // Gets target and camera
     let target_pos = match targetable.get_single() {
         Ok(pos) => pos,
         Err(_) => return
     };
-    let mut camera_pos = match camera.get_single_mut() {
+    let (mut camera_pos, camera_settings) = match camera.get_single_mut() {
         Ok(result) => result,
         Err(_) => return
     };
     
     // Sets camera's position as the target's position
-    camera_pos.0 = target_pos.0;
-}
-
-pub fn push_camera_back(mut camera: Query<(&mut Transform, &CameraTargetSettings), With<Camera>>) {
-    for (mut trans, settings) in camera.iter_mut() {
-        trans.translation += Vec3::new(0.0, 512.0, 512.0);
-        log::info!("Cam translation: {:?}", trans.translation);
-    }
+    camera_pos.0 = target_pos.0 + Vec3::new(0.0, 512.0, 512.0);
 }

@@ -12,10 +12,17 @@ pub struct PlatformerPlugin;
 impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_system_set(
-                SystemSet::on_update(AppState::AppRunning)
-                    .with_system(process_signals.label(AppLabel::Logic).after(AppLabel::Input).after(AppLabel::TickStart))
-                    .with_system(control_animations.label(AppLabel::Graphics).after(AppLabel::PhysicsMove))
+            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+                .after(AppLabel::TickStart)
+                .with_system(process_signals
+                    .label(AppLabel::Logic)
+                    .after(AppLabel::Input)
+                    .after(AppLabel::TickStart)
+                )
+                .with_system(control_animations
+                    .label(AppLabel::Graphics)
+                    .after(AppLabel::PhysicsMove)
+                )
             );
     }
 }

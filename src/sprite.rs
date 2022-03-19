@@ -18,7 +18,8 @@ impl Plugin for SpritePlugin {
                 .label(AppLabel::Graphics)
                 .after(AppLabel::TickStart)
                 .after(AppLabel::PhysicsMove)
-                .with_system(draw_sprites))
+                .with_system(draw_sprites)
+            )
         ;
     }
 }

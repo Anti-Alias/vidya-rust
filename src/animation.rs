@@ -12,6 +12,7 @@ impl Plugin for AnimationPlugin {
         app.add_system_set(
             SystemSet::on_update(AppState::AppRunning)
                 .label(AppLabel::Graphics)
+                .after(AppLabel::PhysicsMove)
                 .with_system(update_animations)
         );
     }

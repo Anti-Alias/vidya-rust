@@ -70,6 +70,9 @@ pub enum AppLabel {
     /// Performs logic, oftend dependent on signals generated in [`AppLabel::Input`] phase
     Logic,
 
+    /// Applies gravity
+    PhysicsGravity,
+
     /// Applies friction to velocity
     /// After Logic
     PhysicsFriction,
@@ -84,11 +87,15 @@ pub enum AppLabel {
     /// Graphics logic. Updates animations and syncs Transform with Position/PreviousPosition
     Graphics,
 
-    /// Post graphics logic. Used for one last set of transformations on the camera
-    PostGraphics,
-
     /// End of tick. Prepare for next tick.
     TickEnd
+}
+
+pub enum GameStage {
+    Start,
+    Logic,
+    Physics,
+    Graphics
 }
 
 /// State of the application as a whole.

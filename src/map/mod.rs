@@ -19,7 +19,7 @@ use traverse::traverse_map;
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
-use bevy::render::camera::ScalingMode;
+use bevy::render::camera::{ScalingMode, WindowOrigin};
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 
@@ -281,7 +281,7 @@ fn map_spawn_entities(
     proj.top = cam_height / 2.0;
     proj.near = 1.0;
     proj.far = 10000.0;
-    proj.scale = 0.5;
+    //proj.scale = 0.5;
     ortho_bundle.transform = Transform::from_translation(cam_pos)
         .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));

@@ -168,11 +168,12 @@ fn start_app(mut app_state: ResMut<State<AppState>>) {
 
 /// Updates the partial ticks value
 fn update_partial_ticks(
+    time: Res<Time>,
     mut partial_ticks: ResMut<PartialTicks>
 ) {
     log::debug!("(SYSTEM) ----- update_partial_ticks ----- ");
-    //let delta = time.delta();
-    let delta = Duration::from_secs_f64(1.0/64.0);
+    let delta = time.delta();
+    //let delta = Duration::from_secs_f64(1.0/60.0);
     partial_ticks.timer.tick(delta);
 }
 

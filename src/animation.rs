@@ -11,8 +11,8 @@ impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_update(AppState::AppRunning)
-                .label(AppLabel::Graphics)
-                .after(AppLabel::PhysicsMove)
+                .label(AppLabel::UpdateAnimations)
+                .after(AppLabel::ControlAnimations)
                 .with_system(update_animations)
         );
     }
@@ -297,6 +297,7 @@ fn update_animations(
     time: Res<Time>,
     mut anim_entities: Query<(&mut Sprite3D, &mut AnimationSet, &mut AnimationTimer)>
 ) {
+    log::debug!("(SYSTEM) update_animations");
     for (mut sprite, mut anim_set, mut anim_timer) in anim_entities.iter_mut() {
         let timer = &mut anim_timer.0;
         timer.tick(time.delta());

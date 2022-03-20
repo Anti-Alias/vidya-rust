@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
-use crate::app::{AppState, AppLabel};
+use crate::app::{AppState, AppLabel, tick_elapsed};
 use crate::physics::{Velocity, Friction};
 use crate::being::{Being, DirectionType};
 use crate::state::{StateHolder, State};
@@ -11,19 +11,18 @@ use crate::util::SignalQueue;
 pub struct PlatformerPlugin;
 impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .after(AppLabel::TickStart)
-                .with_system(process_signals
-                    .label(AppLabel::Logic)
-                    .after(AppLabel::Input)
-                    .after(AppLabel::TickStart)
-                )
-                .with_system(control_animations
-                    .label(AppLabel::Graphics)
-                    .after(AppLabel::PhysicsMove)
-                )
-            );
+        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .with_run_criteria(tick_elapsed)
+            .after(AppLabel::TickStart)
+            .with_system(process_signals
+                .label(AppLabel::Logic)
+                .after(AppLabel::Input)
+            )
+            .with_system(control_animations
+                .label(AppLabel::ControlAnimations)
+                .after(AppLabel::Logic)
+            )
+        );
     }
 }
 
@@ -78,6 +77,7 @@ fn process_signals(mut platformer_entities: Query<(
     &mut Being,
     &mut StateHolder
 )>) {
+    log::debug!("(SYSTEM) process_signals");
     for (
         mut platformer,
         friction,
@@ -120,6 +120,7 @@ fn control_animations(mut platformer_entities: Query<
     (&mut AnimationSet, &PlatformerAnimator, &Being, &StateHolder),
     Changed<StateHolder>
 >) {
+    log::debug!("(SYSTEM) control_animations");
     for (mut animation_set, animator, being, state_holder) in platformer_entities.iter_mut() {
         match state_holder.0 {
             State::Idle => {

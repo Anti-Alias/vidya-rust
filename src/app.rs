@@ -29,7 +29,6 @@ impl PluginGroup for VidyaPlugins {
         builder.add(PhysicsPlugin);
         builder.add(PlatformerPlugin);
         //builder.add(DebugPlugin);
-        builder.add(PlatformerPlugin);
         builder.add(PlayerPlugin);
     }
 }
@@ -84,18 +83,23 @@ pub enum AppLabel {
     /// Applies velocity to position
     PhysicsMove,
 
-    /// Graphics logic. Updates animations and syncs Transform with Position/PreviousPosition
-    Graphics,
+    /// Updates camera
+    CameraUpdate,
+
+    /// Controls animations
+    ControlAnimations,
+
+    /// Updates animations
+    UpdateAnimations,
+
+    /// Interpolates an Entity's graphics using its previous and current state
+    InterpolateGraphics,
+
+    /// Draws to sprite batches
+    DrawBatches,
 
     /// End of tick. Prepare for next tick.
     TickEnd
-}
-
-pub enum GameStage {
-    Start,
-    Logic,
-    Physics,
-    Graphics
 }
 
 /// State of the application as a whole.
@@ -137,9 +141,7 @@ impl PartialTicks {
 
     /// Creates new PartialTicks struct
     fn new(timestep_secs: f64) -> Self {
-        Self {
-            timer: Timer::new(Duration::from_secs_f64(timestep_secs), true)
-        }
+        Self { timer: Timer::new(Duration::from_secs_f64(timestep_secs), true) }
     }
 
     /// T value between 0.0 and 1.0 used for lerping graphics
@@ -160,23 +162,25 @@ fn configure_app(config: Res<AppConfig>,mut commands: Commands) {
 }
 
 fn start_app(mut app_state: ResMut<State<AppState>>) {
-    log::debug!("Entered system 'start_app'");
+    log::debug!("(SYSTEM) 'start_app'");
     app_state.set(AppState::AppRunning).unwrap();
 }
 
 /// Updates the partial ticks value
-fn update_partial_ticks(time: Res<Time>, mut partial_ticks: ResMut<PartialTicks>) {
-    let delta = time.delta();
+fn update_partial_ticks(
+    mut partial_ticks: ResMut<PartialTicks>
+) {
+    log::debug!("(SYSTEM) ----- update_partial_ticks ----- ");
+    //let delta = time.delta();
+    let delta = Duration::from_secs_f64(1.0/64.0);
     partial_ticks.timer.tick(delta);
-    if partial_ticks.timer.just_finished() {
-        log::info!("Tick!!!: {}", partial_ticks.timer.times_finished());
-    }
 }
 
 
 /// Run criteria for when a tick has elapsed
-pub fn tick_elapsed(partial_ticks: Res<PartialTicks>) -> ShouldRun {
-    if partial_ticks.timer.just_finished() {
+pub fn tick_elapsed(time: Res<Time>, partial_ticks: Res<PartialTicks>) -> ShouldRun {
+    let next_time = partial_ticks.timer.elapsed() + time.delta();
+    if next_time >= partial_ticks.timer.duration() {
         ShouldRun::Yes
     }
     else {

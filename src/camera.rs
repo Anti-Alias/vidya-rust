@@ -9,7 +9,7 @@ impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(AppState::AppRunning)
             .with_run_criteria(tick_elapsed)
-            .label(AppLabel::Graphics)
+            .label(AppLabel::CameraUpdate)
             .after(AppLabel::TickStart)
             .after(AppLabel::PhysicsMove)
             .with_system(camera_target)
@@ -61,6 +61,7 @@ pub fn camera_target(
     targetable: Query<&Position, (With<Targetable>, Without<Camera>)>,
     mut camera: Query<(&mut Position, &CameraTargetSettings), With<Camera>>
 ) {
+    log::debug!("(SYSTEM) camera_target");
     // Gets target and camera
     let target_pos = match targetable.get_single() {
         Ok(pos) => pos,

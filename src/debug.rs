@@ -23,6 +23,7 @@ fn move_floater(
     mut query: Query<(&mut Velocity, &Floater)>,
     keys: Res<Input<KeyCode>>
 ) {
+    log::debug!("(SYSTEM) move_floater");
     for (mut velocity, floater) in query.iter_mut() {
         if keys.pressed(KeyCode::W) { velocity.0.z -= floater.speed; }
         if keys.pressed(KeyCode::A) { velocity.0.x -= floater.speed; }

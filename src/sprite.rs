@@ -6,7 +6,8 @@ use bevy::render::primitives::Aabb;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};
 
-use crate::app::{AppState, AppLabel};
+/// Batch drawing stage
+const DRAW_BATCHES_STAGE: &str = "draw_batches";
 
 /// Plugin dedicated to rendering plain sprites in 3D
 pub struct SpritePlugin;
@@ -14,12 +15,8 @@ impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<BatchRenderer>()
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .label(AppLabel::Graphics)
-                .after(AppLabel::TickStart)
-                .after(AppLabel::PhysicsMove)
-                .with_system(draw_sprites)
-            )
+            .add_stage_after(CoreStage::PostUpdate, DRAW_BATCHES_STAGE, SystemStage::single_threaded())
+            .add_system_to_stage(DRAW_BATCHES_STAGE, draw_sprites)
         ;
     }
 }
@@ -200,6 +197,7 @@ fn draw_sprites(
     mut batch_renderer: ResMut<BatchRenderer>,
     mut commands: Commands
 ) {
+    log::debug!("(SYSTEM) draw_sprites");
 
     // Clears mesh handles that are no longer loaded and despawns their entities
     batch_renderer.refresh(&materials, &mut commands);

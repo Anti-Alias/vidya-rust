@@ -19,7 +19,7 @@ impl Plugin for PhysicsPlugin {
                     .after(AppLabel::Logic)
                     .after(AppLabel::PhysicsGravity)
                 )
-                .with_system(sync_previous_states
+                .with_system(sync_previous_state
                     .label(AppLabel::PhysicsSync)
                     .before(AppLabel::PhysicsMove)
                     .after(AppLabel::Logic)
@@ -131,6 +131,7 @@ pub fn apply_gravity(
     gravity: Res<Gravity>,
     mut entities: Query<(&Weight, &mut Velocity)>
 ) {
+    log::debug!("(SYSTEM) apply_gravity");
     for (weight, mut velocity) in entities.iter_mut() {
         let vel = &mut velocity.0;
         vel.y -= gravity.gravity * weight.0;
@@ -140,6 +141,7 @@ pub fn apply_gravity(
 
 // Applies friction to entities
 pub fn apply_friction(mut query: Query<(&mut Velocity, &Friction), With<Position>>) {
+    log::debug!("(SYSTEM) apply_friction");
     for (mut velocity, friction) in query.iter_mut() {
         let vel = &mut velocity.0;
         vel.x *= friction.xz;
@@ -149,7 +151,8 @@ pub fn apply_friction(mut query: Query<(&mut Velocity, &Friction), With<Position
 }
 
 /// Synchronizes previous states with the current one
-pub fn sync_previous_states(mut query: Query<(&mut Position, &mut PreviousPosition)>) {
+pub fn sync_previous_state(mut query: Query<(&mut Position, &mut PreviousPosition)>) {
+    log::debug!("(SYSTEM) sync_previous_state");
     for (position, mut prev_position) in query.iter_mut() {
         prev_position.0 = position.0;
     }
@@ -159,6 +162,7 @@ pub fn sync_previous_states(mut query: Query<(&mut Position, &mut PreviousPositi
 pub fn apply_velocity(
     mut query: Query<(&mut Position, &Velocity)>
 ) {
+    log::debug!("(SYSTEM) apply_velocity");
     for (mut position, velocity) in query.iter_mut() {
         position.0 += velocity.0;
     }

@@ -25,6 +25,7 @@ fn emit_platformer_signals(
     input: Res<Input<KeyCode>>,
     mut player_entities: Query<&mut Platformer, With<Player>>
 ) {
+    log::debug!("(SYSTEM) emit_platformer_signals");
     for mut platformer in player_entities.iter_mut() {
         let direction = match Direction::from_keyboard(&input) {
             Some(direction) => direction,

@@ -19,7 +19,7 @@ use traverse::traverse_map;
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
-use bevy::render::camera::{ScalingMode, WindowOrigin};
+use bevy::render::camera::ScalingMode;
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 
@@ -78,7 +78,7 @@ fn map_listen(
     asset_server: Res<AssetServer>,
     mut commands: Commands
 ) {
-    log::trace!("Entered system 'on_load_map_event'");
+    log::debug!("(SYSTEM) on_load_map_event");
     if let Some(event) = events.iter().next() {
 
         // Begins loading map and stores the handle for later use
@@ -110,7 +110,7 @@ fn map_finish_loading(
     vidya_maps: Res<Assets<VidyaMap>>,
     mut commands: Commands
 ) {
-    log::debug!("Entered system 'finish_loading_map_file_client'");
+    log::debug!("(SYSTEM) map_finish_loading");
     let load_state = asset_server.get_load_state(&current_map.map_handle);
     match load_state {
         LoadState::Loaded => {
@@ -162,7 +162,7 @@ fn map_fire_events(
     mut state: ResMut<State<AppState>>,
     config: Res<MapConfig>
 ) {
-    log::debug!("Entered system 'fire_map_events'");
+    log::debug!("(SYSTEM) map_fire_events");
     // Gets tiled map
     let tiled_map = &vidya_map
         .get(&current_map.map_handle)
@@ -180,7 +180,7 @@ fn map_handle_tile_events(
     mut tile_events: EventReader<AddTileEvent>,
     mut current_map_graphics: ResMut<CurrentMapGraphics>
 ) {
-    log::debug!("Entered system 'handle_map_graphics'");
+    log::debug!("(SYSTEM) map_handle_tile_events");
     for event in tile_events.iter() {
         let tile_info = event.0;
         current_map_graphics.add_tile(tile_info.graphics);
@@ -188,7 +188,7 @@ fn map_handle_tile_events(
 }
 
 fn map_handle_events(mut map_state: ResMut<State<AppState>>) {
-    log::debug!("Entered system 'on_load_map_event'");
+    log::debug!("(SYSTEM) map_handle_events");
     map_state.set(AppState::MapSpawningEntities).unwrap();
 }
 
@@ -201,7 +201,7 @@ fn map_spawn_entities(
     mut state: ResMut<State<AppState>>,
     mut commands: Commands
 ) {
-    log::debug!("Entered system 'spawn_map_graphics_entities'");
+    log::debug!("(SYSTEM) map_spawn_entities");
 
     // Quits if graphics haven't finished loading yet
     let current_map_graphics = current_map_graphics.into_inner();
@@ -281,7 +281,7 @@ fn map_spawn_entities(
     proj.top = cam_height / 2.0;
     proj.near = 1.0;
     proj.far = 10000.0;
-    //proj.scale = 0.5;
+    proj.scale = 0.5;
     ortho_bundle.transform = Transform::from_translation(cam_pos)
         .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
         .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));

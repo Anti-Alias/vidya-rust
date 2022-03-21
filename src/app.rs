@@ -136,12 +136,12 @@ pub struct TimestepTimer(Timer);
 /// Used in graphics to interpolate between previous and current state.
 /// Allows for variable refresh rates
 #[derive(Debug, Default, Clone)]
-pub struct PartialTicks { timer: Timer }
+pub struct PartialTicks { timer: BiasedTimer }
 impl PartialTicks {
 
     /// Creates new PartialTicks struct
     fn new(timestep_secs: f64) -> Self {
-        Self { timer: Timer::new(Duration::from_secs_f64(timestep_secs), true) }
+        Self { timer: BiasedTimer::new(Duration::from_secs_f64(timestep_secs)) }
     }
 
     /// T value between 0.0 and 1.0 used for lerping graphics
@@ -180,11 +180,64 @@ fn update_partial_ticks(
 
 /// Run criteria for when a tick has elapsed
 pub fn tick_elapsed(time: Res<Time>, partial_ticks: Res<PartialTicks>) -> ShouldRun {
-    let next_time = partial_ticks.timer.elapsed() + time.delta();
+    let next_time = partial_ticks.timer.elapsed() + modified_delta(time.delta());
     if next_time >= partial_ticks.timer.duration() {
         ShouldRun::Yes
     }
     else {
         ShouldRun::No
+    }
+}
+
+/// Timer that is biased towards 60 and 120 hz.
+/// Better for pixel-perfect movements at those refresh rates.
+#[derive(Debug, Default, Clone)]
+pub struct BiasedTimer {
+    timer: Timer,
+    elapsed: Duration,
+    modified_elapsed: Duration
+}
+impl BiasedTimer {
+
+    /// Creates new biased timer
+    pub fn new(duration: Duration) -> Self {
+        Self {
+            timer: Timer::new(duration, true),
+            elapsed: Duration::new(0, 0),
+            modified_elapsed: Duration::new(0, 0)
+        }
+    }
+
+    pub fn tick(&mut self, delta: Duration) {
+        let m_delta = modified_delta(delta);
+        self.timer.tick(m_delta);
+        self.elapsed += delta;
+        self.modified_elapsed += m_delta;
+    }
+
+    pub fn elapsed(&self) -> Duration { self.timer.elapsed() }
+
+    pub fn duration(&self) -> Duration { self.timer.duration() }
+}
+
+/// If delta is close to 1/60, just return 1/60.
+/// If delta is close to 1/120, just return 1/120.
+/// Else, return delta
+fn modified_delta(delta: Duration) -> Duration {
+    let threshold = Duration::from_millis(3);
+    let hz60 = Duration::from_secs_f64(1.0/60.0);
+    let diff60 = if delta < hz60 { hz60 - delta } else { delta - hz60 };
+    if diff60 < threshold {
+        hz60
+    }
+    else {
+        let hz120 = Duration::from_secs_f64(1.0/120.0);
+        let diff120 = if delta < hz120 { hz120 - delta } else { delta - hz120 };
+        if diff120 < threshold {
+            hz120
+        }
+        else {
+            delta
+        }
     }
 }

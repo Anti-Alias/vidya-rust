@@ -34,7 +34,6 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<LoadMapEvent>()
-            .add_event::<AddTileEvent>()
             .add_asset::<VidyaMap>()
             .init_asset_loader::<VidyaMapLoader>()
             .insert_resource(MapConfig {
@@ -55,12 +54,8 @@ impl Plugin for MapPlugin {
                 .with_system(map_finish_loading)
             )
 
-            .add_system_set(SystemSet::on_enter(AppState::MapFiringEvents)
+            .add_system_set(SystemSet::on_enter(AppState::MapConstructing)
                 .with_system(map_fire_events)
-            )
-            .add_system_set(SystemSet::on_enter(AppState::MapHandlingEvents)
-                .with_system(map_handle_events)
-                .with_system(map_handle_tile_events)
             )
             .add_system_set(SystemSet::on_update(AppState::MapSpawningEntities)
                 .with_system(map_spawn_entities)
@@ -144,8 +139,7 @@ fn map_finish_loading(
 
             // Goes to next state
             commands.insert_resource(current_map_graphics);
-            state.set(AppState::MapFiringEvents).unwrap();
-            log::debug!("Added map graphics");
+            state.set(AppState::MapConstructing).unwrap();
         }
         LoadState::Failed => {
             panic!("Failed to load map file");
@@ -156,9 +150,9 @@ fn map_finish_loading(
 
 // Fire events that cause map to populate
 fn map_fire_events(
-    current_map: Res<CurrentMap>,
+    mut current_map: ResMut<CurrentMap>,
+    mut current_map_graphics: ResMut<CurrentMapGraphics>,
     vidya_map: Res<Assets<VidyaMap>>,
-    mut tile_events: EventWriter<AddTileEvent>,
     mut state: ResMut<State<AppState>>,
     config: Res<MapConfig>
 ) {
@@ -170,26 +164,8 @@ fn map_fire_events(
         .tiled_map;
 
     // Traverses the map and fires events based on its contents
-    traverse_map(&tiled_map, config.flip_y, &mut tile_events).unwrap();
-
-    // Goes to state that waits for map graphics to finish loading
-    state.set(AppState::MapHandlingEvents).unwrap();
-}
-
-fn map_handle_tile_events(
-    mut tile_events: EventReader<AddTileEvent>,
-    mut current_map_graphics: ResMut<CurrentMapGraphics>
-) {
-    log::debug!("(SYSTEM) map_handle_tile_events");
-    for event in tile_events.iter() {
-        let tile_info = event.0;
-        current_map_graphics.add_tile(tile_info.graphics);
-    }
-}
-
-fn map_handle_events(mut map_state: ResMut<State<AppState>>) {
-    log::debug!("(SYSTEM) map_handle_events");
-    map_state.set(AppState::MapSpawningEntities).unwrap();
+    traverse_map(&tiled_map, config.flip_y, &mut current_map, &mut current_map_graphics).unwrap();
+    state.set(AppState::MapSpawningEntities).unwrap();
 }
 
 fn map_spawn_entities(

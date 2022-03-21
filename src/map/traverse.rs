@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use tiled::*;
 
-use crate::map::{ GeomShape, TileType, AddTileEvent, TileGraphics, TileMeshData };
+use crate::map::{ GeomShape, TileType, TileGraphics, TileMeshData };
+use super::{CurrentMapGraphics, CurrentMap};
 
 
 macro_rules! climb_panic {
@@ -22,7 +23,8 @@ macro_rules! climb_panic {
 pub(crate) fn traverse_map(
     tiled_map: &tiled::Map,
     flip_y: bool,
-    results: &mut EventWriter<AddTileEvent>
+    current_map: &mut CurrentMap,
+    current_map_graphics: &mut CurrentMapGraphics
 ) -> Result<(), ClimbingError> {
     // For all group layers in the root...
     for root_layer in tiled_map.layers() {
@@ -49,7 +51,8 @@ pub(crate) fn traverse_map(
                     tiled_map,
                     flip_y,
                     root_layer.name(),
-                    results
+                    current_map,
+                    current_map_graphics
                 )?;
             },
             _ => return Err(ClimbingError("All root layers must be group layers".to_owned()))
@@ -66,7 +69,8 @@ fn traverse_group_layer(
     map: &Map,                                                  // Map itself
     flip_y: bool,
     group_layer_name: &str,
-    results: &mut EventWriter<AddTileEvent>
+    current_map: &mut CurrentMap,
+    current_map_graphics: &mut CurrentMapGraphics
 ) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
@@ -95,7 +99,8 @@ fn traverse_group_layer(
                 &mut coll_climber,
                 flip_y,
                 group_layer_name,
-                results
+                current_map,
+                current_map_graphics
             )?;
         }
     }
@@ -111,7 +116,8 @@ fn add_tiles<'map>(
     coll_climber: &mut Climber,
     flip_y: bool,
     group_layer_name: &str,
-    results: &mut EventWriter<AddTileEvent>
+    _current_map: &mut CurrentMap,
+    current_map_graphics: &mut CurrentMapGraphics
 ) -> Result<(), ClimbingError> {
 
     // Gets first meta and terrain tiles found at tile_x, tile_y
@@ -143,14 +149,12 @@ fn add_tiles<'map>(
         let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id(), flip_y);
 
         // Add tile info to results
-        results.send(AddTileEvent(TileInfo {
-            graphics: TileGraphics {
-                tileset_index: tileset_index as u32,
-                position: geom_pos,
-                mesh_data: tile_mesh_data,
-                shape: geom_shape
-            }
-        }));
+        current_map_graphics.add_tile(TileGraphics {
+            tileset_index: tileset_index as u32,
+            position: geom_pos,
+            mesh_data: tile_mesh_data,
+            shape: geom_shape
+        });
     }
     Ok(())
 }

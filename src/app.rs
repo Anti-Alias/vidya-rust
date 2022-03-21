@@ -118,8 +118,11 @@ pub enum AppState {
 
     /// TMX file is being loaded
     MapLoadingFile,
-    MapFiringEvents,
-    MapHandlingEvents,
+
+    /// Map collision and/or graphics are being constructed
+    MapConstructing,
+
+    /// Entities specified in map are being spawned
     MapSpawningEntities
 }
 

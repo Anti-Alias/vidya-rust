@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::camera::Camera3d;
 
 use crate::app::{AppState, AppLabel, tick_elapsed};
 use crate::physics::{Velocity, Friction, PreviousPosition, Position};
@@ -23,7 +24,7 @@ impl Plugin for CameraPlugin {
 #[derive(Bundle)]
 pub struct CameraBundle {
     #[bundle]
-    ortho_bundle: OrthographicCameraBundle,
+    ortho_bundle: OrthographicCameraBundle<Camera3d>,
     position: Position,
     prev_position: PreviousPosition,
     velocity: Velocity,
@@ -32,7 +33,7 @@ pub struct CameraBundle {
 }
 impl CameraBundle {
     pub fn new(
-        ortho_bundle: OrthographicCameraBundle,
+        ortho_bundle: OrthographicCameraBundle<Camera3d>,
         position: Position,
         velocity: Velocity,
         friction: Friction,

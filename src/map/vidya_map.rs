@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use bevy::reflect::TypeUuid;
 use bevy::asset::{AssetLoader, AssetServerSettings, BoxedFuture, LoadContext, LoadedAsset};
 use bevy::prelude::*;
-use tiled::{Map, FilesystemResourceCache};
+use tiled::{Map, FilesystemResourceCache, Loader};
 
 #[derive(Debug, TypeUuid)]
 #[uuid = "24740238-86b8-11ec-a8a3-0242ac120002"]
@@ -36,8 +36,8 @@ impl AssetLoader for VidyaMapLoader {
             let mut path = PathBuf::new();
             path.push(&self.assets_folder);
             path.push(load_context.path());
-            let mut cache = FilesystemResourceCache::new();
-            let tiled_map = Map::parse_reader(bytes, &path, &mut cache)?;
+            let mut loader = Loader::with_cache(FilesystemResourceCache::new());
+            let tiled_map = loader.load_tmx_map_from(bytes, &path).unwrap();
             load_context.set_default_asset(LoadedAsset::new(VidyaMap { tiled_map }));
             Ok(())
         })

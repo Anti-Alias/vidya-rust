@@ -62,6 +62,9 @@ pub struct Chunk {
 impl Chunk {
     fn add_tile(&mut self, tile: TileGraphics) {
 
+        //const EPSILON: f32 = 0.001;
+        const EPSILON: f32 = 0.0;
+
         // Splits and borrows members
         let p = &mut self.positions;
         let n = &mut self.normals;
@@ -107,6 +110,7 @@ impl Chunk {
             },
             GeomShape::WallStartSE => {
                 // Vertices (6)
+                tp[y] += EPSILON;   // Skirt around z-buffer issue
                 p.push(tp);
                 tp[x] += tw;
                 p.push(tp);
@@ -148,6 +152,7 @@ impl Chunk {
             }
             GeomShape::WallStartSW => {
                 // Vertices (6)
+                tp[y] += EPSILON;   // Skirt around z-buffer issue
                 tp[z] -= th;
                 p.push(tp);
                 tp[z] += th;

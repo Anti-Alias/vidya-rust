@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use tiled::*;
+use std::result::Result;
 
 use crate::map::{ GeomShape, TileType, TileGraphics, TileMeshData };
 use super::{CurrentMapGraphics, CurrentMap};
@@ -17,6 +18,7 @@ macro_rules! climb_panic {
         );
     }
 }
+
 
 
 // Fire events that cause map to populate
@@ -39,10 +41,10 @@ pub(crate) fn traverse_map(
 
 
                 // Populate tiles from group layer
-                log::trace!("Processing group layer {}", &root_layer.name());
+                log::trace!("Processing group layer {}", &root_layer.name);
                 let offset = Vec2::new(
-                    root_layer.offset_x(),
-                    -root_layer.offset_y()
+                    root_layer.offset_x,
+                    -root_layer.offset_y
                 );
                 traverse_group_layer(
                     &meta_layers,
@@ -50,7 +52,7 @@ pub(crate) fn traverse_map(
                     offset,
                     tiled_map,
                     flip_y,
-                    root_layer.name(),
+                    &root_layer.name,
                     current_map,
                     current_map_graphics
                 )?;
@@ -143,10 +145,10 @@ fn add_tiles<'map>(
     // For all terrain layers belonging to the same layer group in the same position...
     for t_tile in terrain_tiles {
 
-        // Finds tileset, and computes uvs
+        // Finds tileset, and computes mesh data
         let tileset_index = t_tile.tileset_index();
         let tileset = t_tile.get_tileset();
-        let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id(), flip_y);
+        let tile_mesh_data = get_tile_mesh_data(&tileset, t_tile.id(), flip_y);
 
         // Add tile info to results
         current_map_graphics.add_tile(TileGraphics {
@@ -165,7 +167,7 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
     let mut terrain_layers = Vec::new();
     let mut meta_layers = Vec::new();
     for sub_layer in group_layer.layers() {
-        let sub_properties = &sub_layer.properties();
+        let sub_properties = &sub_layer.properties;
         match sub_layer.layer_type() {
             LayerType::TileLayer(sub_layer) => {
                 let tile_layer_type = get_string_property(sub_properties, "type").unwrap_or("terrain");
@@ -308,7 +310,7 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
     }
 }
 
-fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
+fn get_tile_mesh_data(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
     let ts = tileset;                                                       // Tileset (renamed for brevity)
     let img = ts.image.as_ref().expect("Tileset must have a single image");
     let tsm = tileset.margin as f32;                                        // Tileset margin
@@ -397,17 +399,17 @@ impl<'map> MetaTile<'map> {
     fn get_types(&self) -> (TileType, TileType) {
         match self {
             MetaTile::GeomColl(tile) => {
-                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (t_type, t_type)
             }
             MetaTile::Geom(tile) => {
-                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (t_type, TileType::Floor)
             }
             MetaTile::Coll(tile) => {
-                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (TileType::Floor, t_type)
             }

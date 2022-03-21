@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use bevy::window::{WindowResizeConstraints, WindowMode};
 use vidya_rust::camera::Targetable;
 use vidya_rust::extensions::*;
 use vidya_rust::animation::{SpriteAnimationBundle, AnimationSet, Animation, AnimationTimer};
@@ -21,16 +20,7 @@ fn main() {
             title: "vidya".to_string(),
             width: 1600.0,
             height: 900.0,
-            position: None,
-            resize_constraints: WindowResizeConstraints::default(),
-            scale_factor_override: None,
-            vsync: true,
-            resizable: true,
-            decorations: true,
-            cursor_locked: false,
-            cursor_visible: true,
-            mode: WindowMode::Windowed,
-            transparent: false,
+            ..Default::default()
         })
         .add_plugins(VidyaPlugins)
         .add_system_set(SystemSet::on_enter(AppState::AppRunning)

@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use crate::app::{AppState, AppLabel, tick_elapsed};
 use crate::physics::{Velocity, Friction, PreviousPosition, Position};
 
+use std::f32::consts::SQRT_2;
+
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
@@ -73,5 +75,7 @@ pub fn camera_target(
     };
     
     // Sets camera's position as the target's position
-    camera_pos.0 = target_pos.0 + Vec3::new(0.0, 512.0, 512.0);
+    let dist = camera_settings.distance;
+    let yz =dist*SQRT_2;
+    camera_pos.0 = target_pos.0 + Vec3::new(0.0, yz, yz);
 }

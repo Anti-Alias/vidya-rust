@@ -38,7 +38,7 @@ impl CurrentMapGraphics {
         let tileset_index = tile.tileset_index as usize;
         let key = ChunkKey { x, y, z, tileset_index };
         let chunk = self.chunks.entry(key).or_default();
-        chunk.add_tile(tile, 0);
+        chunk.add_tile(tile);
         log::trace!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.translation, key);
     }
 }
@@ -60,25 +60,20 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    fn add_tile(&mut self, tile: TileGraphics, layer_index: u32) {
+    fn add_tile(&mut self, tile: TileGraphics) {
 
-        // Helpful constants
-        const EPSILON: f32 = 0.001;
         const X: usize = 0;
-        const Y: usize = 0;
-        const Z: usize = 0;
+        const Y: usize = 1;
+        const Z: usize = 2;
 
-        // Gets refs of buffers to write to (positions, normal, uvs, indices)
+        // Gets buffers to write to (positions, normal, uvs, indices)
         let p = &mut self.positions;
         let n = &mut self.normals;
         let uvs = &mut self.uvs;
         let i = &mut self.indices;
 
-        // Gets tile's translation and offsets it slightly
-        let layer_offset = layer_index as f32 * EPSILON;
-        let mut tt = tile.translation.to_array();
-        tt[Y] += layer_offset;
-        tt[Z] += layer_offset;
+        // Gets tile's postition and pushes it closer to the camera
+        let mut tp = tile.translation.to_array();
 
         // Gets tile's mesh data
         let md = tile.mesh_data;
@@ -89,13 +84,13 @@ impl Chunk {
         match tile.shape {
             GeomShape::Floor => {
                 // Positions (4)
-                p.push(tt);
-                tt[X] += tw;
-                p.push(tt);
-                tt[Z] -= th;
-                p.push(tt);
-                tt[X] -= tw;
-                p.push(tt);
+                p.push(tp);
+                tp[X] += tw;
+                p.push(tp);
+                tp[Z] -= th;
+                p.push(tp);
+                tp[X] -= tw;
+                p.push(tp);
                 // Normals (4)
                 let norm = [0.0, 1.0, 0.0];
                 for _ in 0..4 { n.push(norm); }
@@ -104,13 +99,13 @@ impl Chunk {
             },
             GeomShape::Wall => {
                 // Positions (4)
-                p.push(tt);
-                tt[X] += tw;
-                p.push(tt);
-                tt[Y] += th;
-                p.push(tt);
-                tt[X] -= tw;
-                p.push(tt);
+                p.push(tp);
+                tp[X] += tw;
+                p.push(tp);
+                tp[Y] += th;
+                p.push(tp);
+                tp[X] -= tw;
+                p.push(tp);
                 // Normals (4)
                 let norm = [0.0, 0.0, 1.0];
                 for _ in 0..4 { n.push(norm); }
@@ -119,19 +114,18 @@ impl Chunk {
             },
             GeomShape::WallStartSE => {
                 // Vertices (6)
-                tt[Y] += EPSILON;   // Skirt around z-buffer issue
-                p.push(tt);
-                tt[X] += tw;
-                p.push(tt);
-                tt[Z] -= th;
-                p.push(tt);
-                p.push(tt);
-                tt[X] -= tw;
-                tt[Y] += th;
-                tt[Z] += th;
-                p.push(tt);
-                tt[Y] -= th;
-                p.push(tt);
+                p.push(tp);
+                tp[X] += tw;
+                p.push(tp);
+                tp[Z] -= th;
+                p.push(tp);
+                p.push(tp);
+                tp[X] -= tw;
+                tp[Y] += th;
+                tp[Z] += th;
+                p.push(tp);
+                tp[Y] -= th;
+                p.push(tp);
 
                 // Normals (6)
                 let up = [0.0, 1.0, 0.0];
@@ -161,20 +155,19 @@ impl Chunk {
             }
             GeomShape::WallStartSW => {
                 // Vertices (6)
-                tt[Y] += EPSILON;   // Skirt around z-buffer issue
-                tt[Z] -= th;
-                p.push(tt);
-                tt[Z] += th;
-                p.push(tt);
-                tt[X] += tw;
-                p.push(tt);
-                p.push(tt);
-                tt[Y] += th;
-                p.push(tt);
-                tt[X] -= tw;
-                tt[Y] -= th;
-                tt[Z] -= th;
-                p.push(tt);
+                tp[Z] -= th;
+                p.push(tp);
+                tp[Z] += th;
+                p.push(tp);
+                tp[X] += tw;
+                p.push(tp);
+                p.push(tp);
+                tp[Y] += th;
+                p.push(tp);
+                tp[X] -= tw;
+                tp[Y] -= th;
+                tp[Z] -= th;
+                p.push(tp);
 
                 // Normals (6)
                 let up = [0.0, 1.0, 0.0];
@@ -204,17 +197,17 @@ impl Chunk {
             }
             GeomShape::WallSE => {
                 // Vertices (4)
-                p.push(tt);
-                tt[X] += tw;
-                tt[Y] -= th;
-                tt[Z] -= th;
-                p.push(tt);
-                tt[Y] += th;
-                p.push(tt);
-                tt[X] -= tw;
-                tt[Y] += th;
-                tt[Z] += th;
-                p.push(tt);
+                p.push(tp);
+                tp[X] += tw;
+                tp[Y] -= th;
+                tp[Z] -= th;
+                p.push(tp);
+                tp[Y] += th;
+                p.push(tp);
+                tp[X] -= tw;
+                tp[Y] += th;
+                tp[Z] += th;
+                p.push(tp);
                 // Normals (4)
                 let norm = [1.0/SQRT_2, 0.0, 1.0/SQRT_2];
                 for _ in 0..4 {
@@ -225,19 +218,19 @@ impl Chunk {
             }
             GeomShape::WallSW => {
                 // Vertices (4)
-                tt[Y] -= th;
-                tt[Z] -= th;
-                p.push(tt);
-                tt[X] += tw;
-                tt[Y] += th;
-                tt[Z] += th;
-                p.push(tt);
-                tt[Y] += th;
-                p.push(tt);
-                tt[X] -= tw;
-                tt[Y] -= th;
-                tt[Z] -= th;
-                p.push(tt);
+                tp[Y] -= th;
+                tp[Z] -= th;
+                p.push(tp);
+                tp[X] += tw;
+                tp[Y] += th;
+                tp[Z] += th;
+                p.push(tp);
+                tp[Y] += th;
+                p.push(tp);
+                tp[X] -= tw;
+                tp[Y] -= th;
+                tp[Z] -= th;
+                p.push(tp);
                 // Normals (4)
                 let norm = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
                 for _ in 0..4 {
@@ -248,18 +241,18 @@ impl Chunk {
             }
             GeomShape::WallEndSE => {
                 // Vertices (6)
-                p.push(tt);
-                tt[X] += tw;
-                tt[Y] -= th;
-                tt[Z] -= th;
-                p.push(tt);
-                tt[Y] += th;
-                p.push(tt);
-                p.push(tt);
-                tt[X] -= tw;
-                p.push(tt);
-                tt[Z] += th;
-                p.push(tt);
+                p.push(tp);
+                tp[X] += tw;
+                tp[Y] -= th;
+                tp[Z] -= th;
+                p.push(tp);
+                tp[Y] += th;
+                p.push(tp);
+                p.push(tp);
+                tp[X] -= tw;
+                p.push(tp);
+                tp[Z] += th;
+                p.push(tp);
 
                 // Normals (6)
                 let up = [0.0, 1.0, 0.0];
@@ -289,19 +282,19 @@ impl Chunk {
             }
             GeomShape::WallEndSW => {
                 // Vertices (6)
-                tt[Z] -= th;
-                p.push(tt);
-                tt[Y] -= th;
-                p.push(tt);
-                tt[X] += tw;
-                tt[Y] += th;
-                tt[Z] += th;
-                p.push(tt);
-                p.push(tt);
-                tt[Z] -= th;
-                p.push(tt);
-                tt[X] -= th;
-                p.push(tt);
+                tp[Z] -= th;
+                p.push(tp);
+                tp[Y] -= th;
+                p.push(tp);
+                tp[X] += tw;
+                tp[Y] += th;
+                tp[Z] += th;
+                p.push(tp);
+                p.push(tp);
+                tp[Z] -= th;
+                p.push(tp);
+                tp[X] -= th;
+                p.push(tp);
 
                 // Normals (6)
                 let up = [0.0, 1.0, 0.0];

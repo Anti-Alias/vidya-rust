@@ -5,6 +5,8 @@ use std::result::Result;
 use crate::map::{ GeomShape, TileType, TileGraphics, TileMeshData };
 use super::{CurrentMapGraphics, CurrentMap};
 
+const DEPTH_EPSILON: f32 = 0.001;
+
 
 macro_rules! climb_panic {
     ($tile_type:expr, $prev_status:expr, $group_layer_name:expr, $x:expr, $y:expr) => {
@@ -29,6 +31,7 @@ pub(crate) fn traverse_map(
     current_map_graphics: &mut CurrentMapGraphics
 ) -> Result<(), ClimbingError> {
     // For all group layers in the root...
+    let mut flattened_layer_index = 0;
     for root_layer in tiled_map.layers() {
         match &root_layer.layer_type() {
             LayerType::GroupLayer(group_layer) => {
@@ -54,8 +57,10 @@ pub(crate) fn traverse_map(
                     flip_y,
                     &root_layer.name,
                     current_map,
-                    current_map_graphics
+                    current_map_graphics,
+                    flattened_layer_index
                 )?;
+                flattened_layer_index += terrain_layers.len();
             },
             _ => return Err(ClimbingError("All root layers must be group layers".to_owned()))
         }
@@ -72,7 +77,8 @@ fn traverse_group_layer(
     flip_y: bool,
     group_layer_name: &str,
     current_map: &mut CurrentMap,
-    current_map_graphics: &mut CurrentMapGraphics
+    current_map_graphics: &mut CurrentMapGraphics,
+    flattened_layer_index: usize,
 ) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
@@ -102,7 +108,8 @@ fn traverse_group_layer(
                 flip_y,
                 group_layer_name,
                 current_map,
-                current_map_graphics
+                current_map_graphics,
+                flattened_layer_index
             )?;
         }
     }
@@ -119,7 +126,8 @@ fn add_tiles<'map>(
     flip_y: bool,
     group_layer_name: &str,
     _current_map: &mut CurrentMap,
-    current_map_graphics: &mut CurrentMapGraphics
+    current_map_graphics: &mut CurrentMapGraphics,
+    flattened_layer_index: usize
 ) -> Result<(), ClimbingError> {
 
     // Gets first meta and terrain tiles found at tile_x, tile_y
@@ -143,17 +151,19 @@ fn add_tiles<'map>(
     let geom_shape = geom_climber.geom_shape(prev_geom_status)?;
 
     // For all terrain layers belonging to the same layer group in the same position...
-    for t_tile in terrain_tiles {
+    for (layer_index, t_tile) in terrain_tiles.enumerate() {
 
         // Finds tileset, and computes mesh data
         let tileset_index = t_tile.tileset_index();
         let tileset = t_tile.get_tileset();
         let tile_mesh_data = get_tile_mesh_data(&tileset, t_tile.id(), flip_y);
+        let flattened_layer_index = flattened_layer_index + layer_index;
+        let depth_offset = Vec3::new(0.0, DEPTH_EPSILON, DEPTH_EPSILON) * flattened_layer_index as f32;
 
         // Add tile info to results
         current_map_graphics.add_tile(TileGraphics {
             tileset_index: tileset_index as u32,
-            translation: geom_pos,
+            translation: geom_pos + depth_offset,
             mesh_data: tile_mesh_data,
             shape: geom_shape
         });

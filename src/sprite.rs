@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bevy::math::Vec3A;
 use bevy::prelude::*;
 use bevy::asset::HandleId;
 use bevy::render::primitives::Aabb;
@@ -73,9 +74,9 @@ impl BatchRenderer {
             .entry(mat_handle.id)
             .or_insert_with(|| {
                 let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
-                mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, Vec::<[f32; 3]>::new());
-                mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, Vec::<[f32; 2]>::new());
+                mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
+                mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, Vec::<[f32; 3]>::new());
+                mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, Vec::<[f32; 2]>::new());
                 mesh.set_indices(Some(Indices::U32(Vec::new())));
                 let mesh_handle = meshes.add(mesh);
                 let entity = commands
@@ -85,8 +86,8 @@ impl BatchRenderer {
                         ..Default::default()
                     })
                     .insert(Aabb {
-                        center: Vec3::ZERO,
-                        half_extents: Vec3::new(f32::MAX, f32::MAX, f32::MAX)
+                        center: Vec3A::ZERO,
+                        half_extents: Vec3A::new(f32::MAX, f32::MAX, f32::MAX)
                     })
                     .id();
                 MeshInfo {

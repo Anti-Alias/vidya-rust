@@ -200,9 +200,9 @@ fn map_spawn_entities(
         let chunk_size = current_map_graphics.chunk_size;
         let chunk_pos = Vec3::new(key.x as f32, key.y as f32, key.z as f32) * chunk_size;
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, chunk.positions.clone());
-        mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, chunk.normals.clone());
-        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, chunk.uvs.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, chunk.positions.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, chunk.normals.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, chunk.uvs.clone());
         mesh.set_indices(Some(Indices::U32(chunk.indices.clone())));
 
         // Creates material

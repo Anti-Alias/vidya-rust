@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.6", features=["dynamic"] }
-tiled = { git = "https://github.com/mapeditor/rs-tiled", branch = "master" }  # Temporary until 1.0 release
+bevy = { git = "https://github.com/bevyengine/bevy.git", commit = "9e450f2827bdaa88257ca3024dd53ddf262925a9", features=["dynamic"] }
+tiled = { git = "https://github.com/Anti-Alias/rs-tiled.git", commit = "5e5f70866cf7d86f3eae247c215ee017d9e826ae" }
 anyhow = "1.0"
 log = "0.4"
 uuid = "0.8.2"

@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 use tiled::*;
+use std::result::Result;
 
 use crate::map::{ GeomShape, TileType, TileGraphics, TileMeshData };
 use super::{CurrentMapGraphics, CurrentMap};
+
+const DEPTH_EPSILON: f32 = 0.001;
 
 
 macro_rules! climb_panic {
@@ -19,6 +22,7 @@ macro_rules! climb_panic {
 }
 
 
+
 // Fire events that cause map to populate
 pub(crate) fn traverse_map(
     tiled_map: &tiled::Map,
@@ -27,6 +31,7 @@ pub(crate) fn traverse_map(
     current_map_graphics: &mut CurrentMapGraphics
 ) -> Result<(), ClimbingError> {
     // For all group layers in the root...
+    let mut flattened_layer_index = 0;
     for root_layer in tiled_map.layers() {
         match &root_layer.layer_type() {
             LayerType::GroupLayer(group_layer) => {
@@ -39,10 +44,10 @@ pub(crate) fn traverse_map(
 
 
                 // Populate tiles from group layer
-                log::trace!("Processing group layer {}", &root_layer.name());
+                log::trace!("Processing group layer {}", &root_layer.name);
                 let offset = Vec2::new(
-                    root_layer.offset_x(),
-                    -root_layer.offset_y()
+                    root_layer.offset_x,
+                    -root_layer.offset_y
                 );
                 traverse_group_layer(
                     &meta_layers,
@@ -50,10 +55,12 @@ pub(crate) fn traverse_map(
                     offset,
                     tiled_map,
                     flip_y,
-                    root_layer.name(),
+                    &root_layer.name,
                     current_map,
-                    current_map_graphics
+                    current_map_graphics,
+                    flattened_layer_index
                 )?;
+                flattened_layer_index += terrain_layers.len();
             },
             _ => return Err(ClimbingError("All root layers must be group layers".to_owned()))
         }
@@ -70,7 +77,8 @@ fn traverse_group_layer(
     flip_y: bool,
     group_layer_name: &str,
     current_map: &mut CurrentMap,
-    current_map_graphics: &mut CurrentMapGraphics
+    current_map_graphics: &mut CurrentMapGraphics,
+    flattened_layer_index: usize,
 ) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
@@ -100,7 +108,8 @@ fn traverse_group_layer(
                 flip_y,
                 group_layer_name,
                 current_map,
-                current_map_graphics
+                current_map_graphics,
+                flattened_layer_index
             )?;
         }
     }
@@ -117,7 +126,8 @@ fn add_tiles<'map>(
     flip_y: bool,
     group_layer_name: &str,
     _current_map: &mut CurrentMap,
-    current_map_graphics: &mut CurrentMapGraphics
+    current_map_graphics: &mut CurrentMapGraphics,
+    flattened_layer_index: usize
 ) -> Result<(), ClimbingError> {
 
     // Gets first meta and terrain tiles found at tile_x, tile_y
@@ -141,17 +151,19 @@ fn add_tiles<'map>(
     let geom_shape = geom_climber.geom_shape(prev_geom_status)?;
 
     // For all terrain layers belonging to the same layer group in the same position...
-    for t_tile in terrain_tiles {
+    for (layer_index, t_tile) in terrain_tiles.enumerate() {
 
-        // Finds tileset, and computes uvs
+        // Finds tileset, and computes mesh data
         let tileset_index = t_tile.tileset_index();
         let tileset = t_tile.get_tileset();
-        let tile_mesh_data = get_tile_size_and_uvs(&tileset, t_tile.id(), flip_y);
+        let tile_mesh_data = get_tile_mesh_data(&tileset, t_tile.id(), flip_y);
+        let flattened_layer_index = flattened_layer_index + layer_index;
+        let depth_offset = Vec3::new(0.0, DEPTH_EPSILON, DEPTH_EPSILON) * flattened_layer_index as f32;
 
         // Add tile info to results
         current_map_graphics.add_tile(TileGraphics {
             tileset_index: tileset_index as u32,
-            position: geom_pos,
+            translation: geom_pos + depth_offset,
             mesh_data: tile_mesh_data,
             shape: geom_shape
         });
@@ -165,7 +177,7 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
     let mut terrain_layers = Vec::new();
     let mut meta_layers = Vec::new();
     for sub_layer in group_layer.layers() {
-        let sub_properties = &sub_layer.properties();
+        let sub_properties = &sub_layer.properties;
         match sub_layer.layer_type() {
             LayerType::TileLayer(sub_layer) => {
                 let tile_layer_type = get_string_property(sub_properties, "type").unwrap_or("terrain");
@@ -308,7 +320,7 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
     }
 }
 
-fn get_tile_size_and_uvs(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
+fn get_tile_mesh_data(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
     let ts = tileset;                                                       // Tileset (renamed for brevity)
     let img = ts.image.as_ref().expect("Tileset must have a single image");
     let tsm = tileset.margin as f32;                                        // Tileset margin
@@ -397,17 +409,17 @@ impl<'map> MetaTile<'map> {
     fn get_types(&self) -> (TileType, TileType) {
         match self {
             MetaTile::GeomColl(tile) => {
-                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (t_type, t_type)
             }
             MetaTile::Geom(tile) => {
-                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (t_type, TileType::Floor)
             }
             MetaTile::Coll(tile) => {
-                let t_type = get_string_property(&tile.properties(), "type").unwrap_or("floor");
+                let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (TileType::Floor, t_type)
             }

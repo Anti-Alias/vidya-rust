@@ -3,11 +3,11 @@ use bevy::prelude::*;
 /// Tile id local to a tileset
 pub type LocalId = u32;
 
-/// Information about a tile's graphics
+/// Information about a tile's graphics (position, size, uvs, shape)
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TileGraphics {
     pub tileset_index: u32,
-    pub position: Vec3,
+    pub translation: Vec3,
     pub mesh_data: TileMeshData,
     pub shape: GeomShape
 }

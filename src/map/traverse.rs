@@ -153,7 +153,7 @@ fn add_tiles<'map>(
         // Add tile info to results
         current_map_graphics.add_tile(TileGraphics {
             tileset_index: tileset_index as u32,
-            position: geom_pos,
+            translation: geom_pos,
             mesh_data: tile_mesh_data,
             shape: geom_shape
         });

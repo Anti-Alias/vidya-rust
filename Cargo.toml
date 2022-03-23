@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-#bevy = { version = "0.6", features=["dynamic"] }
+#bevy = { version = "0.6.1", features=["dynamic"] }
 bevy = { git = "https://github.com/Anti-Alias/bevy.git", branch = "main", features=["dynamic"] }
 tiled = { git = "https://github.com/Anti-Alias/rs-tiled.git", branch = "master" }  # Temporary until 1.0 release
 anyhow = "1.0"

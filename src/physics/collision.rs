@@ -71,6 +71,11 @@ impl Terrain {
     pub fn iter_pieces(&self, min: Coords, max: Coords) -> impl Iterator<Item=TerrainPieceRef> + '_ {
         let chunk_min = self.to_chunk_coords(min);
         let chunk_max = self.to_chunk_coords(max);
+        let chunk_max = ChunkCoords::new(
+            chunk_max.x+1,
+            chunk_max.y+1,
+            chunk_max.z+1
+        );
         self.iter_chunks(chunk_min, chunk_max)
             .flat_map(move |chunk| {
                 let (inter_min, inter_max) = chunk.intersect(min, max);
@@ -84,10 +89,6 @@ impl Terrain {
                     (inter_max.y - chunk.position.y) as u32,
                     (inter_max.z - chunk.position.z) as u32
                 );
-                println!("min: {:?}, max: {:?}", min, max);
-                println!("Inter min: {:?}, inter max: {:?}", inter_min, inter_max);
-                println!("Chunk pos: {:?}!!!!!!!!!!!!!!", chunk.position);
-                println!("Local min: {:?}, local max: {:?}", local_min, local_max);
                 chunk.iter_pieces(local_min, local_max)
             })
             .filter(|piece| match piece.piece {
@@ -122,7 +123,7 @@ impl Terrain {
         let chunk_x = modulo(coords.x, chunk_width) as u32;
         let chunk_y = modulo(coords.y, chunk_height) as u32;
         let chunk_z = modulo(coords.z, chunk_depth) as u32;
-        let idx = self.chunk_size.x * (self.chunk_size.y*chunk_z + chunk_y) + chunk_x;
+        let idx = self.chunk_size.x * (chunk_z * self.chunk_size.y + chunk_y) + chunk_x;
         (chunk_coords, idx as usize)
     }
 
@@ -191,14 +192,11 @@ impl<'terrain> Iterator for ChunkIter<'terrain> {
 
         // Gets chunk at current location and updates position
         let (mut pos, min, max) = (self.pos, self.min, self.max);
-        println!("Trying: {:?}", pos);
         let mut chunk = self.terrain.get_chunk(pos);
         while chunk.is_none() {
             pos = Self::next_pos(&pos, &min, &max);
             if pos.z >= self.max.z { return None; }
-            println!("Trying inner: {:?}", pos);
             chunk = self.terrain.get_chunk(pos);
-            println!("None inner: {}", chunk.is_none());
         }
         self.pos = Self::next_pos(&pos, &min, &max);
 
@@ -296,9 +294,8 @@ impl<'terrain> Iterator for ChunkRefIter<'terrain> {
         let min = &self.min;
         let chunk = &self.chunk;
         let size = &chunk.size;
-        let idx = self.pos.z * (size.y + size.x) + self.pos.y * size.x + self.pos.x;
+        let idx = size.x * (self.pos.z * size.y + self.pos.y) + self.pos.x;
         let piece = &self.chunk.chunk.0[idx as usize];
-        println!("Piece idx: {:?}, pos: {:?}, piece: {:?}", idx, self.pos, piece);
 
         // Advances position
         self.pos.x += 1;

@@ -284,3 +284,29 @@ fn collide_near() {
         collision
     );
 }
+
+#[test]
+fn collide_far() {
+    let old_cylinder = CylinderCollider {
+        center: Vec3::new(5.0, 5.0, -12.0),
+        half_height: 5.0,
+        radius: 10.0
+    };
+    let mov = Movement {
+        origin: old_cylinder,
+        delta: Vec3::new(5.0, 0.0, 15.0)
+    };
+    let coll = TerrainCollider {
+        piece: TerrainPiece::Cuboid,
+        position: Vec3::new(0.0, 0.0, 0.0),
+        size: Vec3::new(10.0, 10.0, 10.0)
+    };
+    let collision = coll.collide_with_cylinder(&mov);
+    assert_eq!(
+        Some(Collision {
+            t: 0.13333334,
+            velocity: Vec3::new(5.0, 0.0, 0.0)
+        }),
+        collision
+    );
+}

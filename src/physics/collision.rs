@@ -73,13 +73,6 @@ impl CylinderCollider {
     }
 }
 
-/// Movement of a collider
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Movement<C: Debug + Copy + Clone + PartialEq> {
-    pub origin: C,
-    pub delta: Vec3
-}
-
 /// Collider of a [`TerrainPiece`].
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TerrainCollider {
@@ -91,33 +84,30 @@ pub struct TerrainCollider {
 impl TerrainCollider {
 
     /// Collides a terrain piece with a cylinder's movement
-    pub fn collide_with_cylinder(&self, movement: &Movement<CylinderCollider>) -> Option<Collision> {
+    pub fn collide_with_cylinder(&self, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
         match self.piece {
-            TerrainPiece::Cuboid => self.collide_cuboid_with_cylinder(movement),
-            TerrainPiece::Slope => self.collide_slope_with_cylinder(movement),
+            TerrainPiece::Cuboid => self.collide_cuboid_with_cylinder(cyl, delta),
+            //TerrainPiece::Slope => self.collide_slope_with_cylinder(cyl, delta),
             _ => None
         }
     }
 
-    fn collide_cuboid_with_cylinder(&self, movement: &Movement<CylinderCollider>) -> Option<Collision> {
+    fn collide_cuboid_with_cylinder(&self, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
 
         // Terrain bounds
         let ter_bounds = self.aabb();
 
         // Unpacks movement
-        let delta = movement.delta;
-        let prev_cyl = movement.origin;
+        let prev_cyl = cyl;
         let cur_cyl_center = prev_cyl.center + delta;
-        let cyl_hh = movement.origin.half_height;
-        let cyl_rad = movement.origin.radius;
 
         // Collision code for left and right sides of this cuboid
         let x_collision = |ter_edge: f32| {
             let t = (ter_edge - prev_cyl.center.x) / delta.x;
             if t >= 0.0 && t < 1.0 {
                 let lerped_center = prev_cyl.center + delta * t;
-                let lerped_bottom = lerped_center.y - cyl_hh;
-                let lerped_top = lerped_center.y + cyl_hh;
+                let lerped_bottom = lerped_center.y - cyl.half_height;
+                let lerped_top = lerped_center.y + cyl.half_height;
                 let in_yz_bounds =
                     lerped_center.z > ter_bounds.min.z &&
                     lerped_center.z < ter_bounds.max.z &&
@@ -143,8 +133,8 @@ impl TerrainCollider {
             let t = (ter_edge - prev_cyl.center.z) / delta.z;
             if t >= 0.0 && t < 1.0 {
                 let lerped_center = prev_cyl.center + delta * t;
-                let lerped_bottom = lerped_center.y - cyl_hh;
-                let lerped_top = lerped_center.y + cyl_hh;
+                let lerped_bottom = lerped_center.y - cyl.half_height;
+                let lerped_top = lerped_center.y + cyl.half_height;
                 let in_xy_bounds =
                     lerped_center.x > ter_bounds.min.x &&
                     lerped_center.x < ter_bounds.max.x &&
@@ -166,33 +156,29 @@ impl TerrainCollider {
         };
 
         // Left collision
-        let coll = x_collision(ter_bounds.min.x - cyl_rad);
+        let coll = x_collision(ter_bounds.min.x - cyl.radius);
         if coll.is_some() {
             return coll;
         }
 
         // Right collision
-        let coll = x_collision(ter_bounds.max.x + cyl_rad);
+        let coll = x_collision(ter_bounds.max.x + cyl.radius);
         if coll.is_some() {
             return coll;
         }
 
         // Near collision
-        let coll = z_collision(ter_bounds.max.z + cyl_rad);
+        let coll = z_collision(ter_bounds.max.z + cyl.radius);
         if coll.is_some() {
             return coll;
         }
 
         // Far collision
-        let coll = z_collision(ter_bounds.min.z - cyl_rad);
+        let coll = z_collision(ter_bounds.min.z - cyl.radius);
         if coll.is_some() {
             return coll;
         }
 
-        None
-    }
-
-    fn collide_slope_with_cylinder(&self, movement: &Movement<CylinderCollider>) -> Option<Collision> {
         None
     }
 
@@ -209,21 +195,18 @@ pub struct Collision {
 
 #[test]
 fn collide_left() {
-    let old_cylinder = CylinderCollider {
+    let cyl = CylinderCollider {
         center: Vec3::new(-15.0, 5.0, 5.0),
         half_height: 5.0,
         radius: 10.0
-    };
-    let mov = Movement {
-        origin: old_cylinder,
-        delta: Vec3::new(10.0, 0.0, 5.0)
     };
     let coll = TerrainCollider {
         piece: TerrainPiece::Cuboid,
         position: Vec3::new(0.0, 0.0, 0.0),
         size: Vec3::new(10.0, 10.0, 10.0)
     };
-    let collision = coll.collide_with_cylinder(&mov);
+    let delta = Vec3::new(10.0, 0.0, 5.0);
+    let collision = coll.collide_with_cylinder(&cyl, delta);
     assert_eq!(
         Some(Collision {
             t: 0.5,
@@ -235,21 +218,18 @@ fn collide_left() {
 
 #[test]
 fn collide_right() {
-    let old_cylinder = CylinderCollider {
+    let cyl = CylinderCollider {
         center: Vec3::new(25.0, 5.0, 5.0),
         half_height: 5.0,
         radius: 10.0
-    };
-    let mov = Movement {
-        origin: old_cylinder,
-        delta: Vec3::new(-10.0, 0.0, 5.0)
     };
     let coll = TerrainCollider {
         piece: TerrainPiece::Cuboid,
         position: Vec3::new(0.0, 0.0, 0.0),
         size: Vec3::new(10.0, 10.0, 10.0)
     };
-    let collision = coll.collide_with_cylinder(&mov);
+    let delta = Vec3::new(-10.0, 0.0, 5.0);
+    let collision = coll.collide_with_cylinder(&cyl, delta);
     assert_eq!(
         Some(Collision {
             t: 0.5,
@@ -261,21 +241,18 @@ fn collide_right() {
 
 #[test]
 fn collide_near() {
-    let old_cylinder = CylinderCollider {
+    let cyl = CylinderCollider {
         center: Vec3::new(5.0, 5.0, 20.0),
         half_height: 5.0,
         radius: 10.0
-    };
-    let mov = Movement {
-        origin: old_cylinder,
-        delta: Vec3::new(5.0, 0.0, -15.0)
     };
     let coll = TerrainCollider {
         piece: TerrainPiece::Cuboid,
         position: Vec3::new(0.0, 0.0, 0.0),
         size: Vec3::new(10.0, 10.0, 10.0)
     };
-    let collision = coll.collide_with_cylinder(&mov);
+    let delta = Vec3::new(5.0, 0.0, -15.0);
+    let collision = coll.collide_with_cylinder(&cyl, delta);
     assert_eq!(
         Some(Collision {
             t: 0.0,
@@ -287,21 +264,18 @@ fn collide_near() {
 
 #[test]
 fn collide_far() {
-    let old_cylinder = CylinderCollider {
+    let cyl = CylinderCollider {
         center: Vec3::new(5.0, 5.0, -12.0),
         half_height: 5.0,
         radius: 10.0
-    };
-    let mov = Movement {
-        origin: old_cylinder,
-        delta: Vec3::new(5.0, 0.0, 15.0)
     };
     let coll = TerrainCollider {
         piece: TerrainPiece::Cuboid,
         position: Vec3::new(0.0, 0.0, 0.0),
         size: Vec3::new(10.0, 10.0, 10.0)
     };
-    let collision = coll.collide_with_cylinder(&mov);
+    let delta = Vec3::new(5.0, 0.0, 15.0);
+    let collision = coll.collide_with_cylinder(&cyl, delta);
     assert_eq!(
         Some(Collision {
             t: 0.13333334,
@@ -309,4 +283,21 @@ fn collide_far() {
         }),
         collision
     );
+}
+
+#[test]
+fn collide_missing() {
+    let cyl = CylinderCollider {
+        center: Vec3::new(-20.0, 15.0, 0.0),
+        half_height: 5.0,
+        radius: 10.0
+    };
+    let coll = TerrainCollider {
+        piece: TerrainPiece::Cuboid,
+        position: Vec3::new(0.0, 0.0, 0.0),
+        size: Vec3::new(10.0, 10.0, 10.0)
+    };
+    let delta = Vec3::new(20.0, 0.0, 5.0);
+    let collision = coll.collide_with_cylinder(&cyl, delta);
+    assert_eq!(None, collision);
 }

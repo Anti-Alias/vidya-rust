@@ -1,10 +1,11 @@
-use bevy::prelude::*;
 use crate::app::{AppState, AppLabel, tick_elapsed};
 
 mod movement;
+mod terrain;
 mod collision;
 
 pub use movement::*;
+pub use terrain::*;
 pub use collision::*;
 
 /// Plugin that adds physics components and terrain collision

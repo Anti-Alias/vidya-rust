@@ -4,6 +4,8 @@ use bevy::prelude::*;
 
 use crate::physics::TerrainPiece;
 
+const T_EPSILON: f32 = 0.001;
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Aabb {
     pub min: Vec3,
@@ -109,74 +111,84 @@ impl TerrainCollider {
         let cyl_hh = movement.origin.half_height;
         let cyl_rad = movement.origin.radius;
 
-        // Left collision
-        {
-            let ter_edge = ter_bounds.min.x - cyl_rad;
+        // Collision code for left and right sides of this cuboid
+        let x_collision = |ter_edge: f32| {
             let t = (ter_edge - prev_cyl.center.x) / delta.x;
-            if t > 0.0 && t < 1.0 {
+            if t >= 0.0 && t < 1.0 {
                 let lerped_center = prev_cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl_hh;
                 let lerped_top = lerped_center.y + cyl_hh;
-                let in_cross_bounds =
+                let in_yz_bounds =
                     lerped_center.z > ter_bounds.min.z &&
                     lerped_center.z < ter_bounds.max.z &&
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
-                if in_cross_bounds {
+                if in_yz_bounds {
                     let mut final_center = cur_cyl_center;
                     final_center.x = ter_edge;
+                    let velocity =
+                        if t > T_EPSILON { (final_center - lerped_center) / (1.0 - t) }
+                        else { Vec3::new(0.0, delta.y, delta.z) };
                     return Some(Collision {
                         t,
-                        velocity: (final_center - lerped_center) / t,
+                        velocity,
                     });
                 }
             }
+            None
         };
 
-        // Right collision
-        {
-            let ter_edge = ter_bounds.max.x + cyl_rad;
-            let t = (ter_edge - prev_cyl.center.x) / delta.x;
-            if t > 0.0 && t < 1.0 {
+        // Collision code for left and right sides of this cuboid
+        let z_collision = |ter_edge: f32| {
+            let t = (ter_edge - prev_cyl.center.z) / delta.z;
+            if t >= 0.0 && t < 1.0 {
                 let lerped_center = prev_cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl_hh;
                 let lerped_top = lerped_center.y + cyl_hh;
-                let in_cross_bounds =
-                    lerped_center.z > ter_bounds.min.z &&
-                    lerped_center.z < ter_bounds.max.z &&
+                let in_xy_bounds =
+                    lerped_center.x > ter_bounds.min.x &&
+                    lerped_center.x < ter_bounds.max.x &&
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
-                if in_cross_bounds {
+                if in_xy_bounds {
                     let mut final_center = cur_cyl_center;
-                    final_center.x = ter_edge;
+                    final_center.z = ter_edge;
+                    let velocity =
+                        if t > T_EPSILON { (final_center - lerped_center) / (1.0 - t) }
+                        else { Vec3::new(delta.x, delta.y, 0.0) };
                     return Some(Collision {
                         t,
-                        velocity: (final_center - lerped_center) / t,
+                        velocity
                     });
                 }
             }
+            None
         };
-        
+
         // Left collision
-        // let left_coll = {
-        //     let diff_other = co_bounds.max.x - bo_bounds.max.x;
-        //     if diff_other > 0.0 {
-        //         let diff_prev = t_bounds.min.x - bo_bounds.max.x;
-        //         let t = diff_prev / diff_other;
-        //         let lerped_cyl = movement.origin.cast(movement.delta, t);
-        //         if cylinder_in_yz(&t_bounds, &lerped_cyl) {
-        //             let diff_current = t_bounds.min.x - co_bounds.max.x;
-        //             let mut nco = co_bounds;
-        //             nco.max.x += diff_current;
-        //             nco.min.x += diff_current;
-        //             return Some(Collision {
-        //                 t,
-        //                 velocity: (nco.center() - lo.center()) / t,
-        //             });
-        //         }
-        //     }
-        //     else { None} 
-        // };
+        let coll = x_collision(ter_bounds.min.x - cyl_rad);
+        if coll.is_some() {
+            return coll;
+        }
+
+        // Right collision
+        let coll = x_collision(ter_bounds.max.x + cyl_rad);
+        if coll.is_some() {
+            return coll;
+        }
+
+        // Near collision
+        let coll = z_collision(ter_bounds.max.z + cyl_rad);
+        if coll.is_some() {
+            return coll;
+        }
+
+        // Far collision
+        let coll = z_collision(ter_bounds.min.z - cyl_rad);
+        if coll.is_some() {
+            return coll;
+        }
+
         None
     }
 
@@ -242,6 +254,32 @@ fn collide_right() {
         Some(Collision {
             t: 0.5,
             velocity: Vec3::new(0.0, 0.0, 5.0)
+        }),
+        collision
+    );
+}
+
+#[test]
+fn collide_near() {
+    let old_cylinder = CylinderCollider {
+        center: Vec3::new(5.0, 5.0, 20.0),
+        half_height: 5.0,
+        radius: 10.0
+    };
+    let mov = Movement {
+        origin: old_cylinder,
+        delta: Vec3::new(5.0, 0.0, -15.0)
+    };
+    let coll = TerrainCollider {
+        piece: TerrainPiece::Cuboid,
+        position: Vec3::new(0.0, 0.0, 0.0),
+        size: Vec3::new(10.0, 10.0, 10.0)
+    };
+    let collision = coll.collide_with_cylinder(&mov);
+    assert_eq!(
+        Some(Collision {
+            t: 0.0,
+            velocity: Vec3::new(5.0, 0.0, 0.0)
         }),
         collision
     );

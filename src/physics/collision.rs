@@ -1,10 +1,16 @@
 use std::fmt::Debug;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, math::Vec3Swizzles};
 
 use crate::physics::TerrainPiece;
 
 const T_EPSILON: f32 = 0.001;
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Collision {
+    pub t: f32,
+    pub velocity: Vec3
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Aabb {
@@ -39,7 +45,7 @@ pub struct CylinderCollider {
 
 impl CylinderCollider {
 
-    pub fn aabb(&self) -> Aabb {
+    fn aabb(&self) -> Aabb {
         let half_height = self.half_height;
         let min = Vec3::new(
             self.center.x - self.radius,
@@ -55,7 +61,7 @@ impl CylinderCollider {
     }
 
     /// self + delta * t
-    pub fn cast(&self, delta: Vec3, t: f32) -> Self {
+    fn cast(&self, delta: Vec3, t: f32) -> Self {
         Self {
             center: self.center + delta * t,
             radius: self.radius,
@@ -64,11 +70,18 @@ impl CylinderCollider {
     }
 
     /// self + delta
-    pub fn mov(&self, delta: Vec3) -> Self {
+    fn mov(&self, delta: Vec3) -> Self {
         CylinderCollider {
             center: self.center + delta,
             radius: self.radius,
             half_height: self.half_height
+        }
+    }
+
+    fn swizzle_circle(&self) -> Circle {
+        Circle {
+            center: self.center.xz(),
+            radius: self.radius
         }
     }
 }
@@ -155,42 +168,190 @@ impl TerrainCollider {
             None
         };
 
+        // Collision of vertical line with cylinder
+        let edge_collision = |edge: Vec2| -> Option<Collision> {
+            let c1 = cyl.swizzle_circle();
+            //let coll_2d = collide_circles();
+            None
+        };
+
         // Left collision
-        let coll = x_collision(ter_bounds.min.x - cyl.radius);
-        if coll.is_some() {
-            return coll;
+        if delta.x > 0.0 {
+            let coll = x_collision(ter_bounds.min.x - cyl.radius);
+            if coll.is_some() {
+                return coll;
+            }
         }
 
         // Right collision
-        let coll = x_collision(ter_bounds.max.x + cyl.radius);
-        if coll.is_some() {
-            return coll;
+        if delta.x < 0.0 {
+            let coll = x_collision(ter_bounds.max.x + cyl.radius);
+            if coll.is_some() {
+                return coll;
+            }
         }
 
         // Near collision
-        let coll = z_collision(ter_bounds.max.z + cyl.radius);
-        if coll.is_some() {
-            return coll;
+        if delta.z < 0.0 {
+            let coll = z_collision(ter_bounds.max.z + cyl.radius);
+            if coll.is_some() {
+                return coll;
+            }
         }
 
         // Far collision
-        let coll = z_collision(ter_bounds.min.z - cyl.radius);
+        if delta.z > 0.0 {
+            let coll = z_collision(ter_bounds.min.z - cyl.radius);
+            if coll.is_some() {
+                return coll;
+            }
+        }
+
+        // Far/left corner collision
+        let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.min.z));
         if coll.is_some() {
             return coll;
         }
 
+        // Far/left corner collision
+        let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.min.z));
+        if coll.is_some() {
+            return coll;
+        }
+
+        // Far/left corner collision
+        let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.max.z));
+        if coll.is_some() {
+            return coll;
+        }
+
+        // Far/left corner collision
+        let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.max.z));
+        if coll.is_some() {
+            return coll;
+        }
+
+        // Default
         None
     }
+
+    /*
+    * ca = center a
+    * cb = center b
+    * ra = radius a
+    * rb = radius b
+    * ((ca + d * t) - cb) ^ 2 = (ra + rb) ^ 2
+    * ((ca+d*t) + -cb) * ((ca+d*t) + -cb) = (ra + rb) ^ 2
+    * ((ca+d)*t)^2 + -2*(ca+d*t)*cb + cb^2 = (ra + rb) ^ 2
+    * ((ca+d)*t)^2 + (-2*ca - 2*d*t*cb) + cb^2 = (ra + rb) ^ 2
+    * A = ca+d
+    * B = 2(ca+d)
+    *
+    */
 
     fn aabb(&self) -> Aabb {
         Aabb { min: self.position, max: self.position + self.size }
     }
 }
 
+
+fn closest_point_on_line(origin: Vec2, direction: Vec2, point: Vec2) -> Vec2 {
+    let dir_norm = direction.normalize();
+    let v = point - origin;
+    let d = v.dot(dir_norm);
+    origin + dir_norm * d
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Collision {
+pub struct Collision2D {
     pub t: f32,
-    pub velocity: Vec3
+    pub velocity: Vec2
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct Circle {
+    center: Vec2,
+    radius: f32
+}
+
+fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Collision2D> {
+
+    // Gets closest point on line "d"
+    let a = src;
+    let c = circle.center;
+    let ca = c - a;
+    let rad_squared = circle.radius * circle.radius;
+    if ca.length_squared() < rad_squared {
+        return None;
+    };
+    let b = dest;
+    let ba = b - a;
+    let ba_len = ba.length();
+    let ba_norm = ba / ba_len;
+    let d = {
+        let dist = ca.dot(ba_norm);
+        src + ba_norm * dist
+    };
+    let dc_len_sq = (d - c).length_squared();
+    if dc_len_sq > rad_squared {
+        return None;
+    }
+
+
+    // Gets lengths of right triangle to compute "back distance"
+    let ec_len_sq = rad_squared;
+    let ed_len = (ec_len_sq - dc_len_sq).sqrt();    // Back distance
+
+    // Computes collision point
+    let e = d - ba_norm * ed_len;
+    let ea_len = (e - a).length();
+    let t = ea_len / ba_len;
+    if t < 0.0 || t > 1.0 {
+        return None;
+    }
+
+    // Calculates velocity
+    let ce_norm = (c - e).normalize();
+    let ce_norm_3d = Vec3::new(ce_norm.x, ce_norm.y, 0.0);
+    let ba_norm_3d = Vec3::new(ba_norm.x, ba_norm.y, 0.0);
+    let up = ce_norm_3d.cross(ba_norm_3d);
+    let velocity = if up == Vec3::ZERO {
+        Vec2::ZERO
+    }
+    else {
+        let vel_norm = up.cross(ce_norm_3d).xy().normalize();
+        let vel_mult = 1.0 - ba_norm.dot(ce_norm);
+        vel_norm * ba_len * vel_mult
+    };
+
+    // Done
+    Some(Collision2D {
+        t,
+        velocity
+    })
+}
+
+/// Shamelessly uses https://ericleong.me/research/circle-circle/
+fn collide_circles(c1: Circle, c2: Circle, vel: Vec2) -> Option<Collision2D> {
+    let closest_point = closest_point_on_line(c1.center, vel, c2.center);
+    let bd_squared = (c2.center - closest_point).length_squared();
+    let bc = c1.radius + c2.radius;
+    let bc_squared = bc*bc;
+    if bd_squared >= bc_squared {
+        return None;
+    }
+    let vel_len = vel.length();
+    let vel_norm = vel / vel_len;
+    let back_dist = (bc_squared - bd_squared).sqrt();
+    let new_center = closest_point - vel_norm * back_dist;
+    let t = (new_center - c1.center).length() / vel_len;
+    if t < 0.0 || t > 1.0 {
+        return None;
+    }
+    Some(Collision2D {
+        t,
+        velocity: Vec2::ZERO
+    })
 }
 
 #[test]
@@ -300,4 +461,141 @@ fn collide_missing() {
     let delta = Vec3::new(20.0, 0.0, 5.0);
     let collision = coll.collide_with_cylinder(&cyl, delta);
     assert_eq!(None, collision);
+}
+
+#[test]
+fn test_closest_point_on_line() {
+    let origin = Vec2::new(-5.0, 0.0);
+    let direction = Vec2::new(10.0, 0.0);
+    let point = Vec2::new(0.0, 10.0);
+    let closest = closest_point_on_line(origin, direction, point);
+    assert_eq!(Vec2::ZERO, closest);
+}
+
+#[test]
+fn test_collide_circles_1() {
+    let c1 = Circle {
+        center: Vec2::ZERO,
+        radius: 10.0
+    };
+    let c2 = Circle {
+        center: Vec2::new(20.0, 0.0),
+        radius: 10.0
+    };
+    let vel = Vec2::new(10.0, 0.0);
+    let coll = collide_circles(c1, c2, vel);
+
+    let expected = Some(Collision2D {
+        t: 0.0,
+        velocity: Vec2::ZERO
+    });
+    assert_eq!(expected, coll);
+}
+
+#[test]
+fn test_collide_circles_2() {
+    let c1 = Circle {
+        center: Vec2::new(-10.0, 0.0),
+        radius: 10.0
+    };
+    let c2 = Circle {
+        center: Vec2::new(20.0, 0.0),
+        radius: 10.0
+    };
+    let vel = Vec2::new(10.0, 0.0);
+    let coll = collide_circles(c1, c2, vel);
+
+    let expected = Some(Collision2D {
+        t: 1.0,
+        velocity: Vec2::ZERO
+    });
+    assert_eq!(expected, coll);
+}
+
+#[test]
+fn test_collide_circles_3() {
+    let c1 = Circle {
+        center: Vec2::new(-11.0, 0.0),
+        radius: 10.0
+    };
+    let c2 = Circle {
+        center: Vec2::new(20.0, 0.0),
+        radius: 10.0
+    };
+    let vel = Vec2::new(10.0, 0.0);
+    let coll = collide_circles(c1, c2, vel);
+
+    assert_eq!(None, coll);
+}
+
+#[test]
+fn test_collide_line_with_circle() {
+
+    fn test(a: Vec2, b: Vec2, circle: Circle, expected: Option<Collision2D>) {
+        let collision = collide_line_with_circle(a, b, circle);
+        assert_eq!(expected, collision);
+    }
+
+    let circle = Circle {
+        center: Vec2::new(2.0, 0.0),
+        radius: 1.0
+    };
+
+    test(
+        Vec2::ZERO,
+        Vec2::new(2.0, 0.0),
+        circle,
+        Some(Collision2D {
+            t: 0.5,
+            velocity: Vec2::ZERO
+        })
+    );
+
+    test(
+        Vec2::ZERO,
+        Vec2::new(1.0, 1.0),
+        circle,
+        None
+    );
+
+    test(
+        Vec2::ZERO,
+        Vec2::new(1.0, -1.0),
+        circle,
+        None
+    );
+
+    test(
+        Vec2::new(-1.0, 0.0),
+        Vec2::ZERO,
+        circle,
+        None
+    );
+
+    test(
+        Vec2::new(1.0, 0.0),
+        Vec2::new(2.0, 0.0),
+        circle,
+        Some(Collision2D {
+            t: 0.0,
+            velocity: Vec2::ZERO
+        })
+    );
+
+    test(
+        Vec2::new(1.1, 0.0),
+        Vec2::new(2.0, 0.0),
+        circle,
+        None
+    );
+
+    test(
+        Vec2::new(0.0, 0.001),
+        Vec2::new(2.0, 0.001),
+        circle,
+        Some(Collision2D {
+            t: 0.50000024,
+            velocity: Vec2::new(9.536743e-10, 9.5367375e-7)
+        })
+    );
 }

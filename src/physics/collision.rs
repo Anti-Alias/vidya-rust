@@ -42,50 +42,6 @@ pub struct CylinderCollider {
     pub radius: f32,
     pub half_height: f32,
 }
-
-impl CylinderCollider {
-
-    fn aabb(&self) -> Aabb {
-        let half_height = self.half_height;
-        let min = Vec3::new(
-            self.center.x - self.radius,
-            self.center.y - half_height,
-            self.center.z - self.radius
-        );
-        let max = Vec3::new(
-            self.center.x + self.radius,
-            self.center.y + half_height,
-            self.center.z + self.radius
-        );
-        Aabb { min, max }
-    }
-
-    /// self + delta * t
-    fn cast(&self, delta: Vec3, t: f32) -> Self {
-        Self {
-            center: self.center + delta * t,
-            radius: self.radius,
-            half_height: self.half_height
-        }
-    }
-
-    /// self + delta
-    fn mov(&self, delta: Vec3) -> Self {
-        CylinderCollider {
-            center: self.center + delta,
-            radius: self.radius,
-            half_height: self.half_height
-        }
-    }
-
-    fn swizzle_circle(&self) -> Circle {
-        Circle {
-            center: self.center.xz(),
-            radius: self.radius
-        }
-    }
-}
-
 /// Collider of a [`TerrainPiece`].
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TerrainCollider {
@@ -111,14 +67,13 @@ impl TerrainCollider {
         let ter_bounds = self.aabb();
 
         // Unpacks movement
-        let prev_cyl = cyl;
-        let cur_cyl_center = prev_cyl.center + delta;
+        let next_cyl_center = cyl.center + delta;
 
         // Collision code for left and right sides of this cuboid
         let x_collision = |ter_edge: f32| {
-            let t = (ter_edge - prev_cyl.center.x) / delta.x;
+            let t = (ter_edge - cyl.center.x) / delta.x;
             if t >= 0.0 && t < 1.0 {
-                let lerped_center = prev_cyl.center + delta * t;
+                let lerped_center = cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl.half_height;
                 let lerped_top = lerped_center.y + cyl.half_height;
                 let in_yz_bounds =
@@ -127,7 +82,7 @@ impl TerrainCollider {
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_yz_bounds {
-                    let mut final_center = cur_cyl_center;
+                    let mut final_center = next_cyl_center;
                     final_center.x = ter_edge;
                     let velocity =
                         if t > T_EPSILON { (final_center - lerped_center) / (1.0 - t) }
@@ -143,9 +98,9 @@ impl TerrainCollider {
 
         // Collision code for left and right sides of this cuboid
         let z_collision = |ter_edge: f32| {
-            let t = (ter_edge - prev_cyl.center.z) / delta.z;
-            if t >= 0.0 && t < 1.0 {
-                let lerped_center = prev_cyl.center + delta * t;
+            let t = (ter_edge - cyl.center.z) / delta.z;
+            if t >= 0.0 && t <= 1.0 {
+                let lerped_center = cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl.half_height;
                 let lerped_top = lerped_center.y + cyl.half_height;
                 let in_xy_bounds =
@@ -154,7 +109,7 @@ impl TerrainCollider {
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_xy_bounds {
-                    let mut final_center = cur_cyl_center;
+                    let mut final_center = next_cyl_center;
                     final_center.z = ter_edge;
                     let velocity =
                         if t > T_EPSILON { (final_center - lerped_center) / (1.0 - t) }
@@ -170,8 +125,23 @@ impl TerrainCollider {
 
         // Collision of vertical line with cylinder
         let edge_collision = |edge: Vec2| -> Option<Collision> {
-            let c1 = cyl.swizzle_circle();
-            //let coll_2d = collide_circles();
+            let cir = Circle {
+                center: edge,
+                radius: cyl.radius
+            };
+            let coll_2d = collide_line_with_circle(cyl.center.xz(), next_cyl_center.xz(), cir)?;
+            let lerped_center = cyl.center + delta * coll_2d.t;
+            let lerped_bottom = lerped_center.y - cyl.half_height;
+            let lerped_top = lerped_center.y + cyl.half_height;
+            let in_y_bounds =
+                lerped_bottom < ter_bounds.max.y &&
+                lerped_top > ter_bounds.min.y;
+            if in_y_bounds {
+                return Some(Collision {
+                    t: coll_2d.t,
+                    velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y)
+                })
+            }
             None
         };
 
@@ -234,20 +204,6 @@ impl TerrainCollider {
         // Default
         None
     }
-
-    /*
-    * ca = center a
-    * cb = center b
-    * ra = radius a
-    * rb = radius b
-    * ((ca + d * t) - cb) ^ 2 = (ra + rb) ^ 2
-    * ((ca+d*t) + -cb) * ((ca+d*t) + -cb) = (ra + rb) ^ 2
-    * ((ca+d)*t)^2 + -2*(ca+d*t)*cb + cb^2 = (ra + rb) ^ 2
-    * ((ca+d)*t)^2 + (-2*ca - 2*d*t*cb) + cb^2 = (ra + rb) ^ 2
-    * A = ca+d
-    * B = 2(ca+d)
-    *
-    */
 
     fn aabb(&self) -> Aabb {
         Aabb { min: self.position, max: self.position + self.size }
@@ -452,6 +408,20 @@ fn test_collide_line_with_circle() {
             t: 0.5,
             velocity: Vec2::ZERO
         })
+    );
+
+    test(
+        Vec2::new(-5.0, 0.0),
+        Vec2::new(-4.0, 1.0),
+        circle,
+        None
+    );
+
+    test(
+        Vec2::new(5.0, 0.0),
+        Vec2::new(6.0, 1.0),
+        circle,
+        None
     );
 
     test(

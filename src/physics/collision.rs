@@ -72,7 +72,8 @@ impl TerrainCollider {
         // Collision code for left and right sides of this cuboid
         let x_collision = |ter_edge: f32| {
             let t = (ter_edge - cyl.center.x) / delta.x;
-            if t >= 0.0 && t < 1.0 {
+            if t >= 0.0 && t <= 1.0 {
+                println!("X");
                 let lerped_center = cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl.half_height;
                 let lerped_top = lerped_center.y + cyl.half_height;
@@ -82,11 +83,62 @@ impl TerrainCollider {
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_yz_bounds {
-                    let mut final_center = next_cyl_center;
-                    final_center.x = ter_edge;
                     let velocity =
-                        if t > T_EPSILON { (final_center - lerped_center) / (1.0 - t) }
+                        if t > T_EPSILON {
+                            let vel_2d = (next_cyl_center.yz() - lerped_center.yz()) / (1.0 - t);
+                            Vec3::new(0.0, vel_2d.x, vel_2d.y)
+                        }
                         else { Vec3::new(0.0, delta.y, delta.z) };
+                    return Some(Collision {
+                        t,
+                        velocity,
+                    });
+                }
+            }
+            None
+        };
+
+        // Collision code for left and right sides of this cuboid
+        let y_collision = |ter_edge: f32| {
+            let t = (ter_edge - cyl.center.y) / delta.y;
+            if t >= 0.0 && t <= 1.0 {
+                println!("Y");
+                let lerped_center = cyl.center + delta * t;
+                let lerped_bottom = lerped_center.y - cyl.half_height;
+                let lerped_top = lerped_center.y + cyl.half_height;
+                let lerped_center_xz = lerped_center.xz();
+                let in_xz_bounds =
+                    Rect {
+                        min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z),
+                        max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z)
+                    }.contains_point(lerped_center_xz) ||
+                    Rect {
+                        min: Vec2::new(ter_bounds.min.x, ter_bounds.min.z - cyl.radius),
+                        max: Vec2::new(ter_bounds.max.x, ter_bounds.max.z + cyl.radius)
+                    }.contains_point(lerped_center_xz) ||
+                    Circle {
+                        center: ter_bounds.min.xz(),
+                        radius: cyl.radius
+                    }.contains_point(lerped_center_xz) ||
+                    Circle {
+                        center: Vec2::new(ter_bounds.max.x, ter_bounds.min.z),
+                        radius: cyl.radius
+                    }.contains_point(lerped_center_xz) ||
+                    Circle {
+                        center: Vec2::new(ter_bounds.min.x, ter_bounds.max.z),
+                        radius: cyl.radius
+                    }.contains_point(lerped_center_xz) ||
+                    Circle {
+                        center: ter_bounds.max.xz(),
+                        radius: cyl.radius
+                    }.contains_point(lerped_center_xz);
+                if in_xz_bounds {
+                    let velocity =
+                        if t > T_EPSILON {
+                            let vel_2d = (next_cyl_center.xz() - lerped_center_xz) / (1.0 - t);
+                            Vec3::new(vel_2d.x, 0.0, vel_2d.y)
+                        }
+                        else { Vec3::new(delta.x, 0.0, delta.z) };
                     return Some(Collision {
                         t,
                         velocity,
@@ -99,6 +151,7 @@ impl TerrainCollider {
         // Collision code for left and right sides of this cuboid
         let z_collision = |ter_edge: f32| {
             let t = (ter_edge - cyl.center.z) / delta.z;
+            println!("t: {}", t);
             if t >= 0.0 && t <= 1.0 {
                 let lerped_center = cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl.half_height;
@@ -109,10 +162,11 @@ impl TerrainCollider {
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_xy_bounds {
-                    let mut final_center = next_cyl_center;
-                    final_center.z = ter_edge;
                     let velocity =
-                        if t > T_EPSILON { (final_center - lerped_center) / (1.0 - t) }
+                        if t > T_EPSILON {
+                            let vel_2d = (next_cyl_center.xy() - lerped_center.xy()) / (1.0 - t);
+                            Vec3::new(vel_2d.x, vel_2d.y, 0.0)
+                        }
                         else { Vec3::new(delta.x, delta.y, 0.0) };
                     return Some(Collision {
                         t,
@@ -137,6 +191,7 @@ impl TerrainCollider {
                 lerped_bottom < ter_bounds.max.y &&
                 lerped_top > ter_bounds.min.y;
             if in_y_bounds {
+                println!("Edge");
                 return Some(Collision {
                     t: coll_2d.t,
                     velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y)
@@ -156,6 +211,23 @@ impl TerrainCollider {
         // Right collision
         if delta.x < 0.0 {
             let coll = x_collision(ter_bounds.max.x + cyl.radius);
+            if coll.is_some() {
+                return coll;
+            }
+        }
+
+        // Bottom collision
+        if delta.y > 0.0 {
+            let coll = y_collision(ter_bounds.min.y - cyl.half_height);
+            if coll.is_some() {
+                return coll;
+            }
+        }
+        
+
+        // Top collision
+        if delta.y < 0.0 {
+            let coll = y_collision(ter_bounds.max.y + cyl.half_height);
             if coll.is_some() {
                 return coll;
             }
@@ -183,19 +255,19 @@ impl TerrainCollider {
             return coll;
         }
 
-        // Far/left corner collision
+        // Far/right corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.min.z));
         if coll.is_some() {
             return coll;
         }
 
-        // Far/left corner collision
+        // Near/left corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.max.z));
         if coll.is_some() {
             return coll;
         }
 
-        // Far/left corner collision
+        // Near/right corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.max.z));
         if coll.is_some() {
             return coll;
@@ -220,6 +292,27 @@ pub struct Collision2D {
 struct Circle {
     center: Vec2,
     radius: f32
+}
+
+impl Circle {
+    fn contains_point(&self, point: Vec2) -> bool {
+        let dist_squared = (point - self.center).length_squared();
+        let rad_squared = self.radius*self.radius;
+        dist_squared <= rad_squared
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct Rect {
+    min: Vec2,
+    max: Vec2
+}
+
+impl Rect {
+    fn contains_point(&self, point: Vec2) -> bool {
+        point.x >= self.min.x && point.x <= self.max.x &&
+        point.y >= self.min.y && point.y <= self.max.y
+    }
 }
 
 fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Collision2D> {
@@ -287,6 +380,12 @@ fn test_collide() {
         assert_eq!(expected, collision);
     }
 
+    let terrain_collider = TerrainCollider {
+        piece: TerrainPiece::Cuboid,
+        position: Vec3::new(0.0, 0.0, 0.0),
+        size: Vec3::new(10.0, 10.0, 10.0)
+    };
+
     // Left
     test(
         CylinderCollider {
@@ -294,11 +393,7 @@ fn test_collide() {
             half_height: 5.0,
             radius: 10.0
         },
-        TerrainCollider {
-            piece: TerrainPiece::Cuboid,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            size: Vec3::new(10.0, 10.0, 10.0)
-        },
+        terrain_collider,
         Vec3::new(10.0, 0.0, 5.0),
         Some(Collision {
             t: 0.5,
@@ -313,11 +408,7 @@ fn test_collide() {
             half_height: 5.0,
             radius: 10.0
         },
-        TerrainCollider {
-            piece: TerrainPiece::Cuboid,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            size: Vec3::new(10.0, 10.0, 10.0)
-        },
+        terrain_collider,
         Vec3::new(-10.0, 0.0, 5.0),
         Some(Collision {
             t: 0.5,
@@ -325,17 +416,14 @@ fn test_collide() {
         })
     );
 
+    // Near
     test(
         CylinderCollider {
             center: Vec3::new(5.0, 5.0, 20.0),
             half_height: 5.0,
             radius: 10.0
         },
-        TerrainCollider {
-            piece: TerrainPiece::Cuboid,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            size: Vec3::new(10.0, 10.0, 10.0)
-        },
+        terrain_collider,
         Vec3::new(5.0, 0.0, -15.0),
         Some(Collision {
             t: 0.0,
@@ -343,17 +431,14 @@ fn test_collide() {
         })
     );
 
+    // Far
     test(
         CylinderCollider {
             center: Vec3::new(5.0, 5.0, -12.0),
             half_height: 5.0,
             radius: 10.0
         },
-        TerrainCollider {
-            piece: TerrainPiece::Cuboid,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            size: Vec3::new(10.0, 10.0, 10.0)
-        },
+        terrain_collider,
         Vec3::new(5.0, 0.0, 15.0),
         Some(Collision {
             t: 0.13333334,
@@ -361,6 +446,50 @@ fn test_collide() {
         })
     );
 
+    let terrain_collider = TerrainCollider {
+        piece: TerrainPiece::Cuboid,
+        position: Vec3::new(3.0, 0.0, -6.0),
+        size: Vec3::new(3.0, 4.0, 3.0)
+    };
+    let mov = 2.0 * std::f32::consts::FRAC_1_SQRT_2;
+
+    // Far/left corner
+    test(
+        CylinderCollider {
+            center: Vec3::new(3.0-mov, 2.0, -6.0-mov),
+            half_height: 2.0,
+            radius: 1.0
+        },
+        terrain_collider,
+        Vec3::new(mov, 0.0, mov),
+        Some(Collision { t: 0.50000006, velocity: Vec3::new(0.0, 0.0, 0.0) })
+    );
+
+    // Far/left corner edgecase 1
+    test(
+        CylinderCollider {
+            center: Vec3::new(3.0, 2.0, -8.0),
+            half_height: 2.0,
+            radius: 1.0
+        },
+        terrain_collider,
+        Vec3::new(0.0, 0.0, 2.0),
+        Some(Collision { t: 0.5, velocity: Vec3::new(0.0, 0.0, 0.0) })
+    );
+
+    // Near/right corner edgecase
+    test(
+        CylinderCollider {
+            center: Vec3::new(6.0+mov, 2.0, -3.0+mov),
+            half_height: 2.0,
+            radius: 1.0
+        },
+        terrain_collider,
+        Vec3::new(-mov, 0.0, -mov),
+        Some(Collision { t: 0.50000006, velocity: Vec3::new(0.0, 0.0, 0.0) })
+    );
+
+    // Missing
     test(
         CylinderCollider {
             center: Vec3::new(-20.0, 15.0, 0.0),

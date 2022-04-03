@@ -2,9 +2,8 @@ use std::f32::consts::SQRT_2;
 
 use bevy::{prelude::*, asset::LoadState};
 use bevy::utils::HashMap;
-use crate::map::{ TileGraphics, GeomShape };
 
-use super::TileMeshData;
+use crate::map::{ TileGraphics, TileShape, TileMeshData };
 
 /// Staging resource for the graphics of map being loaded
 #[derive(Default)]
@@ -82,7 +81,7 @@ impl Chunk {
 
         // Writes tile to buffers
         match tile.shape {
-            GeomShape::Floor => {
+            TileShape::Floor => {
                 // Positions (4)
                 p.push(tp);
                 tp[X] += tw;
@@ -97,7 +96,7 @@ impl Chunk {
                 // UVs and indices
                 push_uv_indices_4(&md, uvs, i, vlen);
             },
-            GeomShape::Wall => {
+            TileShape::Wall => {
                 // Positions (4)
                 p.push(tp);
                 tp[X] += tw;
@@ -112,7 +111,7 @@ impl Chunk {
                 // UVs and indices
                 push_uv_indices_4(&md, uvs, i, vlen);
             },
-            GeomShape::WallStartSE => {
+            TileShape::WallStartSE => {
                 // Vertices (6)
                 p.push(tp);
                 tp[X] += tw;
@@ -153,7 +152,7 @@ impl Chunk {
                 i.push(vlen+4);
                 i.push(vlen+5);
             }
-            GeomShape::WallStartSW => {
+            TileShape::WallStartSW => {
                 // Vertices (6)
                 tp[Z] -= th;
                 p.push(tp);
@@ -195,7 +194,7 @@ impl Chunk {
                 i.push(vlen+4);
                 i.push(vlen+5);
             }
-            GeomShape::WallSE => {
+            TileShape::WallSE => {
                 // Vertices (4)
                 p.push(tp);
                 tp[X] += tw;
@@ -216,7 +215,7 @@ impl Chunk {
                 // UVs and indices
                 push_uv_indices_4(&md, uvs, i, vlen);
             }
-            GeomShape::WallSW => {
+            TileShape::WallSW => {
                 // Vertices (4)
                 tp[Y] -= th;
                 tp[Z] -= th;
@@ -239,7 +238,7 @@ impl Chunk {
                 // UVs and indices
                 push_uv_indices_4(&md, uvs, i, vlen);
             }
-            GeomShape::WallEndSE => {
+            TileShape::WallEndSE => {
                 // Vertices (6)
                 p.push(tp);
                 tp[X] += tw;
@@ -280,7 +279,7 @@ impl Chunk {
                 i.push(vlen+4);
                 i.push(vlen+5);
             }
-            GeomShape::WallEndSW => {
+            TileShape::WallEndSW => {
                 // Vertices (6)
                 tp[Z] -= th;
                 p.push(tp);

@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use crate::app::AppState;
 use crate::camera::{CameraBundle, CameraTargetSettings};
-use crate::physics::{ Position, Velocity, Friction };
+use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::debug::Floater;
 use crate::extensions::*;
 
@@ -55,7 +55,7 @@ impl Plugin for MapPlugin {
             )
 
             .add_system_set(SystemSet::on_enter(AppState::MapConstructing)
-                .with_system(map_fire_events)
+                .with_system(map_construct)
             )
             .add_system_set(SystemSet::on_update(AppState::MapSpawningEntities)
                 .with_system(map_spawn_entities)
@@ -87,7 +87,8 @@ fn map_listen(
         commands.insert_resource(CurrentMap {
             file: map_file.to_string(),
             map_handle,
-            map_entity: map_parent_entity
+            map_entity: map_parent_entity,
+            terrain: Terrain::new(Vec3::new(16.0, 16.0, 16.0), UVec3::new(16, 16, 16))
         });
 
         state.push(AppState::MapLoadingFile).unwrap()
@@ -148,15 +149,15 @@ fn map_finish_loading(
     }
 }
 
-// Fire events that cause map to populate
-fn map_fire_events(
+// Constructs map
+fn map_construct(
     mut current_map: ResMut<CurrentMap>,
     mut current_map_graphics: ResMut<CurrentMapGraphics>,
     vidya_map: Res<Assets<VidyaMap>>,
     mut state: ResMut<State<AppState>>,
     config: Res<MapConfig>
 ) {
-    log::debug!("(SYSTEM) map_fire_events");
+    log::debug!("(SYSTEM) map_construct");
     // Gets tiled map
     let tiled_map = &vidya_map
         .get(&current_map.map_handle)
@@ -196,7 +197,7 @@ fn map_spawn_entities(
             None => return
         };
 
-        // Creates mesh
+        // Creates mesh for chunk
         let chunk_size = current_map_graphics.chunk_size;
         let chunk_pos = Vec3::new(key.x as f32, key.y as f32, key.z as f32) * chunk_size;
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -205,7 +206,7 @@ fn map_spawn_entities(
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, chunk.uvs.clone());
         mesh.set_indices(Some(Indices::U32(chunk.indices.clone())));
 
-        // Creates material
+        // Creates material for chunk
         let material = StandardMaterial {
             base_color_texture: Some(image_handle.clone()),
             metallic: 0.0,

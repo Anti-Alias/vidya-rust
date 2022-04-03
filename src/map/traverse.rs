@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use tiled::*;
 use std::result::Result;
 
-use crate::map::{ GeomShape, TileType, TileGraphics, TileMeshData };
-use super::{CurrentMapGraphics, CurrentMap};
+use crate::map::{ TileShape, TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap };
 
 const DEPTH_EPSILON: f32 = 0.001;
 
@@ -125,12 +124,12 @@ fn add_tiles<'map>(
     coll_climber: &mut Climber,
     flip_y: bool,
     group_layer_name: &str,
-    _current_map: &mut CurrentMap,
+    current_map: &mut CurrentMap,
     current_map_graphics: &mut CurrentMapGraphics,
     flattened_layer_index: usize
 ) -> Result<(), ClimbingError> {
 
-    // Gets first meta and terrain tiles found at tile_x, tile_y
+    // Gets first meta tile at tile_x, tile_y and all terrain tiles found at tile_x, tile_y of current group layer
     let meta_tile = meta_layers
         .iter()
         .flat_map(|m_layer| m_layer.get_tile(tile_x, tile_y))
@@ -144,13 +143,13 @@ fn add_tiles<'map>(
         .map(|tile| tile.get_types())
         .unwrap_or((TileType::Floor, TileType::Floor));
     let geom_pos = geom_climber.position;
-
+    let coll_pos = coll_climber.position;
     let prev_geom_status = geom_climber.climb_status;
+    let prev_coll_status = coll_climber.climb_status;
     geom_climber.climb(geom_type, tile_x, tile_y, group_layer_name);
     coll_climber.climb(coll_type, tile_x, tile_y, group_layer_name);
-    let geom_shape = geom_climber.geom_shape(prev_geom_status)?;
 
-    // For all terrain layers belonging to the same layer group in the same position...
+    // For all terrain tiles in the current group layer...
     for (layer_index, t_tile) in terrain_tiles.enumerate() {
 
         // Finds tileset, and computes mesh data
@@ -160,7 +159,8 @@ fn add_tiles<'map>(
         let flattened_layer_index = flattened_layer_index + layer_index;
         let depth_offset = Vec3::new(0.0, DEPTH_EPSILON, DEPTH_EPSILON) * flattened_layer_index as f32;
 
-        // Add tile info to results
+        // Add tile info to graphics
+        let geom_shape = geom_climber.tile_shape(prev_geom_status)?;
         current_map_graphics.add_tile(TileGraphics {
             tileset_index: tileset_index as u32,
             translation: geom_pos + depth_offset,
@@ -168,6 +168,10 @@ fn add_tiles<'map>(
             shape: geom_shape
         });
     }
+
+    // Applies collision data to current map
+    let coll_shape = coll_climber.tile_shape(prev_coll_status)?;
+    current_map.set_terrain_piece_from_shape(coll_shape, coll_climber.position);
     Ok(())
 }
 
@@ -321,14 +325,15 @@ fn get_string_property<'a>(properties: &'a Properties, key: &str) -> Option<&'a 
 }
 
 fn get_tile_mesh_data(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMeshData {
-    let ts = tileset;                                                       // Tileset (renamed for brevity)
-    let img = ts.image.as_ref().expect("Tileset must have a single image");
+
+    let ts = tileset;                                                       // Tileset
+    let img = ts.image.as_ref().expect("Tileset must have a single image"); // Tileset image
     let tsm = tileset.margin as f32;                                        // Tileset margin
     let tssp = tileset.spacing as f32;                                      // Tileset spacing
     let (tiw, tih) = (ts.tile_width as f32, ts.tile_height as f32);         // Tile width / height
     let (tixi, tiyi) = (tile_id % ts.columns, tile_id / ts.columns);        // Tile x / y (ints)
     let (tix, tiy) = (tixi as f32 * tiw, tiyi as f32 * tih);                // Tile x / y (floats)
-    let tss = Vec2::new(img.width as f32, img.height as f32);
+    let tss = Vec2::new(img.width as f32, img.height as f32);               // Tileset size
 
     // Creates UV coords
     let tsm = Vec2::new(tsm, tsm);          // Tileset margin
@@ -468,27 +473,27 @@ impl Climber {
         }
     }
 
-    fn geom_shape(&self, prev_status: ClimbStatus) -> Result<GeomShape, ClimbingError> {
+    fn tile_shape(&self, prev_status: ClimbStatus) -> Result<TileShape, ClimbingError> {
         match self.climb_status {
             ClimbStatus::NotClimbing => match prev_status {
-                ClimbStatus::ClimbingWallS | ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(GeomShape::Floor),
-                ClimbStatus::ClimbingWallSE => Ok(GeomShape::WallEndSE),
-                ClimbStatus::ClimbingWallSW => Ok(GeomShape::WallEndSW)
+                ClimbStatus::ClimbingWallS | ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::Floor),
+                ClimbStatus::ClimbingWallSE => Ok(TileShape::WallEndSE),
+                ClimbStatus::ClimbingWallSW => Ok(TileShape::WallEndSW)
             }
-            ClimbStatus::ClimbingWallS => Ok(GeomShape::Wall),
+            ClimbStatus::ClimbingWallS => Ok(TileShape::Wall),
             ClimbStatus::ClimbingWallSE => match prev_status {
-                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(GeomShape::WallStartSE),
-                ClimbStatus::ClimbingWallSE => Ok(GeomShape::WallSE),
+                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::WallStartSE),
+                ClimbStatus::ClimbingWallSE => Ok(TileShape::WallSE),
                 _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status)))
             },
             ClimbStatus::ClimbingWallSW => match prev_status {
-                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(GeomShape::WallStartSW),
-                ClimbStatus::ClimbingWallSW => Ok(GeomShape::WallSW),
+                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::WallStartSW),
+                ClimbStatus::ClimbingWallSW => Ok(TileShape::WallSW),
                 _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status)))
             },
             ClimbStatus::FinishedClimbing => match prev_status {
                 ClimbStatus::FinishedClimbing => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status))),
-                _ => Ok(GeomShape::Floor)
+                _ => Ok(TileShape::Floor)
             }
         }
     }

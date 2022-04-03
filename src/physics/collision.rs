@@ -3,6 +3,9 @@ use std::fmt::Debug;
 use bevy::{prelude::*, math::Vec3Swizzles};
 
 use crate::physics::TerrainPiece;
+use crate::physics::{Position, PreviousPosition};
+
+use super::Terrain;
 
 const T_EPSILON: f32 = 0.001;
 
@@ -586,6 +589,12 @@ fn test_collide() {
         Vec3::new(20.0, 0.0, 5.0),
         None
     );
+}
+
+pub fn collide_with_terrain(terrain: Option<Res<Terrain>>, mut entities: Query<(&mut Position, &PreviousPosition)>) {
+    for (pos, prev_pos) in entities.iter_mut() {
+        
+    }
 }
 
 #[test]

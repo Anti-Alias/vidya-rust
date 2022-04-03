@@ -9,7 +9,7 @@ pub struct TileGraphics {
     pub tileset_index: u32,
     pub translation: Vec3,
     pub mesh_data: TileMeshData,
-    pub shape: GeomShape
+    pub shape: TileShape
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -67,8 +67,9 @@ impl TileType {
     }
 }
 
+/// Represents the 3D shape of a tile
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum GeomShape {
+pub enum TileShape {
     Floor,
     Wall,
     WallStartSE,

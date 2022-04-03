@@ -83,6 +83,9 @@ pub enum AppLabel {
     /// Applies velocity to position
     PhysicsMove,
 
+    /// Collides objects with each other after movement happens
+    PhysicsCollide,
+
     /// Updates camera
     CameraUpdate,
 

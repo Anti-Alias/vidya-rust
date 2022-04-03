@@ -254,14 +254,6 @@ impl TerrainCollider {
     }
 }
 
-
-fn closest_point_on_line(origin: Vec2, direction: Vec2, point: Vec2) -> Vec2 {
-    let dir_norm = direction.normalize();
-    let v = point - origin;
-    let d = v.dot(dir_norm);
-    origin + dir_norm * d
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Collision2D {
     pub t: f32,
@@ -293,7 +285,7 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Col
         src + ba_norm * dist
     };
     let dc_len_sq = (d - c).length_squared();
-    if dc_len_sq > rad_squared {
+    if dc_len_sq >= rad_squared {
         return None;
     }
 
@@ -330,30 +322,6 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Col
         velocity
     })
 }
-
-/// Shamelessly uses https://ericleong.me/research/circle-circle/
-fn collide_circles(c1: Circle, c2: Circle, vel: Vec2) -> Option<Collision2D> {
-    let closest_point = closest_point_on_line(c1.center, vel, c2.center);
-    let bd_squared = (c2.center - closest_point).length_squared();
-    let bc = c1.radius + c2.radius;
-    let bc_squared = bc*bc;
-    if bd_squared >= bc_squared {
-        return None;
-    }
-    let vel_len = vel.length();
-    let vel_norm = vel / vel_len;
-    let back_dist = (bc_squared - bd_squared).sqrt();
-    let new_center = closest_point - vel_norm * back_dist;
-    let t = (new_center - c1.center).length() / vel_len;
-    if t < 0.0 || t > 1.0 {
-        return None;
-    }
-    Some(Collision2D {
-        t,
-        velocity: Vec2::ZERO
-    })
-}
-
 #[test]
 fn collide_left() {
     let cyl = CylinderCollider {
@@ -464,71 +432,6 @@ fn collide_missing() {
 }
 
 #[test]
-fn test_closest_point_on_line() {
-    let origin = Vec2::new(-5.0, 0.0);
-    let direction = Vec2::new(10.0, 0.0);
-    let point = Vec2::new(0.0, 10.0);
-    let closest = closest_point_on_line(origin, direction, point);
-    assert_eq!(Vec2::ZERO, closest);
-}
-
-#[test]
-fn test_collide_circles_1() {
-    let c1 = Circle {
-        center: Vec2::ZERO,
-        radius: 10.0
-    };
-    let c2 = Circle {
-        center: Vec2::new(20.0, 0.0),
-        radius: 10.0
-    };
-    let vel = Vec2::new(10.0, 0.0);
-    let coll = collide_circles(c1, c2, vel);
-
-    let expected = Some(Collision2D {
-        t: 0.0,
-        velocity: Vec2::ZERO
-    });
-    assert_eq!(expected, coll);
-}
-
-#[test]
-fn test_collide_circles_2() {
-    let c1 = Circle {
-        center: Vec2::new(-10.0, 0.0),
-        radius: 10.0
-    };
-    let c2 = Circle {
-        center: Vec2::new(20.0, 0.0),
-        radius: 10.0
-    };
-    let vel = Vec2::new(10.0, 0.0);
-    let coll = collide_circles(c1, c2, vel);
-
-    let expected = Some(Collision2D {
-        t: 1.0,
-        velocity: Vec2::ZERO
-    });
-    assert_eq!(expected, coll);
-}
-
-#[test]
-fn test_collide_circles_3() {
-    let c1 = Circle {
-        center: Vec2::new(-11.0, 0.0),
-        radius: 10.0
-    };
-    let c2 = Circle {
-        center: Vec2::new(20.0, 0.0),
-        radius: 10.0
-    };
-    let vel = Vec2::new(10.0, 0.0);
-    let coll = collide_circles(c1, c2, vel);
-
-    assert_eq!(None, coll);
-}
-
-#[test]
 fn test_collide_line_with_circle() {
 
     fn test(a: Vec2, b: Vec2, circle: Circle, expected: Option<Collision2D>) {
@@ -597,5 +500,42 @@ fn test_collide_line_with_circle() {
             t: 0.50000024,
             velocity: Vec2::new(9.536743e-10, 9.5367375e-7)
         })
+    );
+
+    test(
+        Vec2::new(0.0, 0.99999),
+        Vec2::new(4.0, 0.99999),
+        circle,
+        Some(Collision2D {
+            t: 0.49888122,
+            velocity: Vec2::new(3.9820597, 0.01782036)
+        })
+    );
+
+    test(
+        Vec2::new(2.99999, 2.0),
+        Vec2::new(2.99999, -2.0),
+        circle,
+        Some(Collision2D {
+            t: 0.49888122,
+            velocity: Vec2::new(0.017820578, -3.9820595) }
+        )
+    );
+
+    test(
+        Vec2::new(1.9, 2.0),
+        Vec2::new(1.9, -2.0),
+        circle,
+        Some(Collision2D {
+            t: 0.25125313,
+            velocity: Vec2::new(-0.019949785, -0.0020050292)
+        })
+    );
+
+    test(
+        Vec2::new(3.0, 2.0),
+        Vec2::new(3.0, -2.0),
+        circle,
+        None
     );
 }

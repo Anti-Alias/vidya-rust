@@ -278,113 +278,103 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Col
         velocity
     })
 }
+
 #[test]
-fn collide_left() {
-    let cyl = CylinderCollider {
-        center: Vec3::new(-15.0, 5.0, 5.0),
-        half_height: 5.0,
-        radius: 10.0
-    };
-    let coll = TerrainCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(0.0, 0.0, 0.0),
-        size: Vec3::new(10.0, 10.0, 10.0)
-    };
-    let delta = Vec3::new(10.0, 0.0, 5.0);
-    let collision = coll.collide_with_cylinder(&cyl, delta);
-    assert_eq!(
+fn test_collide() {
+
+    fn test(cyl: CylinderCollider, coll: TerrainCollider, delta: Vec3, expected: Option<Collision>) {
+        let collision = coll.collide_with_cylinder(&cyl, delta);
+        assert_eq!(expected, collision);
+    }
+
+    // Left
+    test(
+        CylinderCollider {
+            center: Vec3::new(-15.0, 5.0, 5.0),
+            half_height: 5.0,
+            radius: 10.0
+        },
+        TerrainCollider {
+            piece: TerrainPiece::Cuboid,
+            position: Vec3::new(0.0, 0.0, 0.0),
+            size: Vec3::new(10.0, 10.0, 10.0)
+        },
+        Vec3::new(10.0, 0.0, 5.0),
         Some(Collision {
             t: 0.5,
             velocity: Vec3::new(0.0, 0.0, 5.0)
-        }),
-        collision
+        })
     );
-}
 
-#[test]
-fn collide_right() {
-    let cyl = CylinderCollider {
-        center: Vec3::new(25.0, 5.0, 5.0),
-        half_height: 5.0,
-        radius: 10.0
-    };
-    let coll = TerrainCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(0.0, 0.0, 0.0),
-        size: Vec3::new(10.0, 10.0, 10.0)
-    };
-    let delta = Vec3::new(-10.0, 0.0, 5.0);
-    let collision = coll.collide_with_cylinder(&cyl, delta);
-    assert_eq!(
+    // Right
+    test(
+        CylinderCollider {
+            center: Vec3::new(25.0, 5.0, 5.0),
+            half_height: 5.0,
+            radius: 10.0
+        },
+        TerrainCollider {
+            piece: TerrainPiece::Cuboid,
+            position: Vec3::new(0.0, 0.0, 0.0),
+            size: Vec3::new(10.0, 10.0, 10.0)
+        },
+        Vec3::new(-10.0, 0.0, 5.0),
         Some(Collision {
             t: 0.5,
             velocity: Vec3::new(0.0, 0.0, 5.0)
-        }),
-        collision
+        })
     );
-}
 
-#[test]
-fn collide_near() {
-    let cyl = CylinderCollider {
-        center: Vec3::new(5.0, 5.0, 20.0),
-        half_height: 5.0,
-        radius: 10.0
-    };
-    let coll = TerrainCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(0.0, 0.0, 0.0),
-        size: Vec3::new(10.0, 10.0, 10.0)
-    };
-    let delta = Vec3::new(5.0, 0.0, -15.0);
-    let collision = coll.collide_with_cylinder(&cyl, delta);
-    assert_eq!(
+    test(
+        CylinderCollider {
+            center: Vec3::new(5.0, 5.0, 20.0),
+            half_height: 5.0,
+            radius: 10.0
+        },
+        TerrainCollider {
+            piece: TerrainPiece::Cuboid,
+            position: Vec3::new(0.0, 0.0, 0.0),
+            size: Vec3::new(10.0, 10.0, 10.0)
+        },
+        Vec3::new(5.0, 0.0, -15.0),
         Some(Collision {
             t: 0.0,
             velocity: Vec3::new(5.0, 0.0, 0.0)
-        }),
-        collision
+        })
     );
-}
 
-#[test]
-fn collide_far() {
-    let cyl = CylinderCollider {
-        center: Vec3::new(5.0, 5.0, -12.0),
-        half_height: 5.0,
-        radius: 10.0
-    };
-    let coll = TerrainCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(0.0, 0.0, 0.0),
-        size: Vec3::new(10.0, 10.0, 10.0)
-    };
-    let delta = Vec3::new(5.0, 0.0, 15.0);
-    let collision = coll.collide_with_cylinder(&cyl, delta);
-    assert_eq!(
+    test(
+        CylinderCollider {
+            center: Vec3::new(5.0, 5.0, -12.0),
+            half_height: 5.0,
+            radius: 10.0
+        },
+        TerrainCollider {
+            piece: TerrainPiece::Cuboid,
+            position: Vec3::new(0.0, 0.0, 0.0),
+            size: Vec3::new(10.0, 10.0, 10.0)
+        },
+        Vec3::new(5.0, 0.0, 15.0),
         Some(Collision {
             t: 0.13333334,
             velocity: Vec3::new(5.0, 0.0, 0.0)
-        }),
-        collision
+        })
     );
-}
 
-#[test]
-fn collide_missing() {
-    let cyl = CylinderCollider {
-        center: Vec3::new(-20.0, 15.0, 0.0),
-        half_height: 5.0,
-        radius: 10.0
-    };
-    let coll = TerrainCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(0.0, 0.0, 0.0),
-        size: Vec3::new(10.0, 10.0, 10.0)
-    };
-    let delta = Vec3::new(20.0, 0.0, 5.0);
-    let collision = coll.collide_with_cylinder(&cyl, delta);
-    assert_eq!(None, collision);
+    test(
+        CylinderCollider {
+            center: Vec3::new(-20.0, 15.0, 0.0),
+            half_height: 5.0,
+            radius: 10.0
+        },
+        TerrainCollider {
+            piece: TerrainPiece::Cuboid,
+            position: Vec3::new(0.0, 0.0, 0.0),
+            size: Vec3::new(10.0, 10.0, 10.0)
+        },
+        Vec3::new(20.0, 0.0, 5.0),
+        None
+    );
 }
 
 #[test]

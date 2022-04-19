@@ -2,24 +2,9 @@ use bevy::prelude::*;
 use tiled::*;
 use std::result::Result;
 
-use crate::map::{ TileShape, TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap };
+use crate::map::{ TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber };
 
 const DEPTH_EPSILON: f32 = 0.001;
-
-
-macro_rules! climb_panic {
-    ($tile_type:expr, $prev_status:expr, $group_layer_name:expr, $x:expr, $y:expr) => {
-        panic!(
-            "Encountered a {:?} tile while in climb status {:?} on group layer '{}' at {}, {}",
-            $tile_type,
-            $prev_status,
-            $group_layer_name,
-            $x,
-            $y
-        );
-    }
-}
-
 
 
 // Fire events that cause map to populate
@@ -44,14 +29,11 @@ pub(crate) fn traverse_map(
 
                 // Populate tiles from group layer
                 log::trace!("Processing group layer {}", &root_layer.name);
-                let offset = Vec2::new(
-                    root_layer.offset_x,
-                    -root_layer.offset_y
-                );
+                let offset_y = 0;
                 traverse_group_layer(
                     &meta_layers,
                     &terrain_layers,
-                    offset,
+                    offset_y,
                     tiled_map,
                     flip_y,
                     &root_layer.name,
@@ -71,7 +53,7 @@ pub(crate) fn traverse_map(
 fn traverse_group_layer(
     m_layers: &[MetaLayer],                                     // Group meta layers
     t_layers: &[TileLayer],                                     // Group terrain layers
-    offset: Vec2,                                               // Group offset
+    offset_y: i32,                                              // Group offset
     map: &Map,                                                  // Map itself
     flip_y: bool,
     group_layer_name: &str,
@@ -81,13 +63,14 @@ fn traverse_group_layer(
 ) -> Result<(), ClimbingError> {
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
-    let tile_size = Vec2::new(map.tile_width as f32, map.tile_height as f32);
+    let (tw, th) = (map.tile_width as f32, map.tile_height as f32);
+    let tile_size = Vec3::new(tw, th, th);
     for x in 0..w {
 
         // Make climbers at the bottom of the vertical strip...
-        let c_pos = Vec2::new(x as f32, 0.0) * tile_size + offset;
-        let mut geom_climber = Climber::new(c_pos, tile_size.y);
-        let mut coll_climber = Climber::new(c_pos, tile_size.y);
+        let climber_pos = Vec2::new(x as f32 * tw, offset_y as f32 * th);
+        let mut geom_climber = Climber::new(climber_pos, tile_size);
+        let mut coll_climber = Climber::new(climber_pos, tile_size);
 
         // Traverse the strip from bottom to top
         let x = x as i32;
@@ -108,6 +91,7 @@ fn traverse_group_layer(
                 group_layer_name,
                 current_map,
                 current_map_graphics,
+                tile_size.y,
                 flattened_layer_index
             )?;
         }
@@ -126,6 +110,7 @@ fn add_tiles<'map>(
     group_layer_name: &str,
     current_map: &mut CurrentMap,
     current_map_graphics: &mut CurrentMapGraphics,
+    tile_height: f32,
     flattened_layer_index: usize
 ) -> Result<(), ClimbingError> {
 
@@ -142,12 +127,8 @@ fn add_tiles<'map>(
     let (geom_type, coll_type) = meta_tile
         .map(|tile| tile.get_types())
         .unwrap_or((TileType::Floor, TileType::Floor));
-    let geom_pos = geom_climber.position;
-    let coll_pos = coll_climber.position;
-    let prev_geom_status = geom_climber.climb_status;
-    let prev_coll_status = coll_climber.climb_status;
-    geom_climber.climb(geom_type, tile_x, tile_y, group_layer_name);
-    coll_climber.climb(coll_type, tile_x, tile_y, group_layer_name);
+    geom_climber.climb(geom_type, tile_x, tile_y, group_layer_name)?;
+    coll_climber.climb(coll_type, tile_x, tile_y, group_layer_name)?;
 
     // For all terrain tiles in the current group layer...
     for (layer_index, t_tile) in terrain_tiles.enumerate() {
@@ -160,18 +141,26 @@ fn add_tiles<'map>(
         let depth_offset = Vec3::new(0.0, DEPTH_EPSILON, DEPTH_EPSILON) * flattened_layer_index as f32;
 
         // Add tile info to graphics
-        let geom_shape = geom_climber.tile_shape(prev_geom_status)?;
+        let geom_shape = geom_climber.tile_shape()?;
         current_map_graphics.add_tile(TileGraphics {
             tileset_index: tileset_index as u32,
-            translation: geom_pos + depth_offset,
+            translation: geom_climber.position() + depth_offset,
             mesh_data: tile_mesh_data,
             shape: geom_shape
         });
     }
 
     // Applies collision data to current map
-    let coll_shape = coll_climber.tile_shape(prev_coll_status)?;
-    current_map.set_terrain_piece_from_shape(coll_shape, coll_climber.position);
+    let coll_shape = coll_climber.tile_shape()?;
+    // let just_dropped = coll_climber.next_position.y < coll_climber.position.y;
+    // current_map.set_terrain_piece_from_shape(coll_shape, coll_climber.position);
+
+    // Applies a collision "L shape" in the event the climber hit a lip tile
+    let mut pos = coll_climber.position();
+    while pos.y > coll_climber.next_position().y {
+        pos.y -= tile_height;
+        current_map.set_terrain_piece_from_shape(coll_shape, pos);
+    }
     Ok(())
 }
 
@@ -206,114 +195,6 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
 #[derive(Debug, Copy, Clone)]
 pub struct TileInfo {
     pub graphics: TileGraphics
-}
-
-/// Determines the status of a climb.
-/// Used in conjunction with `Climber`
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum ClimbStatus {
-    /// Tile is treated as a floor. Next tile is 1 farther (z)
-    NotClimbing,
-    // Tile is treated as a wall. Next tile is 1 higher (y)
-    ClimbingWallS,
-    /// Tile is treated as a south-east wall. Next tile is 1 higher (y)
-    ClimbingWallSE,
-    // Tile is treated as a south-west wall. Next tile is 1 higher (y)
-    ClimbingWallSW,
-    // Just encountered a "lip" tile. Tile is treated as floor. Next tile is N tiles below (y) and N tiles farther (z), where N represents how high we were in tiles
-    FinishedClimbing
-}
-
-impl ClimbStatus {
-    
-    /// Takes into account the climb status of the previous tile and the type of the current tile to determine the
-    /// climb status for the current tile.
-    fn next(
-        prev_status: ClimbStatus,
-        tile_type: TileType,
-        tile_x: i32,
-        tile_y: i32,
-        group_layer_name: &str
-    ) -> Self {
-        // What should the resulting climb status be, considering the current collision tile and the previous climb status?
-        // Yes, this is ugly and no, I'm not going to fix it...
-        if tile_type == TileType::Floor {
-            let is_status_valid =
-                prev_status == Self::NotClimbing ||
-                prev_status == Self::ClimbingWallS ||
-                prev_status == Self::ClimbingWallSE ||
-                prev_status == Self::ClimbingWallSW ||
-                prev_status == Self::FinishedClimbing;
-            if !is_status_valid {
-                //climb_panic!(tile_type, prev_status, tile_x, tile_y, group_layer_name);
-                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
-            }
-            Self::NotClimbing
-        }
-        else if tile_type == TileType::Wall {
-            if  prev_status == Self::NotClimbing ||
-                prev_status == Self::ClimbingWallS ||
-                prev_status == Self::FinishedClimbing {
-                Self::ClimbingWallS
-            }
-            else if prev_status == Self::ClimbingWallSE {
-                Self::ClimbingWallSE
-            }
-            else if prev_status == Self::ClimbingWallSW {
-                Self::ClimbingWallSW
-            }
-            else {
-                // Slopes???
-                todo!()
-            }
-        }
-        else if tile_type == TileType::WallStartSE {
-            let is_status_valid =
-                prev_status == Self::NotClimbing ||
-                prev_status == Self::FinishedClimbing;
-            if !is_status_valid {
-                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
-            }
-            Self::ClimbingWallSE
-        }
-        else if tile_type == TileType::WallStartSW {
-            let is_status_valid =
-                prev_status == Self::NotClimbing ||
-                prev_status == Self::FinishedClimbing;
-            if !is_status_valid {
-                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
-            }
-            Self::ClimbingWallSW
-        }
-        else if tile_type == TileType::WallEndSE {
-            if prev_status != Self::ClimbingWallSE {
-                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
-            }
-            Self::NotClimbing
-        }
-        else if tile_type == TileType::WallEndSW {
-            if prev_status != Self::ClimbingWallSW {
-                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
-            }
-            Self::NotClimbing
-        }
-        else if tile_type.is_lip() {
-            if !(prev_status.is_climbing_wall() || prev_status == Self::NotClimbing) {
-                climb_panic!(tile_type, prev_status, group_layer_name, tile_x, tile_y);
-            }
-            Self::FinishedClimbing
-        }
-        else {
-            // Slopes???
-            todo!()
-        }
-    }
-
-    fn is_climbing_wall(self) -> bool {
-        self == Self::ClimbingWallS ||
-        self == Self::ClimbingWallSE ||
-        self == Self::ClimbingWallSW
-    }
 }
 
 // Helper function that assumes a property is a string
@@ -364,14 +245,6 @@ fn get_tile_mesh_data(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMesh
 struct SplitGroupLayer<'map> {
     terrain_layers: Vec<TileLayer<'map>>,
     meta_layers: Vec<MetaLayer<'map>>
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ClimbingError(String);
-impl std::fmt::Display for ClimbingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
-    }
 }
 
 
@@ -427,73 +300,6 @@ impl<'map> MetaTile<'map> {
                 let t_type = get_string_property(&tile.properties, "type").unwrap_or("floor");
                 let t_type = TileType::from_str(t_type).unwrap();
                 (TileType::Floor, t_type)
-            }
-        }
-    }
-}
-
-// Used for "climbing" a vertical strip from a group layer.
-// There should be two of these when climbing: One for determining geometry, and one for determining collision.
-struct Climber {
-    climb_status: ClimbStatus,
-    position: Vec3,
-    offset: Vec2,
-    tile_height: f32
-}
-
-impl Climber {
-    fn new(offset: Vec2, tile_height: f32) -> Self {
-        Self {
-            climb_status: ClimbStatus::NotClimbing,
-            position: Vec3::new(offset.x, offset.y, 0.0),
-            offset,
-            tile_height
-        }
-    }
-
-    /// Compares current climb status and the next tile encountered, and "climbs" appropriately.
-    fn climb(
-        &mut self,
-        tile_type: TileType,
-        tile_x: i32,
-        tile_y: i32,
-        group_layer_name: &str
-    ) {
-        self.climb_status = ClimbStatus::next(self.climb_status, tile_type, tile_x, tile_y, group_layer_name);
-        if self.climb_status == ClimbStatus::NotClimbing {
-            self.position.z -= self.tile_height;
-        }
-        else if self.climb_status.is_climbing_wall() {
-            self.position.y += self.tile_height;
-        }
-        else if self.climb_status == ClimbStatus::FinishedClimbing {
-            let ydiff = self.position.y - self.offset.y;
-            self.position.y = self.offset.y;
-            self.position.z -= ydiff + self.tile_height;
-        }
-    }
-
-    fn tile_shape(&self, prev_status: ClimbStatus) -> Result<TileShape, ClimbingError> {
-        match self.climb_status {
-            ClimbStatus::NotClimbing => match prev_status {
-                ClimbStatus::ClimbingWallS | ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::Floor),
-                ClimbStatus::ClimbingWallSE => Ok(TileShape::WallEndSE),
-                ClimbStatus::ClimbingWallSW => Ok(TileShape::WallEndSW)
-            }
-            ClimbStatus::ClimbingWallS => Ok(TileShape::Wall),
-            ClimbStatus::ClimbingWallSE => match prev_status {
-                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::WallStartSE),
-                ClimbStatus::ClimbingWallSE => Ok(TileShape::WallSE),
-                _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status)))
-            },
-            ClimbStatus::ClimbingWallSW => match prev_status {
-                ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::WallStartSW),
-                ClimbStatus::ClimbingWallSW => Ok(TileShape::WallSW),
-                _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status)))
-            },
-            ClimbStatus::FinishedClimbing => match prev_status {
-                ClimbStatus::FinishedClimbing => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, prev_status))),
-                _ => Ok(TileShape::Floor)
             }
         }
     }

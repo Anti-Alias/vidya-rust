@@ -35,10 +35,10 @@ impl Plugin for PhysicsPlugin {
                 .after(AppLabel::Logic)
                 .after(AppLabel::PhysicsFriction)
             )
-            .with_system(collide_with_terrain
-                .label(AppLabel::PhysicsCollide)
-                .after(AppLabel::PhysicsMove)
-            )
+            // .with_system(collide_with_terrain
+            //     .label(AppLabel::PhysicsCollide)
+            //     .after(AppLabel::PhysicsMove)
+            // )
         );
     }
 }

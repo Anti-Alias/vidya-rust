@@ -15,8 +15,6 @@ use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::debug::Floater;
 use crate::extensions::*;
 
-use traverse::traverse_map;
-
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
 use bevy::render::camera::ScalingMode;
@@ -28,6 +26,7 @@ pub use current_map_graphics::*;
 pub use events::*;
 pub use vidya_map::*;
 pub use tile::*;
+pub use traverse::*;
 
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
@@ -158,6 +157,7 @@ fn map_construct(
     config: Res<MapConfig>
 ) {
     log::debug!("(SYSTEM) map_construct");
+    
     // Gets tiled map
     let tiled_map = &vidya_map
         .get(&current_map.map_handle)

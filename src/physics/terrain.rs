@@ -1,5 +1,5 @@
 use bevy::{utils::HashMap};
-use bevy::math::{Vec3, UVec3, UVec2, IVec3};
+use bevy::math::{Vec3, UVec3};
 
 /// All of the terrain in a [`World`] at a given time as a resource.
 pub struct Terrain {
@@ -26,6 +26,12 @@ impl Terrain {
             chunk_size
         }
     }
+
+    /// Assumed size of each terrian piece in pixels
+    pub fn piece_size(&self) -> Vec3 { self.piece_size }
+
+    /// Size of each chunk in terrain pieces
+    pub fn chunk_size(&self) -> UVec3 { self.chunk_size }
 
     /// Gets terrain piece at specified coords or None if the chunk it belongs to does not exist.
     pub fn get(&self, coords: Coords) -> Option<&TerrainPiece> {

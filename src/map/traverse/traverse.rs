@@ -166,11 +166,10 @@ fn add_tiles<'map>(
             coords.y -= 1;
             let mut next_coords = coll_climber.next_coords();
             next_coords.y -= 1;
-            while coords.y >= next_coords.y {
+            while coords.y > next_coords.y {
                 current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
                 coords.y -= 1;
             }
-            coords.z -= 1;
             while coords.z > next_coords.z {
                 current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
                 coords.z -= 1;

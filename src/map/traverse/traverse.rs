@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use tiled::*;
 use std::result::Result;
 
-use crate::map::{ TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber };
+use crate::{map::{ TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus }, physics::{Coords, TerrainPiece}};
 
 const DEPTH_EPSILON: f32 = 0.001;
 
@@ -151,16 +151,30 @@ fn add_tiles<'map>(
     }
 
     // Applies collision data to current map
-    let coll_shape = coll_climber.tile_shape()?;
-    // let just_dropped = coll_climber.next_position.y < coll_climber.position.y;
-    // current_map.set_terrain_piece_from_shape(coll_shape, coll_climber.position);
-
-    // Applies a collision "L shape" in the event the climber hit a lip tile
-    let mut pos = coll_climber.position();
-    while pos.y > coll_climber.next_position().y {
-        pos.y -= tile_height;
-        current_map.set_terrain_piece_from_shape(coll_shape, pos);
+    match geom_climber.climb_status() {
+        ClimbStatus::NotClimbing => {
+            let mut coords = coll_climber.coords();
+            coords.y -= 1;
+            current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
+        }
+        ClimbStatus::ClimbingWallS | ClimbStatus::ClimbingWallSE | ClimbStatus::ClimbingWallSW => {
+            current_map.set_terrain_piece(TerrainPiece::Cuboid, coll_climber.coords());
+        }
+        ClimbStatus::FinishedClimbing => {
+            let mut coords = coll_climber.coords();
+            coords.y -= 1;
+            let next_coords_y = coll_climber.next_coords().y - 1;
+            while coords.y >= next_coords_y {
+                current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
+                coords.y -= 1;
+            }
+        }
+        _ => {
+            panic!("Climb status {:?} not yet supported by collision engine", geom_climber.climb_status());
+        }
     }
+
+    // Done
     Ok(())
 }
 

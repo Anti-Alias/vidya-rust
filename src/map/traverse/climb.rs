@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::map::{TileType, TileShape};
-use crate::physics::TerrainPiece;
+use crate::physics::{TerrainPiece, Coords};
 
 // Used for "climbing" a vertical strip from a group layer.
 // There should be two of these when climbing: One for determining geometry, and one for determining collision.
@@ -30,8 +30,28 @@ impl Climber {
     /// Position of this climber
     pub fn position(&self) -> Vec3 { self.position }
 
+    /// Coordinates of current tile for collision
+    pub fn coords(&self) -> Coords {
+        let c = self.position / self.tile_size;
+        Coords::new(
+            c.x as i32,
+            c.y as i32,
+            c.z as i32
+        )
+    }
+
     /// Next position of this climber
     pub fn next_position(&self) -> Vec3 { self.next_position }
+
+    /// Coordinates of next tile for collision
+    pub fn next_coords(&self) -> Coords {
+        let c = self.next_position / self.tile_size;
+        Coords::new(
+            c.x as i32,
+            c.y as i32,
+            c.z as i32
+        )
+    }
 
     /// Compares current climb status and the next tile encountered, and "climbs" appropriately.
     pub fn climb(
@@ -41,8 +61,8 @@ impl Climber {
         tile_y: i32,
         group_layer_name: &str
     ) -> Result<(), ClimbingError> {
-        self.position = self.next_position;
-        self.prev_status = self.climb_status;
+        let position = self.next_position;
+        let prev_status = self.climb_status;
         self.climb_status = ClimbStatus::next(self.climb_status, tile_type, tile_x, tile_y, group_layer_name)?;
         if self.climb_status == ClimbStatus::NotClimbing {
             self.next_position.z -= self.tile_size.y;
@@ -55,8 +75,12 @@ impl Climber {
             self.next_position.y = self.offset.y;
             self.next_position.z -= ydiff + self.tile_size.y;
         }
+        self.position = position;
+        self.prev_status = prev_status;
         Ok(())
     }
+
+    pub fn climb_status(&self) -> ClimbStatus { self.climb_status }
 
     pub fn tile_shape(&self) -> Result<TileShape, ClimbingError> {
         match self.climb_status {
@@ -208,14 +232,4 @@ impl ClimbStatus {
             tile_y
         ))
     }
-}
-
-/// Represents a set of instructions for writing terrain pieces to a [`Terrain`] instance.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum WriteTerrainInstruction {
-    Vertical {
-        piece: TerrainPiece,
-        start: i32,
-        end: i32
-    },
 }

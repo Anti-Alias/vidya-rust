@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use tiled::*;
 use std::result::Result;
 
-use crate::{map::{ TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus }, physics::{Coords, TerrainPiece}};
+use crate::physics::{ TerrainPiece };
+use crate::map::{TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus };
 
 const DEPTH_EPSILON: f32 = 0.001;
 
@@ -110,7 +111,7 @@ fn add_tiles<'map>(
     group_layer_name: &str,
     current_map: &mut CurrentMap,
     current_map_graphics: &mut CurrentMapGraphics,
-    tile_height: f32,
+    _tile_height: f32,
     flattened_layer_index: usize
 ) -> Result<(), ClimbingError> {
 
@@ -168,9 +169,6 @@ fn add_tiles<'map>(
                 current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
                 coords.y -= 1;
             }
-        }
-        _ => {
-            panic!("Climb status {:?} not yet supported by collision engine", geom_climber.climb_status());
         }
     }
 

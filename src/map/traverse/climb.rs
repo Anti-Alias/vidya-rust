@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::map::{TileType, TileShape};
-use crate::physics::{TerrainPiece, Coords};
+use crate::physics::{Coords};
 
 // Used for "climbing" a vertical strip from a group layer.
 // There should be two of these when climbing: One for determining geometry, and one for determining collision.
@@ -39,9 +39,6 @@ impl Climber {
             c.z as i32
         )
     }
-
-    /// Next position of this climber
-    pub fn next_position(&self) -> Vec3 { self.next_position }
 
     /// Coordinates of next tile for collision
     pub fn next_coords(&self) -> Coords {

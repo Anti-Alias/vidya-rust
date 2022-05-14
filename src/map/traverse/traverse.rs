@@ -8,30 +8,28 @@ use crate::map::{TileType, TileGraphics, TileMeshData, CurrentMapGraphics, Curre
 const DEPTH_EPSILON: f32 = 0.001;
 
 
-// Fire events that cause map to populate
-pub(crate) fn traverse_map(
+// Reads contents of tiled map, parses/validates it, and populates collision data (current_map) and graphics (current_map_graphics).
+pub(crate) fn process_map(
     tiled_map: &tiled::Map,
     flip_y: bool,
     current_map: &mut CurrentMap,
     current_map_graphics: &mut CurrentMapGraphics
 ) -> Result<(), ClimbingError> {
-    // For all group layers in the root...
+
     let mut flattened_layer_index = 0;
+
+    // For all group layers in the root...
     for root_layer in tiled_map.layers() {
         match &root_layer.layer_type() {
             LayerType::GroupLayer(group_layer) => {
 
-                // Split the sub layers between terrain and meta layers
-                let SplitGroupLayer {
-                    terrain_layers,
-                    meta_layers
-                } = split_group_layer(group_layer);
+                // Splits the group layer between the terrain layers and the meta layers
+                let (terrain_layers, meta_layers) = split_group_layer(group_layer);
 
-
-                // Populate tiles from group layer
+                // Process those sub layers
                 log::trace!("Processing group layer {}", &root_layer.name);
                 let offset_y = 0;
-                traverse_group_layer(
+                process_sub_layers(
                     &meta_layers,
                     &terrain_layers,
                     offset_y,
@@ -50,11 +48,11 @@ pub(crate) fn traverse_map(
     Ok(())
 }
 
-
-fn traverse_group_layer(
+// Processes the sub layers of a group layer
+fn process_sub_layers(
     m_layers: &[MetaLayer],                                     // Group meta layers
     t_layers: &[TileLayer],                                     // Group terrain layers
-    offset_y: i32,                                              // Group offset
+    offset_y: i32,                                              // Group offset y (measured in tiles, not pixels)
     map: &Map,                                                  // Map itself
     flip_y: bool,
     group_layer_name: &str,
@@ -62,6 +60,7 @@ fn traverse_group_layer(
     current_map_graphics: &mut CurrentMapGraphics,
     flattened_layer_index: usize,
 ) -> Result<(), ClimbingError> {
+
     // For all columns in the group...
     let (w, h) = (map.width, map.height);
     let (tw, th) = (map.tile_width as f32, map.tile_height as f32);
@@ -81,7 +80,7 @@ fn traverse_group_layer(
             let y = y as i32;
 
             // "Climb" the current tile at x, y
-            add_tiles(
+            process_tiles_at(
                 m_layers,
                 t_layers,
                 x,
@@ -100,7 +99,8 @@ fn traverse_group_layer(
     Ok(())
 }
 
-fn add_tiles<'map>(
+// Processes the tiles of a sub layer at a specific X/Y location (tile_x, tile_y)
+fn process_tiles_at<'map>(
     meta_layers: &[MetaLayer<'map>],
     terrain_layers: &[TileLayer],
     tile_x: i32,
@@ -181,7 +181,8 @@ fn add_tiles<'map>(
     Ok(())
 }
 
-fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLayer<'map>{
+/// Splits group layer between
+fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> (Vec<TileLayer<'map>>, Vec<MetaLayer<'map>>){
 
     // Goes through sub layers and splits them
     let mut terrain_layers = Vec::new();
@@ -204,7 +205,7 @@ fn split_group_layer<'map>(group_layer: &'map GroupLayer<'map>) -> SplitGroupLay
     }
 
     // Returns split data
-    SplitGroupLayer { terrain_layers, meta_layers }
+    (terrain_layers, meta_layers)
 }
 
 
@@ -256,12 +257,6 @@ fn get_tile_mesh_data(tileset: &Tileset, tile_id: u32, flip_y: bool) -> TileMesh
         uv3,
         uv4
     }
-}
-
-// A Group layer that has has been parsed (split between the terrain layers and the optional meta layers)
-struct SplitGroupLayer<'map> {
-    terrain_layers: Vec<TileLayer<'map>>,
-    meta_layers: Vec<MetaLayer<'map>>
 }
 
 

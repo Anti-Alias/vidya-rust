@@ -63,7 +63,7 @@ fn spawn_player(
         let idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
         let run_handle = animation_set.add_animation_group(&[run_e, run_n, run_w, run_s]);
         let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
-    
+
         // Spawns platformer entity from bundle
         commands
             .spawn()
@@ -75,13 +75,14 @@ fn spawn_player(
                 GlobalTransform::default()
             ))
             .insert_bundle(PhysicsBundle::new(
-                Position(Vec3::new(256.0, -19.0, -256.0)),
+                //Position(Vec3::new(256.0, -19.0, -256.0)),
+                Position(Vec3::new(256.0, 40.0, -256.0)),
                 Size(Vec3::new(64.0, 64.0, 0.0)),
                 Friction {
                     xz: 0.5,
                     y: 1.0,
                 },
-                Weight(0.0)
+                Weight(0.1)
             ))
             .insert(Player)
             .insert(Being::default())

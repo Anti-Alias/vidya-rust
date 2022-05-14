@@ -5,7 +5,7 @@ use bevy::utils::HashMap;
 
 use crate::map::{ TileGraphics, TileShape, TileMeshData };
 
-/// Staging resource for the graphics of map being loaded
+// Temporary staging resource for a map's graphics data.
 #[derive(Default)]
 pub struct CurrentMapGraphics {
     pub tileset_image_handles: Vec<Option<Handle<Image>>>,  // Tileset name -> image

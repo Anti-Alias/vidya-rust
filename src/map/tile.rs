@@ -21,6 +21,8 @@ pub struct TileMeshData {
     pub uv4: Vec2
 }
 
+/// Type of meta tile this is.
+/// Maps directly to what is is in a map file.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TileType {
     Floor,
@@ -67,7 +69,7 @@ impl TileType {
     }
 }
 
-/// Represents the 3D shape of a tile
+/// Represents the immediate 3D shape of a meta tile, not to be confused with [`TileType`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TileShape {
     Floor,

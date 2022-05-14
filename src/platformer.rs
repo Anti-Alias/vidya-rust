@@ -1,3 +1,4 @@
+use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
@@ -107,7 +108,7 @@ fn process_signals(mut platformer_entities: Query<(
 
         // Updates state based on velocity
         const EPSILON: f32 = 0.1;
-        if velocity.0.length_squared() > EPSILON*EPSILON {
+        if velocity.0.xz().length_squared() > EPSILON*EPSILON {
             state_holder.0 = State::Running;
         }
         else {

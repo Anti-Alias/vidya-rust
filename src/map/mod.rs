@@ -165,7 +165,7 @@ fn map_construct(
         .tiled_map;
 
     // Traverses the map and fires events based on its contents
-    traverse_map(&tiled_map, config.flip_y, &mut current_map, &mut current_map_graphics).unwrap();
+    process_map(&tiled_map, config.flip_y, &mut current_map, &mut current_map_graphics).unwrap();
     state.set(AppState::MapSpawningEntities).unwrap();
 }
 

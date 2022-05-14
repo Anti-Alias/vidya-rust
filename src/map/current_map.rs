@@ -4,7 +4,7 @@ use crate::physics::{Terrain, TerrainPiece, Coords};
 use bevy::prelude::*;
 
 
-// Staging resource for a map that is being loaded
+// Temporary staging resource for a map's collision data / metadata.
 pub struct CurrentMap {
     pub file: String,                   // Name of the file the map came from
     pub map_handle: Handle<VidyaMap>,   // Map handle

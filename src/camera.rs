@@ -51,7 +51,7 @@ impl CameraBundle {
 }
 
 /// Tag component that marks the entity as "targettable" by the camera.
-/// There should only be 1 entity with this marker.
+/// There should only be 1 entity with this marker at a time.
 #[derive(Component)]
 pub struct Targetable;
 

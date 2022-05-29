@@ -8,12 +8,13 @@ use crate::map::{ TileGraphics, TileShape, TileMeshData };
 // Temporary staging resource for a map's graphics data.
 #[derive(Default)]
 pub struct CurrentMapGraphics {
-    pub tileset_image_handles: Vec<Option<Handle<Image>>>,  // Tileset name -> image
-    pub chunk_size: Vec3,                                   // Width, height and depth of chunks
-    pub chunks: HashMap<ChunkKey, Chunk>                    // Chunked mesh data
+    pub tileset_handles: Vec<Option<Handle<Image>>>,    // Image handle list
+    pub chunk_size: Vec3,                               // Width, height and depth of chunks
+    pub chunks: HashMap<ChunkKey, Chunk>                // Chunked mesh data
 }
 
 impl CurrentMapGraphics {
+
     pub fn new(chunk_size: Vec3) -> Self {
         Self {
             chunk_size,
@@ -23,7 +24,7 @@ impl CurrentMapGraphics {
 
     pub fn get_load_state(&self, assets: &AssetServer) -> LoadState {
         let handle_ids = self
-            .tileset_image_handles
+            .tileset_handles
             .iter()
             .flatten()
             .map(|handle| { handle.id });
@@ -35,7 +36,7 @@ impl CurrentMapGraphics {
         let tile_pos = tile.translation / chunk_size;
         let (x, y, z) = (tile_pos.x as i32, tile_pos.y as i32, tile_pos.z as i32);
         let tileset_index = tile.tileset_index as usize;
-        let key = ChunkKey { x, y, z, tileset_index };
+        let key = ChunkKey { x, y, z, tileset_handle_index: tileset_index };
         let chunk = self.chunks.entry(key).or_default();
         chunk.add_tile(tile);
         log::trace!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.translation, key);
@@ -47,7 +48,7 @@ pub struct ChunkKey {
     pub x: i32,
     pub y: i32,
     pub z: i32,
-    pub tileset_index: usize
+    pub tileset_handle_index: usize
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]

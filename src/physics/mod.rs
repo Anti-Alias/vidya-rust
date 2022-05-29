@@ -4,9 +4,12 @@ mod movement;
 mod terrain;
 mod collision;
 
-pub use movement::*;
+pub use bevy::prelude::*;
+
 pub use terrain::*;
 pub use collision::*;
+pub use movement::*;
+pub use movement::SizeCylinder;
 
 /// Plugin that adds physics components and terrain collision
 pub struct PhysicsPlugin;
@@ -35,10 +38,38 @@ impl Plugin for PhysicsPlugin {
                 .after(AppLabel::Logic)
                 .after(AppLabel::PhysicsFriction)
             )
-            // .with_system(collide_with_terrain
-            //     .label(AppLabel::PhysicsCollide)
-            //     .after(AppLabel::PhysicsMove)
-            // )
+            .with_system(collide_with_terrain
+                .label(AppLabel::PhysicsCollide)
+                .after(AppLabel::PhysicsMove)
+            )
         );
+    }
+}
+
+fn collide_with_terrain(
+    terrain_entity: Query<&Terrain>,
+    mut collidable_entities: Query<(&mut Position, &PreviousPosition, &SizeCylinder)>
+) {
+    log::debug!("(SYSTEM) collide_with_terrain");
+    let terrain = match terrain_entity.iter().next() {
+        Some(entity) => entity,
+        None => return
+    };
+    for (mut pos, prev_pos, size) in collidable_entities.iter_mut() {
+        let cylinder = CylinderCollider {
+            center: pos.0,
+            radius: size.radius,
+            half_height: size.half_height
+        };
+        let delta = pos.0 - prev_pos.0;
+        let coll = terrain.collide_with_cylinder(&cylinder, delta);
+        match coll {
+            Some(_) => {
+                println!("Collision!!!");
+            }
+            None => {
+                //println!("No collision...");
+            }
+        }
     }
 }

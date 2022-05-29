@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
-use vidya_rust::animation::{SpriteAnimationBundle, AnimationTimer, AnimationPlugin, Animation, AnimationSet};
+use vidya_rust::animation::{AnimationSetBundle, AnimationTimer, AnimationPlugin, Animation, AnimationSet};
 use vidya_rust::app::{AppState, VidyaCorePlugin};
 use vidya_rust::sprite::SpritePlugin;
 
@@ -42,7 +42,7 @@ fn spawn_sprite_animation(
     
         // Spawns entity from bundle
         commands
-            .spawn_bundle(SpriteAnimationBundle::new(
+            .spawn_bundle(AnimationSetBundle::new(
                 animation_set,
                 AnimationTimer::new(Duration::from_millis(1000/15)),
                 materials.add(material),

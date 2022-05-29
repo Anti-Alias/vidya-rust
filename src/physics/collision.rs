@@ -4,6 +4,8 @@ use bevy::{prelude::*, math::Vec3Swizzles};
 
 use crate::physics::TerrainPiece;
 
+use super::{Terrain, Coords, TerrainPieceRef};
+
 const T_EPSILON: f32 = 0.001;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -42,15 +44,16 @@ pub struct CylinderCollider {
     pub radius: f32,
     pub half_height: f32,
 }
+
 /// Collider of a [`TerrainPiece`].
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct TerrainCollider {
+pub struct PieceCollider {
     pub piece: TerrainPiece,
     pub position: Vec3,
     pub size: Vec3
 }
 
-impl TerrainCollider {
+impl PieceCollider {
 
     /// Collides a terrain piece with a cylinder's movement
     pub fn collide_with_cylinder(&self, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
@@ -276,6 +279,95 @@ impl TerrainCollider {
     }
 }
 
+pub trait TerrainCollider {
+    fn collide_with_cylinder(&self, cylinder: &CylinderCollider, delta: Vec3) -> Option<Collision>;
+}
+
+impl TerrainCollider for Terrain {
+
+    fn collide_with_cylinder(&self, cylinder: &CylinderCollider, delta: Vec3) -> Option<Collision> {
+        let mut closest_coll = None;
+
+        // Determines terrain area to select based on cylinder's size and movement
+        let piece_size = self.piece_size();
+        let cyl_aabb = moving_cylinder_aabb(cylinder, delta);
+        let min = cyl_aabb.min / piece_size;
+        let max = cyl_aabb.max / piece_size;
+        let min = Coords::new(min.x as i32, min.y as i32, min.z as i32);
+        let max = Coords::new(max.x as i32 + 1, max.y as i32 + 1, max.z as i32 + 1);
+
+
+        // For all terrain pieces in the selection...
+        println!("-----");
+        for piece_ref in self.iter_pieces(min, max) {
+            println!("Piece: {:?}", piece_ref.piece);
+
+            // Create short-lived piece collider
+            let TerrainPieceRef { piece, coords } = piece_ref;
+            let piece_pos = Vec3::new(
+                coords.x as f32 * piece_size.x,
+                coords.y as f32 * piece_size.y,
+                coords.z as f32 * piece_size.z
+            );
+            let piece_coll = PieceCollider {
+                piece: *piece,
+                position: piece_pos,
+                size: piece_size
+            };
+
+            // Collides the piece collider with the moving cylinder
+            let collision = piece_coll.collide_with_cylinder(cylinder, delta);
+            closest_coll = closest_collision(collision, closest_coll);
+        }
+        
+        // Returns closest collision
+        closest_coll
+    }
+}
+
+// Computes the Aabb of a moving cylinder
+fn moving_cylinder_aabb(cylinder: &CylinderCollider, delta: Vec3) -> Aabb {
+    let mut min = Vec3::new(
+        cylinder.center.x - cylinder.radius,
+        cylinder.center.y - cylinder.half_height,
+        cylinder.center.z - cylinder.radius
+    );
+    let mut max = Vec3::new(
+        cylinder.center.x + cylinder.radius,
+        cylinder.center.y + cylinder.half_height,
+        cylinder.center.z + cylinder.radius
+    );
+    if delta.x < 0.0 {
+        min.x += delta.x;
+        max.x += delta.x;
+    }
+    if delta.y < 0.0 {
+        min.y += delta.y;
+        max.y += delta.y;
+    }
+    if delta.z < 0.0 {
+        min.z += delta.z;
+        max.z += delta.z;
+    }
+    Aabb { min, max }
+}
+
+fn closest_collision<'a>(a: Option<Collision>, b: Option<Collision>) -> Option<Collision> {
+    match a {
+        Some(a_coll) => {
+            match b {
+                Some(b_coll) => {
+                    if a_coll.t < b_coll.t { a }
+                    else { b }
+                }
+                None => a
+            }
+        }
+        None => b
+    }
+}
+
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Collision2D {
     pub t: f32,
@@ -368,12 +460,12 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Col
 #[test]
 fn test_collide() {
 
-    fn test(cyl: CylinderCollider, coll: TerrainCollider, delta: Vec3, expected: Option<Collision>) {
+    fn test(cyl: CylinderCollider, coll: PieceCollider, delta: Vec3, expected: Option<Collision>) {
         let collision = coll.collide_with_cylinder(&cyl, delta);
         assert_eq!(expected, collision);
     }
 
-    let terrain_collider = TerrainCollider {
+    let terrain_collider = PieceCollider {
         piece: TerrainPiece::Cuboid,
         position: Vec3::new(0.0, 0.0, 0.0),
         size: Vec3::new(10.0, 10.0, 10.0)
@@ -454,7 +546,7 @@ fn test_collide() {
         })
     );
 
-    let terrain_collider = TerrainCollider {
+    let terrain_collider = PieceCollider {
         piece: TerrainPiece::Cuboid,
         position: Vec3::new(3.0, 0.0, -6.0),
         size: Vec3::new(3.0, 4.0, 3.0)
@@ -578,7 +670,7 @@ fn test_collide() {
             half_height: 5.0,
             radius: 10.0
         },
-        TerrainCollider {
+        PieceCollider {
             piece: TerrainPiece::Cuboid,
             position: Vec3::new(0.0, 0.0, 0.0),
             size: Vec3::new(10.0, 10.0, 10.0)

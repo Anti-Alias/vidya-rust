@@ -9,7 +9,7 @@ const DEPTH_EPSILON: f32 = 0.001;
 
 
 // Reads contents of tiled map, parses/validates it, and populates collision data (current_map) and graphics (current_map_graphics).
-pub(crate) fn process_map(
+pub(crate) fn process_tiled_map(
     tiled_map: &tiled::Map,
     flip_y: bool,
     current_map: &mut CurrentMap,

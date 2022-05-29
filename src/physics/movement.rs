@@ -1,4 +1,4 @@
-pub use bevy::prelude::*;
+use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy, Default, Reflect)]
 #[reflect(Component, PartialEq)]
@@ -10,7 +10,10 @@ pub struct PreviousPosition(pub Vec3);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy, Default, Reflect)]
 #[reflect(Component, PartialEq)]
-pub struct Size(pub Vec3);
+pub struct SizeCylinder {
+    pub half_height: f32,
+    pub radius: f32
+}
 
 /// Velocity of an entity
 #[derive(Component, PartialEq, Debug, Copy, Clone, Default)]
@@ -29,7 +32,7 @@ impl Default for Weight {
 pub struct PhysicsBundle {
     pub position: Position,
     pub prev_position: PreviousPosition,
-    pub size: Size,
+    pub size: SizeCylinder,
     pub velocity: Velocity,
     pub friction: Friction,
     pub weight: Weight
@@ -37,7 +40,7 @@ pub struct PhysicsBundle {
 impl PhysicsBundle {
     pub fn new(
         position: Position,
-        size: Size,
+        size: SizeCylinder,
         friction: Friction,
         weight: Weight
     ) -> Self {

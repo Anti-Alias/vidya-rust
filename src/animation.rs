@@ -47,7 +47,7 @@ impl AnimationSet {
     pub fn set_frame_index(&mut self, frame_index: usize) -> Result<(), AnimationError> {
         match self.current_animation() {
             Some(anim) => {
-                if frame_index >= anim.0.len() {
+                if frame_index >= anim.frames.len() {
                     return Err(AnimationError::FrameOutOfBounds);
                 }
             },
@@ -65,7 +65,7 @@ impl AnimationSet {
     pub fn advance(&mut self, frames: usize) {
         if frames == 0 { return; }
         if let Some(anim) = self.current_animation() {
-            self.frame = (self.frame + frames) % anim.0.len();
+            self.frame = (self.frame + frames) % anim.frames.len();
         }
     }
 
@@ -115,9 +115,12 @@ impl AnimationSet {
     }
 
     /// Current frame of current animation
-    pub fn current_frame(&self) -> Option<Frame> {
+    pub fn current_frame_info(&self) -> Option<FrameInfo> {
         let anim = self.current_animation()?;
-        Some(anim.0[self.frame])
+        Some(FrameInfo {
+            frame: anim.frames[self.frame],
+            offset: anim.offset
+        })
     }
 
     /// Handle to current animation.
@@ -169,7 +172,7 @@ impl AnimationSet {
         // Determines what to do with current frame index
         if preserve_frame_index {
             let next_anim = &self.animations[next_anim_handle.0];
-            if self.frame > next_anim.0.len() {
+            if self.frame > next_anim.frames.len() {
                 self.frame = 0;
             }
         }
@@ -191,14 +194,20 @@ impl AnimationTimer {
     }
 }
 
+/// Bundle for an AnimationSet + auxiliary components.
 #[derive(Bundle)]
-pub struct SpriteAnimationBundle {
+pub struct AnimationSetBundle {
+    /// Set of animations available to the entity
     pub animation_set: AnimationSet,
+
+    /// Timer used to power all of the animations
     pub timer: AnimationTimer,
+
+    /// Sprite3D bundle. The Sprite3D component will be continuously written to when frames are updated.
     #[bundle]
     pub sprite_bundle: Sprite3DBundle
 }
-impl SpriteAnimationBundle {
+impl AnimationSetBundle {
     pub fn new(
         animation_set: AnimationSet,
         timer: AnimationTimer,
@@ -225,12 +234,22 @@ pub struct Frame {
     // Size of frame in pixels
     pub size: Vec2,
     // UV region
-    pub region: Region
+    pub region: Region,
+}
+
+/// Represents a frame with extra metadata
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct FrameInfo {
+    frame: Frame,
+    offset: Vec3
 }
 
 /// A set of frames
 #[derive(Debug, Clone, PartialEq)]
-pub struct Animation(pub Vec<Frame>);
+pub struct Animation {
+    pub frames: Vec<Frame>,
+    pub offset: Vec3
+}
 impl Animation {
 
     // Constructs a [`SpriteAnimation`] an image, assuming that the sprites are aligned from left to right, top to bottom with no spacing between.
@@ -241,12 +260,16 @@ impl Animation {
         frame_height: u32,
         image_width: u32,
         image_height: u32,
-        total_frames: u32
+        total_frames: u32,
+        offset: Vec3
     ) -> Self {
 
         // Simple case
         if total_frames == 0 {
-            return Self(Vec::new());
+            return Self {
+                frames: Vec::new(),
+                offset
+            };
         }
 
         // Accumultes frames
@@ -272,7 +295,10 @@ impl Animation {
 
                 // If we're past our capacity for frames, quit early with the frames we have
                 if frames.len() == total_frames as usize {
-                    return Self(frames);
+                    return Self {
+                        frames,
+                        offset
+                    };
                 }
                 x += frame_width;
             }
@@ -280,7 +306,10 @@ impl Animation {
         }
 
         // Done
-        Self(frames)
+        return Self {
+            frames,
+            offset
+        };
     }
 }
 
@@ -304,9 +333,10 @@ fn update_animations(
         let times_finished = timer.times_finished();
         if times_finished > 0 {
             anim_set.advance(times_finished as usize);
-            if let Some(frame) = anim_set.current_frame() {
-                sprite.size = frame.size;
-                sprite.region = frame.region;
+            if let Some(info) = anim_set.current_frame_info() {
+                sprite.size = info.frame.size;
+                sprite.region = info.frame.region;
+                sprite.offset = info.offset;
             }
         }
     }
@@ -332,62 +362,71 @@ impl fmt::Display for AnimationError {
 
 #[test]
 fn test_from_grid() {
-    let expected = Animation(vec![Frame {
-        size: Vec2::new(32.0, 32.0),
-        region: Region {
-            min: Vec2::new(0.0, 0.0),
-            max: Vec2::new(1.0, 1.0)
-        }
-    }]);
+    let expected = Animation{
+        frames: vec![Frame {
+            size: Vec2::new(32.0, 32.0),
+            region: Region {
+                min: Vec2::new(0.0, 0.0),
+                max: Vec2::new(1.0, 1.0)
+            },
+        }],
+        offset: Vec3::ZERO
+    };
     let actual = Animation::from_grid(0, 0, 32, 32, 32, 32, 100);
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_from_grid_2() {
-    let expected = Animation(vec![Frame {
-        size: Vec2::new(32.0, 32.0),
-        region: Region {
-            min: Vec2::new(0.0, 0.0),
-            max: Vec2::new(0.50793654, 0.50793654)
-        }
-    }]);
+    let expected = Animation {
+        frames: vec![Frame {
+            size: Vec2::new(32.0, 32.0),
+            region: Region {
+                min: Vec2::new(0.0, 0.0),
+                max: Vec2::new(0.50793654, 0.50793654)
+            }
+        }],
+        offset: Vec3::ZERO
+    };
     let actual = Animation::from_grid(0, 0, 32, 32, 63, 63, 100);
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_from_grid_3() {
-    let expected = Animation(vec![
-        Frame {
-            size: Vec2::new(32.0, 32.0),
-            region: Region {
-                min: Vec2::new(0.0, 0.0),
-                max: Vec2::new(0.5, 0.5)
+    let expected = Animation {
+        frames: vec![
+            Frame {
+                size: Vec2::new(32.0, 32.0),
+                region: Region {
+                    min: Vec2::new(0.0, 0.0),
+                    max: Vec2::new(0.5, 0.5)
+                }
+            },
+            Frame {
+                size: Vec2::new(32.0, 32.0),
+                region: Region {
+                    min: Vec2::new(0.5, 0.0),
+                    max: Vec2::new(1.0, 0.5)
+                }
+            },
+            Frame {
+                size: Vec2::new(32.0, 32.0),
+                region: Region {
+                    min: Vec2::new(0.0, 0.5),
+                    max: Vec2::new(0.5, 1.0)
+                }
+            },
+            Frame {
+                size: Vec2::new(32.0, 32.0),
+                region: Region {
+                    min: Vec2::new(0.5, 0.5),
+                    max: Vec2::new(1.0, 1.0)
+                }
             }
-        },
-        Frame {
-            size: Vec2::new(32.0, 32.0),
-            region: Region {
-                min: Vec2::new(0.5, 0.0),
-                max: Vec2::new(1.0, 0.5)
-            }
-        },
-        Frame {
-            size: Vec2::new(32.0, 32.0),
-            region: Region {
-                min: Vec2::new(0.0, 0.5),
-                max: Vec2::new(0.5, 1.0)
-            }
-        },
-        Frame {
-            size: Vec2::new(32.0, 32.0),
-            region: Region {
-                min: Vec2::new(0.5, 0.5),
-                max: Vec2::new(1.0, 1.0)
-            }
-        }
-    ]);
+        ],
+        offset: Vec3::ZERO
+    };
     let actual = Animation::from_grid(0, 0, 32, 32, 64, 64, 100);
     assert_eq!(expected, actual);
 }

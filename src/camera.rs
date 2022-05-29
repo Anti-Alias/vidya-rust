@@ -56,9 +56,7 @@ impl CameraBundle {
 pub struct Targetable;
 
 #[derive(Component)]
-pub struct CameraTargetSettings {
-    pub distance: f32
-}
+pub struct CameraTargetSettings { pub distance: f32 }
 
 pub fn camera_target(
     targetable: Query<&Position, (With<Targetable>, Without<Camera>)>,

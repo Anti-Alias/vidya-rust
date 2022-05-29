@@ -1,7 +1,9 @@
+use bevy::prelude::*;
 use bevy::{utils::HashMap};
 use bevy::math::{Vec3, UVec3};
 
 /// All of the terrain in a [`World`] at a given time as a resource.
+#[derive(Component, Clone)]
 pub struct Terrain {
     chunks: HashMap<ChunkCoords, Chunk>,
     piece_size: Vec3,
@@ -73,7 +75,7 @@ impl Terrain {
     }
 
     /// Iterates over all terrain pieces within global range specified
-    pub fn iter_pieces(&self, min: Coords, max: Coords) -> impl Iterator<Item=TerrainPieceRef> + '_ {
+    pub fn iter_pieces(&self, min: Coords, max: Coords) -> impl Iterator<Item=TerrainPieceRef<'_>> {
         let chunk_min = self.to_chunk_coords(min);
         let chunk_max = self.to_chunk_coords(max);
         let chunk_max = ChunkCoords::new(
@@ -222,6 +224,7 @@ impl<'terrain> Iterator for ChunkIter<'terrain> {
 }
 
 /// Chunk of terrain pieces
+#[derive(Clone)]
 pub struct Chunk(Vec<TerrainPiece>);
 
 #[derive(Copy, Clone)]

@@ -27,14 +27,29 @@ impl Plugin for SpritePlugin {
 pub struct Sprite3D {
     pub size: Vec2,
     pub region: Region,
+    pub offset: Vec3
 }
 
-/// Components necessary to draw a sprite quad
+impl Sprite3D {
+    pub fn new(size: Vec2, region: Region) -> Self {
+        Sprite3D { size, region, offset: Vec3::ZERO }
+    }
+}
+
+/// Bundle for a Sprite3D + auxiliary components
 #[derive(Bundle, Clone, Debug)]
 pub struct Sprite3DBundle {
+
+    /// Sprite region itself
     pub sprite: Sprite3D,
+
+    /// Material the sprite samples from
     pub material: Handle<StandardMaterial>,
+    
+    /// Position, scale and rotation of the sprite to use when drawing
     pub transform: Transform,
+
+    /// Global transform used for parent/child relationships. Do not touch.
     pub global_transform: GlobalTransform
 }
 
@@ -207,8 +222,10 @@ fn draw_sprites(
     for (sprite, mat_handle, transform) in sprite_query.iter() {
 
         // Buffers draw command for sprite
+        let mut transform = *transform;
+        transform.translation += sprite.offset;
         let draw_command = DrawQuadCommand {
-            transform: transform.clone(),
+            transform,
             size: sprite.size,
             uv_region: sprite.region
         };

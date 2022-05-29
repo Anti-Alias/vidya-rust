@@ -24,7 +24,6 @@ pub fn interpolate_graphics(
 ) {
     log::debug!("(SYSTEM) interpolate_graphics");
     let t = partial_ticks.t();
-    log::debug!("T: {}", partial_ticks.t());
     for (position, prev_position, mut transform) in query.iter_mut() {
         let src = prev_position.0;
         let dest = position.0;

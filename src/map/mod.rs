@@ -79,17 +79,13 @@ fn map_listen(
         let map_file = &event.0;
         let map_handle = asset_server.load(map_file);
 
-        // Spawns map entity, and inserts CurrentMap resource to track it
-        let map_parent_entity = commands
-            .spawn()
-            .id();
+        // Creates current map resource and keeps track of the map that is loading
         commands.insert_resource(CurrentMap {
-            file: map_file.to_string(),
             map_handle,
-            map_entity: map_parent_entity,
             terrain: Terrain::new(Vec3::new(16.0, 16.0, 16.0), UVec3::new(16, 16, 16))
         });
 
+        // Goes to loading state
         state.push(AppState::MapLoadingFile).unwrap()
     }
 }
@@ -97,12 +93,12 @@ fn map_listen(
 // 1) When in LoadingMapState, checks if map finished loading
 // 2) If so, loads tileset images, sets counter to 1 and goes to FiringEvents state
 fn map_finish_loading(
-    map_config: Res<MapConfig>,
-    current_map: Res<CurrentMap>,
     asset_server: Res<AssetServer>,
-    asset_server_settings: Res<AssetServerSettings>,
-    mut state: ResMut<State<AppState>>,
+    current_map: Res<CurrentMap>,
     vidya_maps: Res<Assets<VidyaMap>>,
+    map_config: Res<MapConfig>,
+    asset_server_settings: Res<AssetServerSettings>,
+    mut app_state: ResMut<State<AppState>>,
     mut commands: Commands
 ) {
     log::debug!("(SYSTEM) map_finish_loading");
@@ -110,36 +106,36 @@ fn map_finish_loading(
     match load_state {
         LoadState::Loaded => {
 
-            // Gets staged map and created its graphics
-            let tiled_map = &vidya_maps
-                .get(&current_map.map_handle)
-                .unwrap()
-                .tiled_map;
+            // Gets underlying tiled map and stages the map's graphics as a resource
             let mut current_map_graphics = CurrentMapGraphics {
                 chunk_size: map_config.chunk_size,
                 ..Default::default()
             };
 
             // Begins loading map graphics asynchronously
+            let tiled_map = &vidya_maps
+                .get(&current_map.map_handle)
+                .unwrap()
+                .tiled_map;
             let asset_folder = PathBuf::from(&asset_server_settings.asset_folder);
             for tileset in tiled_map.tilesets() {
                 if let Some(image) = &tileset.image {
                     let image_source = image.source.relativize(&asset_folder);
                     let image_handle = asset_server.load(image_source.as_path());
                     current_map_graphics
-                        .tileset_image_handles
+                        .tileset_handles
                         .push(Some(image_handle));
                 }
                 else {
                     current_map_graphics
-                        .tileset_image_handles
+                        .tileset_handles
                         .push(None);
                 }
             }
 
-            // Goes to next state
+            // Goes to "constructing" state
             commands.insert_resource(current_map_graphics);
-            state.set(AppState::MapConstructing).unwrap();
+            app_state.set(AppState::MapConstructing).unwrap();
         }
         LoadState::Failed => {
             panic!("Failed to load map file");
@@ -153,8 +149,8 @@ fn map_construct(
     mut current_map: ResMut<CurrentMap>,
     mut current_map_graphics: ResMut<CurrentMapGraphics>,
     vidya_map: Res<Assets<VidyaMap>>,
-    mut state: ResMut<State<AppState>>,
-    config: Res<MapConfig>
+    mut app_state: ResMut<State<AppState>>,
+    map_config: Res<MapConfig>
 ) {
     log::debug!("(SYSTEM) map_construct");
     
@@ -164,9 +160,14 @@ fn map_construct(
         .unwrap()
         .tiled_map;
 
-    // Traverses the map and fires events based on its contents
-    process_map(&tiled_map, config.flip_y, &mut current_map, &mut current_map_graphics).unwrap();
-    state.set(AppState::MapSpawningEntities).unwrap();
+    // Traverses the map and populates both current_map and current_map_graphics
+    process_tiled_map(
+        &tiled_map,
+        map_config.flip_y,
+        &mut current_map,
+        &mut current_map_graphics
+    ).unwrap();
+    app_state.set(AppState::MapSpawningEntities).unwrap();
 }
 
 fn map_spawn_entities(
@@ -186,13 +187,15 @@ fn map_spawn_entities(
         return
     }
 
+    // Creates root map entity
+    let map_entity = commands.spawn().insert(MapTag).id();
+
     // Spawns chunks as PBRBundles
-    let map_entity = current_map.map_entity;
-    let image_handles = &current_map_graphics.tileset_image_handles;
+    let image_handles = &current_map_graphics.tileset_handles;
     for (key, chunk) in &current_map_graphics.chunks {
 
         // Try to get texture for current chunk
-        let image_handle = match &image_handles[key.tileset_index] {
+        let image_handle = match &image_handles[key.tileset_handle_index] {
             Some(handle) => handle,
             None => return
         };
@@ -220,7 +223,7 @@ fn map_spawn_entities(
         let mesh_handle = meshes.add(mesh);
         let material_handle = materials.add(material);
 
-        // Spawns chunk as PbrBundle and attaches it to the map entity
+        // Creates entity for chunk
         let chunk_entity = commands
             .spawn_bundle(PbrBundle {
                 mesh: mesh_handle,
@@ -229,6 +232,9 @@ fn map_spawn_entities(
                 ..Default::default()
             })
             .id();
+
+        
+        // Attaches chunk entity to map entity
         commands
             .entity(map_entity)
             .push_children(&[chunk_entity]);
@@ -244,6 +250,11 @@ fn map_spawn_entities(
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::Y),
         ..Default::default()
     });
+
+    // Adds terrain to map entity
+    commands
+        .entity(map_entity)
+        .insert(current_map.terrain.clone());
 
     // Spawns camera
     let cam_width = 800.0;
@@ -276,14 +287,20 @@ fn map_spawn_entities(
     commands.remove_resource::<CurrentMap>();
     commands.remove_resource::<CurrentMapGraphics>();
 
+    
+
     // Finishes map loading
     state.pop().unwrap();
-
     log::debug!("Done spawning map graphics entities...");
 }
+
 /// Map configuration resource
 #[derive(Debug, PartialEq)]
 pub struct MapConfig {
     pub chunk_size: Vec3,
     pub flip_y: bool
 }
+
+/// Marker component struct
+#[derive(Component)]
+pub struct MapTag;

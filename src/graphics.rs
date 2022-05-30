@@ -1,17 +1,18 @@
 use bevy::prelude::*;
 
 use crate::physics::{Position, PreviousPosition};
-use crate::app::{AppState, AppLabel, PartialTicks};
+use crate::app::{AppState, SystemLabels, PartialTicks};
 
 pub struct GraphicsPlugin;
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_update(AppState::AppRunning)
-                .label(AppLabel::InterpolateGraphics)
-                .after(AppLabel::TickStart)
-                .after(AppLabel::PhysicsMove)
-                .after(AppLabel::CameraUpdate)
+                .label(SystemLabels::InterpolateGraphics)
+                .after(SystemLabels::TickStart)
+                .after(SystemLabels::PhysicsMove)
+                .after(SystemLabels::PhysicsCollide)
+                .after(SystemLabels::CameraUpdate)
                 .with_system(interpolate_graphics)
         );
     }
@@ -28,7 +29,6 @@ pub fn interpolate_graphics(
         let src = prev_position.0;
         let dest = position.0;
         let lerped = src.lerp(dest, t).round();
-        //let lerped = src.lerp(dest, 1.0).round();
         *transform = transform.with_translation(lerped);
     }
 }

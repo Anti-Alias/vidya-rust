@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy::{utils::HashMap};
 use bevy::math::{Vec3, UVec3};
 
+use super::Aabb;
+
 /// All of the terrain in a [`World`] at a given time as a resource.
 #[derive(Component, Clone)]
 pub struct Terrain {
@@ -298,12 +300,22 @@ impl<'terrain> Iterator for ChunkRefIter<'terrain> {
             return None;
         }
 
-        // Gets current piece
+        // Gets current Terrain piece
         let min = &self.min;
         let chunk = &self.chunk;
         let size = &chunk.size;
         let idx = size.x * (self.pos.z * size.y + self.pos.y) + self.pos.x;
         let piece = &self.chunk.chunk.0[idx as usize];
+
+        // Computes result
+        let result = Some(TerrainPieceRef {
+            piece,
+            coords: Coords::new(
+                chunk.position.x + self.pos.x as i32,
+                chunk.position.y + self.pos.y as i32,
+                chunk.position.z + self.pos.z as i32
+            )
+        });
 
         // Advances position
         self.pos.x += 1;
@@ -317,14 +329,7 @@ impl<'terrain> Iterator for ChunkRefIter<'terrain> {
         }
 
         // Done
-        Some(TerrainPieceRef {
-            piece,
-            coords: Coords::new(
-                chunk.position.x + self.pos.x as i32,
-                chunk.position.y + self.pos.y as i32,
-                chunk.position.z + self.pos.z as i32
-            )
-        })
+        result
     }
 }
 
@@ -347,6 +352,21 @@ pub struct Coords {
 }
 impl Coords {
     pub fn new(x: i32, y: i32, z: i32) -> Self { Self { x, y, z} }
+    pub fn from_aabb(aabb: Aabb, divider: Vec3) -> (Coords, Coords) {
+        let min_div = aabb.min / divider;
+        let max_div = aabb.max / divider;
+        let min_coords = Coords::new(
+            min_div.x.floor() as i32,
+            min_div.y.floor() as i32,
+            min_div.z.floor() as i32,
+        );
+        let max_coords = Coords::new(
+            max_div.x.ceil() as i32 + 1,
+            max_div.y.ceil() as i32 + 1,
+            max_div.z.ceil() as i32 + 1,
+        );
+        (min_coords, max_coords)
+    }
     pub fn min(self, other: Self) -> Self {
         Self::new(
             self.x.min(other.x),

@@ -47,7 +47,7 @@ impl Plugin for VidyaCorePlugin {
                 timestep_secs
             })
             .add_system_set(SystemSet::on_update(AppState::AppRunning)
-                .with_system(update_partial_ticks.label(AppLabel::TickStart))
+                .with_system(update_partial_ticks.label(SystemLabels::TickStart))
             )
             .add_startup_system_set(SystemSet::new()
                 .with_system(configure_app)
@@ -59,7 +59,7 @@ impl Plugin for VidyaCorePlugin {
 
 /// Labels used for scheduling the timing of systems in a single tick
 #[derive(SystemLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum AppLabel {
+pub enum SystemLabels {
     /// Start of a tick.
     TickStart,
 
@@ -113,7 +113,7 @@ pub enum AppState {
     /// No systems should run, as the application is starting
     AppStarting,
 
-    /// App is in a free state
+    /// App started and is in a free state
     AppRunning,
 
     /// Application stopped. No systems should run
@@ -125,8 +125,8 @@ pub enum AppState {
     /// Map collision and/or graphics are being constructed
     MapConstructing,
 
-    /// Entities specified in map are being spawned
-    MapSpawningEntities
+    /// Map is being spawned
+    MapSpawning
 }
 
 /// Side the application is on

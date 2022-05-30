@@ -291,16 +291,10 @@ impl TerrainCollider for Terrain {
         // Determines terrain area to select based on cylinder's size and movement
         let piece_size = self.piece_size();
         let cyl_aabb = moving_cylinder_aabb(cylinder, delta);
-        let min = cyl_aabb.min / piece_size;
-        let max = cyl_aabb.max / piece_size;
-        let min = Coords::new(min.x as i32, min.y as i32, min.z as i32);
-        let max = Coords::new(max.x as i32 + 1, max.y as i32 + 1, max.z as i32 + 1);
-
+        let (min, max) = Coords::from_aabb(cyl_aabb, piece_size);
 
         // For all terrain pieces in the selection...
-        println!("-----");
         for piece_ref in self.iter_pieces(min, max) {
-            println!("Piece: {:?}", piece_ref.piece);
 
             // Create short-lived piece collider
             let TerrainPieceRef { piece, coords } = piece_ref;
@@ -327,28 +321,20 @@ impl TerrainCollider for Terrain {
 
 // Computes the Aabb of a moving cylinder
 fn moving_cylinder_aabb(cylinder: &CylinderCollider, delta: Vec3) -> Aabb {
-    let mut min = Vec3::new(
+    let min1 = Vec3::new(
         cylinder.center.x - cylinder.radius,
         cylinder.center.y - cylinder.half_height,
         cylinder.center.z - cylinder.radius
     );
-    let mut max = Vec3::new(
+    let max1 = Vec3::new(
         cylinder.center.x + cylinder.radius,
         cylinder.center.y + cylinder.half_height,
         cylinder.center.z + cylinder.radius
     );
-    if delta.x < 0.0 {
-        min.x += delta.x;
-        max.x += delta.x;
-    }
-    if delta.y < 0.0 {
-        min.y += delta.y;
-        max.y += delta.y;
-    }
-    if delta.z < 0.0 {
-        min.z += delta.z;
-        max.z += delta.z;
-    }
+    let min2 = min1 + delta;
+    let max2 = max1 + delta;
+    let min = min1.min(min2);
+    let max = max1.max(max2);
     Aabb { min, max }
 }
 

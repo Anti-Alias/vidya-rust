@@ -33,6 +33,7 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<LoadMapEvent>()
+            .add_event::<MapSpawnedEvent>()
             .add_asset::<VidyaMap>()
             .init_asset_loader::<VidyaMapLoader>()
             .insert_resource(MapConfig {
@@ -48,15 +49,19 @@ impl Plugin for MapPlugin {
                 .with_system(map_listen)
             )
 
-            // Halts further progress until map is loaded
+            // Halts further progress until map is loaded.
+            // When map is loaded, kicks off the graphics loading.
             .add_system_set(SystemSet::on_update(AppState::MapLoadingFile)
                 .with_system(map_finish_loading)
             )
 
+            // Constructs map based on the TiledMap loaded.
             .add_system_set(SystemSet::on_enter(AppState::MapConstructing)
                 .with_system(map_construct)
             )
-            .add_system_set(SystemSet::on_update(AppState::MapSpawningEntities)
+
+            // Spawns map entities (the map itself, not the player, enemies, etc.)
+            .add_system_set(SystemSet::on_update(AppState::MapSpawning)
                 .with_system(map_spawn_entities)
             )
         ;
@@ -81,6 +86,7 @@ fn map_listen(
 
         // Creates current map resource and keeps track of the map that is loading
         commands.insert_resource(CurrentMap {
+            name: map_file.clone(),
             map_handle,
             terrain: Terrain::new(Vec3::new(16.0, 16.0, 16.0), UVec3::new(16, 16, 16))
         });
@@ -167,13 +173,14 @@ fn map_construct(
         &mut current_map,
         &mut current_map_graphics
     ).unwrap();
-    app_state.set(AppState::MapSpawningEntities).unwrap();
+    app_state.set(AppState::MapSpawning).unwrap();
 }
 
 fn map_spawn_entities(
     current_map: Res<CurrentMap>,
     current_map_graphics: ResMut<CurrentMapGraphics>,
     assets: Res<AssetServer>,
+    mut spawned_writer: EventWriter<MapSpawnedEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut state: ResMut<State<AppState>>,
@@ -286,11 +293,10 @@ fn map_spawn_entities(
     // Removes staging resources
     commands.remove_resource::<CurrentMap>();
     commands.remove_resource::<CurrentMapGraphics>();
-
     
-
     // Finishes map loading
     state.pop().unwrap();
+    spawned_writer.send(MapSpawnedEvent(current_map.name.clone()));
     log::debug!("Done spawning map graphics entities...");
 }
 

@@ -2,7 +2,7 @@ use std::{fmt, time::Duration};
 
 use bevy::prelude::*;
 
-use crate::app::{AppState, AppLabel};
+use crate::app::{AppState, SystemLabels};
 use crate::sprite::{Region, Sprite3D, Sprite3DBundle};
 
 /// Plugin that plays/loops entities with animation components
@@ -11,8 +11,8 @@ impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_update(AppState::AppRunning)
-                .label(AppLabel::UpdateAnimations)
-                .after(AppLabel::ControlAnimations)
+                .label(SystemLabels::UpdateAnimations)
+                .after(SystemLabels::ControlAnimations)
                 .with_system(update_animations)
         );
     }
@@ -372,7 +372,7 @@ fn test_from_grid() {
         }],
         offset: Vec3::ZERO
     };
-    let actual = Animation::from_grid(0, 0, 32, 32, 32, 32, 100);
+    let actual = Animation::from_grid(0, 0, 32, 32, 32, 32, 100, Vec3::ZERO);
     assert_eq!(expected, actual);
 }
 
@@ -388,7 +388,7 @@ fn test_from_grid_2() {
         }],
         offset: Vec3::ZERO
     };
-    let actual = Animation::from_grid(0, 0, 32, 32, 63, 63, 100);
+    let actual = Animation::from_grid(0, 0, 32, 32, 63, 63, 100, Vec3::ZERO);
     assert_eq!(expected, actual);
 }
 
@@ -427,6 +427,6 @@ fn test_from_grid_3() {
         ],
         offset: Vec3::ZERO
     };
-    let actual = Animation::from_grid(0, 0, 32, 32, 64, 64, 100);
+    let actual = Animation::from_grid(0, 0, 32, 32, 64, 64, 100, Vec3::ZERO);
     assert_eq!(expected, actual);
 }

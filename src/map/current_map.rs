@@ -7,6 +7,7 @@ use bevy::prelude::*;
 // Temporary staging resource for a map's collision data / metadata.
 #[derive(Clone)]
 pub struct CurrentMap {
+    pub name: String,
     pub map_handle: Handle<VidyaMap>,   // Map handle
     pub terrain: Terrain                // Terrain of the current map
 }

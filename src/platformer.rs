@@ -2,7 +2,7 @@ use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
-use crate::app::{AppState, AppLabel, tick_elapsed};
+use crate::app::{AppState, SystemLabels, tick_elapsed};
 use crate::physics::{Velocity, Friction};
 use crate::being::{Being, DirectionType};
 use crate::state::{StateHolder, State};
@@ -14,14 +14,14 @@ impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(AppState::AppRunning)
             .with_run_criteria(tick_elapsed)
-            .after(AppLabel::TickStart)
+            .after(SystemLabels::TickStart)
             .with_system(process_signals
-                .label(AppLabel::Logic)
-                .after(AppLabel::Input)
+                .label(SystemLabels::Logic)
+                .after(SystemLabels::Input)
             )
             .with_system(control_animations
-                .label(AppLabel::ControlAnimations)
-                .after(AppLabel::Logic)
+                .label(SystemLabels::ControlAnimations)
+                .after(SystemLabels::Logic)
             )
         );
     }

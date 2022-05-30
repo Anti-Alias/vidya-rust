@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::app::{AppState, AppLabel};
+use crate::app::{AppState, SystemLabels};
 use crate::being::Direction;
 use crate::platformer::{Platformer, PlatformerSignal};
 
@@ -9,8 +9,8 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(AppState::AppRunning)
             .with_system(emit_platformer_signals
-                .label(AppLabel::Input)
-                .after(AppLabel::TickStart)
+                .label(SystemLabels::Input)
+                .after(SystemLabels::TickStart)
             )
         );
     }

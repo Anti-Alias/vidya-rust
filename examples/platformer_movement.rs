@@ -54,23 +54,23 @@ fn spawn_player(
     }
 
     // Loads material from single image
-    let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01_red.png", AlphaMode::Mask(0.5), &assets);
+    let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01.png", AlphaMode::Mask(0.5), &assets);
 
     // Creates animation set
-    let offset = Vec3::new(-32.0, -20.0, 0.0);
+    let sprite_offset = Vec3::new(-31.0, -32.0 - 2.0, -10.0);
     let mut animation_set = AnimationSet::new();
-    let idle_n = Animation::from_grid(0, 1*64, 64, 64, 512, 512, 1, offset);
-    let idle_s = Animation::from_grid(0, 0*64, 64, 64, 512, 512, 1, offset);
-    let idle_e = Animation::from_grid(0, 2*64, 64, 64, 512, 512, 1, offset);
-    let idle_w = Animation::from_grid(0, 3*64, 64, 64, 512, 512, 1, offset);
-    let run_n = Animation::from_grid(0, 5*64, 64, 64, 512, 512, 6, offset);
-    let run_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6, offset);
-    let run_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6, offset);
-    let run_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6, offset);
-    let jump_n = Animation::from_grid(6*64, 1*64, 64, 64, 512, 512, 1, offset);
-    let jump_s = Animation::from_grid(6*64, 0*64, 64, 64, 512, 512, 1, offset);
-    let jump_e = Animation::from_grid(6*64, 2*64, 64, 64, 512, 512, 1, offset);
-    let jump_w = Animation::from_grid(6*64, 3*64, 64, 64, 512, 512, 1, offset);
+    let idle_n = Animation::from_grid(0, 1*64, 64, 64, 512, 512, 1, sprite_offset);
+    let idle_s = Animation::from_grid(0, 0*64, 64, 64, 512, 512, 1, sprite_offset);
+    let idle_e = Animation::from_grid(0, 2*64, 64, 64, 512, 512, 1, sprite_offset);
+    let idle_w = Animation::from_grid(0, 3*64, 64, 64, 512, 512, 1, sprite_offset);
+    let run_n = Animation::from_grid(0, 5*64, 64, 64, 512, 512, 6, sprite_offset);
+    let run_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6, sprite_offset);
+    let run_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6, sprite_offset);
+    let run_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6, sprite_offset);
+    let jump_n = Animation::from_grid(6*64, 1*64, 64, 64, 512, 512, 1, sprite_offset);
+    let jump_s = Animation::from_grid(6*64, 0*64, 64, 64, 512, 512, 1, sprite_offset);
+    let jump_e = Animation::from_grid(6*64, 2*64, 64, 64, 512, 512, 1, sprite_offset);
+    let jump_w = Animation::from_grid(6*64, 3*64, 64, 64, 512, 512, 1, sprite_offset);
     let idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
     let run_handle = animation_set.add_animation_group(&[run_e, run_n, run_w, run_s]);
     let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
@@ -86,9 +86,9 @@ fn spawn_player(
             GlobalTransform::default()
         ))
         .insert_bundle(PhysicsBundle::new(
-            Position(Vec3::new(8.0, 100.0, -8.0)),
+            Position(Vec3::new(8.0, 300.0, 0.0*16.0)),
             SizeCylinder{
-                radius: 8.0,
+                radius: 6.0,
                 half_height: 15.0
             },
             Friction {

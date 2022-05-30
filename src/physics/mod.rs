@@ -76,10 +76,9 @@ fn collide_with_terrain(
             let coll = terrain.collide_with_cylinder(&cylinder, vel_value);
             match coll {
                 Some(coll) => {
-                    let old_pos_value = pos_value;
-                    pos_value = prev_pos_value + vel_value * coll.t;
-                    prev_pos_value = old_pos_value;
+                    prev_pos_value = prev_pos_value + vel_value * coll.t;
                     vel_value = coll.velocity;
+                    pos_value = prev_pos_value + vel_value;
                 }
                 None => {
                     pos.0 = pos_value;

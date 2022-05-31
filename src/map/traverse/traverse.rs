@@ -92,6 +92,7 @@ fn process_sub_layers(
                 current_map,
                 current_map_graphics,
                 tile_size.y,
+                offset_y,
                 flattened_layer_index
             )?;
         }
@@ -112,6 +113,7 @@ fn process_tiles_at<'map>(
     current_map: &mut CurrentMap,
     current_map_graphics: &mut CurrentMapGraphics,
     _tile_height: f32,
+    offset_y: i32,
     flattened_layer_index: usize
 ) -> Result<(), ClimbingError> {
 
@@ -155,8 +157,10 @@ fn process_tiles_at<'map>(
     match coll_climber.climb_status() {
         ClimbStatus::NotClimbing => {
             let mut coords = coll_climber.coords();
-            coords.y -= 1;
-            current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
+            while coords.y >= offset_y {
+                coords.y -= 1;
+                current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
+            }
         }
         ClimbStatus::ClimbingWallS | ClimbStatus::ClimbingWallSE | ClimbStatus::ClimbingWallSW => {
             current_map.set_terrain_piece(TerrainPiece::Cuboid, coll_climber.coords());

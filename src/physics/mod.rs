@@ -73,12 +73,14 @@ fn collide_with_terrain(
                 radius: size.radius,
                 half_height: size.half_height
             };
-            let coll = terrain.collide_with_cylinder(&cylinder, vel_value);
+            let coll = terrain.collide_with_cylinder(&cylinder, pos_value - prev_pos_value);
             match coll {
                 Some(coll) => {
-                    prev_pos_value = prev_pos_value + vel_value * coll.t;
+                    const EPSILON: f32 = 0.0001;
+                    let t = (coll.t - EPSILON).max(0.0);
+                    prev_pos_value = prev_pos_value + vel_value * t;
                     vel_value = coll.velocity;
-                    pos_value = prev_pos_value + vel_value;
+                    pos_value = prev_pos_value + vel_value * (1.0 - t);
                 }
                 None => {
                     pos.0 = pos_value;

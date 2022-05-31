@@ -152,7 +152,7 @@ fn process_tiles_at<'map>(
     }
 
     // Applies collision data to current map
-    match geom_climber.climb_status() {
+    match coll_climber.climb_status() {
         ClimbStatus::NotClimbing => {
             let mut coords = coll_climber.coords();
             coords.y -= 1;

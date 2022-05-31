@@ -18,8 +18,8 @@ fn main() {
     App::new()
         .insert_resource(WindowDescriptor {
             title: "vidya".to_string(),
-            width: 1600.0,
-            height: 900.0,
+            width: 16.0*80.0,
+            height: 9.0*80.0,
             ..Default::default()
         })
         .add_plugins(VidyaPlugins)
@@ -35,7 +35,7 @@ fn main() {
 // Kicks off map loading
 fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
     log::debug!("Entered system 'load_map'");
-    emitter.send(LoadMapEvent("maps/tmx/smallmap.tmx".to_string()));
+    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
     log::debug!("Sent LoadMapEvent event");
 }
 
@@ -86,7 +86,7 @@ fn spawn_player(
             GlobalTransform::default()
         ))
         .insert_bundle(PhysicsBundle::new(
-            Position(Vec3::new(8.0, 300.0, 0.0*16.0)),
+            Position(Vec3::new(8.0, 100.0, 0.0*16.0)),
             SizeCylinder{
                 radius: 6.0,
                 half_height: 15.0
@@ -95,7 +95,7 @@ fn spawn_player(
                 xz: 0.5,
                 y: 1.0,
             },
-            Weight(1.0)
+            Weight(0.5)
         ))
         .insert(Player)
         .insert(Being::default())

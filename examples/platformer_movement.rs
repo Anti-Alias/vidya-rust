@@ -6,7 +6,7 @@ use vidya_rust::animation::{AnimationSetBundle, AnimationSet, Animation, Animati
 use vidya_rust::app::VidyaPlugins;
 use vidya_rust::map::{LoadMapEvent, MapSpawnedEvent};
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
-use vidya_rust::being::{Being, DirectionType};
+use vidya_rust::direction::{DirectionHolder, DirectionType};
 use vidya_rust::physics::{Friction, Position, SizeCylinder, Weight, PhysicsBundle};
 use vidya_rust::player::Player;
 use vidya_rust::app::AppState;
@@ -98,7 +98,7 @@ fn spawn_player(
             Weight(0.5)
         ))
         .insert(Player)
-        .insert(Being::default())
+        .insert(DirectionHolder::default())
         .insert(StateHolder::default())
         .insert(Platformer::new(2.0))
         .insert(PlatformerAnimator {

@@ -1,7 +1,7 @@
 pub mod app;
 pub mod state;
 pub mod animation;
-pub mod being;
+pub mod direction;
 pub mod platformer;
 pub mod sprite;
 pub mod map;

@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use crate::animation::{AnimationGroupHandle, AnimationSet};
 use crate::app::{AppState, SystemLabels, tick_elapsed};
 use crate::physics::{Velocity, Friction};
-use crate::being::{Being, DirectionType};
+use crate::direction::{DirectionHolder, DirectionType};
 use crate::state::{StateHolder, State};
 use crate::util::SignalQueue;
 
-/// Plugin for "Being" behavior
+/// Plugin for "Platformer" behavior
 pub struct PlatformerPlugin;
 impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
@@ -33,13 +33,15 @@ impl Plugin for PlatformerPlugin {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PlatformerSignal {
     Move { direction: f32 },
+    Look { direction: f32},
     Jump
 }
 impl From<PlatformerSignal> for u32 {
     fn from(signal: PlatformerSignal) -> Self {
         match signal {
             PlatformerSignal::Move {..} => 0,
-            PlatformerSignal::Jump => 1
+            PlatformerSignal::Look {..} => 1,
+            PlatformerSignal::Jump => 2
         }
     }
 }
@@ -75,7 +77,7 @@ fn process_signals(mut platformer_entities: Query<(
     &mut Platformer,
     &Friction,
     &mut Velocity,
-    &mut Being,
+    &mut DirectionHolder,
     &mut StateHolder
 )>) {
     log::debug!("(SYSTEM) process_signals");
@@ -83,7 +85,7 @@ fn process_signals(mut platformer_entities: Query<(
         mut platformer,
         friction,
         mut velocity,
-        mut being,
+        mut dir_holder,
         mut state_holder
     )
     in platformer_entities.iter_mut() {
@@ -97,7 +99,10 @@ fn process_signals(mut platformer_entities: Query<(
                     let vel = speed * Vec2::new(f32::cos(direction), -f32::sin(direction));
                     velocity.0.x += vel.x;
                     velocity.0.z += vel.y;
-                    being.direction = direction;
+                    dir_holder.facing = direction;
+                }
+                PlatformerSignal::Look { direction } => {
+                    dir_holder.looking = direction;
                 }
                 PlatformerSignal::Jump => {
                     log::info!("Jumping!!!");
@@ -118,30 +123,30 @@ fn process_signals(mut platformer_entities: Query<(
 }
 
 fn control_animations(mut platformer_entities: Query<
-    (&mut AnimationSet, &PlatformerAnimator, &Being, &StateHolder),
+    (&mut AnimationSet, &PlatformerAnimator, &DirectionHolder, &StateHolder),
     Changed<StateHolder>
 >) {
     log::debug!("(SYSTEM) control_animations");
-    for (mut animation_set, animator, being, state_holder) in platformer_entities.iter_mut() {
+    for (mut animation_set, animator, dir_holder, state_holder) in platformer_entities.iter_mut() {
         match state_holder.0 {
             State::Idle => {
                 animation_set.set_grouped_animation(
                     animator.idle_handle,
-                    being.get_direction_index(animator.direction_type),
+                    dir_holder.get_direction_index(animator.direction_type),
                     false
                 ).unwrap();
             },
             crate::state::State::Running => {
                 animation_set.set_grouped_animation(
                     animator.run_handle,
-                    being.get_direction_index(animator.direction_type),
+                    dir_holder.get_direction_index(animator.direction_type),
                     false
                 ).unwrap();
             },
             crate::state::State::Jumping => {
                 animation_set.set_grouped_animation(
                     animator.jump_handle,
-                    being.get_direction_index(animator.direction_type),
+                    dir_holder.get_direction_index(animator.direction_type),
                     false
                 ).unwrap();
             },

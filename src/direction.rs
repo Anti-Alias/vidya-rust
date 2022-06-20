@@ -4,23 +4,17 @@ pub use bevy::prelude::*;
 /// IE: Player, Creatures, etc
 #[derive(Component, Default)]
 pub struct DirectionHolder {
-    /// Direction faced in radians.
-    /// Used for determining which way to move.
-    pub facing: f32,
-
-    /// Direction looking in radians.
-    /// Used for determing which way the entity is looking.
-    /// Allows for things like running backwards/sideways if it differs from [`facing`].
-    pub looking: f32
+    /// Direction the entity is facing in radians.
+    pub direction: f32
 }
 
 impl DirectionHolder {
 
-    /// Determines group animation index to use for the direction of this being
+    /// Determines group animation index to use for the direction of this being.
     pub fn get_direction_index(&self, direction_type: DirectionType) -> usize {
         match direction_type {
-            DirectionType::EightWay => Direction::from_radians(self.looking).to_index(),
-            DirectionType::FourWay => CardinalDirection::from_radians(self.looking).to_index()
+            DirectionType::EightWay => Direction::from_radians(self.direction).to_index(),
+            DirectionType::FourWay => CardinalDirection::from_radians(self.direction).to_index()
         }
     }
 }

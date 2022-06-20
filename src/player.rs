@@ -28,7 +28,7 @@ fn control_with_keyboard(
     log::debug!("(SYSTEM) keyboard_control_platformer");
     for mut platformer in player_entities.iter_mut() {
         
-        // Reads keyboard input and determines which way to "move"
+        // Reads arrow keys and determines which way to "move"
         match Direction::from_keyboard(&input) {
             Some(direction) => {
                 let radians = direction.to_radians();
@@ -37,13 +37,18 @@ fn control_with_keyboard(
             None => {}
         };
 
-        // Reads keyboard input and determines which way to "look"
+        // Reads arrow keys and determines which way to "look"
         match CardinalDirection::from_keyboard(&input) {
             Some(direction) => {
                 let radians = direction.to_radians();
                 platformer.signals.push(PlatformerSignal::Look { direction: radians });
             }
             None => {}
+        }
+
+        // Reads spacebar and jumps if its pressed
+        if input.just_pressed(KeyCode::Space) {
+            platformer.signals.push(PlatformerSignal::Jump);
         }
     }
 }

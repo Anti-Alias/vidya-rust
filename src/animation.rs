@@ -252,6 +252,14 @@ pub struct Animation {
 }
 impl Animation {
 
+    // Makes new animation from an old one, with a new offset.
+    pub fn with_offset(self, offset: Vec3) -> Self {
+        Self {
+            frames: self.frames,
+            offset
+        }
+    }
+
     // Constructs a [`SpriteAnimation`] an image, assuming that the sprites are aligned from left to right, top to bottom with no spacing between.
     pub fn from_grid(
         start_x: u32,
@@ -261,14 +269,13 @@ impl Animation {
         image_width: u32,
         image_height: u32,
         total_frames: u32,
-        offset: Vec3
     ) -> Self {
 
         // Simple case
         if total_frames == 0 {
             return Self {
                 frames: Vec::new(),
-                offset
+                offset: Vec3::ZERO
             };
         }
 
@@ -297,7 +304,7 @@ impl Animation {
                 if frames.len() == total_frames as usize {
                     return Self {
                         frames,
-                        offset
+                        offset: Vec3::ZERO
                     };
                 }
                 x += frame_width;
@@ -308,7 +315,7 @@ impl Animation {
         // Done
         return Self {
             frames,
-            offset
+            offset: Vec3::ZERO
         };
     }
 }

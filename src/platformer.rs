@@ -36,15 +36,6 @@ pub enum PlatformerSignal {
     Look { direction: f32},
     Jump
 }
-impl From<PlatformerSignal> for u32 {
-    fn from(signal: PlatformerSignal) -> Self {
-        match signal {
-            PlatformerSignal::Move {..} => 0,
-            PlatformerSignal::Look {..} => 1,
-            PlatformerSignal::Jump => 2
-        }
-    }
-}
 
 
 /// Controls on-ground movement, in-air movement, and jumping
@@ -58,7 +49,7 @@ impl Platformer {
     pub fn new(top_speed: f32) -> Self {
         Self {
             top_speed,
-             signals: SignalQueue::new()
+            signals: SignalQueue::new()
         }
     }
 }
@@ -99,10 +90,9 @@ fn process_signals(mut platformer_entities: Query<(
                     let vel = speed * Vec2::new(f32::cos(direction), -f32::sin(direction));
                     velocity.0.x += vel.x;
                     velocity.0.z += vel.y;
-                    dir_holder.facing = direction;
                 }
                 PlatformerSignal::Look { direction } => {
-                    dir_holder.looking = direction;
+                    dir_holder.direction = direction;
                 }
                 PlatformerSignal::Jump => {
                     log::info!("Jumping!!!");

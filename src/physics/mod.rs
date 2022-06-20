@@ -76,7 +76,7 @@ fn collide_with_terrain(
             let coll = terrain.collide_with_cylinder(&cylinder, vel_value);
             match coll {
                 Some(coll) => {
-                    const EPSILON: f32 = 0.001;
+                    const EPSILON: f32 = 0.0001;
                     let t = (coll.t - EPSILON).min(1.0).max(0.0);
                     prev_pos_value = prev_pos_value + vel_value * t;
                     vel_value = coll.velocity;

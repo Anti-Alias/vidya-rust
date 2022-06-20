@@ -59,6 +59,7 @@ pub struct Targetable;
 #[derive(Component)]
 pub struct CameraTargetSettings { pub distance: f32 }
 
+// Has the camera follow an entity with a "Targettable" component
 pub fn camera_target(
     targetable: Query<&Position, (With<Targetable>, Without<Camera>)>,
     mut camera: Query<(&mut Position, &CameraTargetSettings), With<Camera>>

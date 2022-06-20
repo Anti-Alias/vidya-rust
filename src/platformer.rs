@@ -122,6 +122,7 @@ fn process_signals(mut platformer_entities: Query<(
     }
 }
 
+// Controls the platformer's animation based on their current state
 fn control_animations(mut platformer_entities: Query<
     (&mut AnimationSet, &PlatformerAnimator, &DirectionHolder, &StateHolder),
     Changed<StateHolder>

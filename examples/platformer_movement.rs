@@ -22,10 +22,6 @@ fn main() {
             height: 9.0*80.0,
             ..Default::default()
         })
-        .insert_resource(GameConfig {
-            side: Side::Client,
-            timestep_secs: 1.0/20.0
-        })
         .add_plugins(GamePlugins)
         .add_system_set(SystemSet::on_enter(AppState::AppRunning)
             .with_system(load_map)

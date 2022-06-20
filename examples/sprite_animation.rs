@@ -35,7 +35,7 @@ fn spawn_sprite_animation(
         };
     
         // Gets walk animation
-        let walk_anim = Animation::from_grid(0, 64*4, 64, 64, 512, 512, 6, Vec3::ZERO);
+        let walk_anim = Animation::from_grid(0, 64*4, 64, 64, 512, 512, 6);
         let mut animation_set = AnimationSet::new();
         let walk_anim_handle = animation_set.add_animation(walk_anim);
         animation_set.set_animation(walk_anim_handle).unwrap();

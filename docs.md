@@ -1,7 +1,7 @@
 # Plugins:
 
-## Vidya Plugins:
-    VidyaCorePlugin, GraphicsPlugin, SpritePlugin, AnimationPlugin,
+## GamePlugins:
+    CorePlugin, GraphicsPlugin, SpritePlugin, AnimationPlugin,
     MapPlugin, CameraPlugin, PhysicsPlugin, PlayerPlugin
     
 ## VidyaCorePlugin

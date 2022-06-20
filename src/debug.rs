@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-use crate::game::{AppState, tick_elapsed};
+use crate::game::{GameState, tick_elapsed};
 use crate::physics::{ Velocity };
 
 pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .add_system_set(SystemSet::on_update(GameState::GameRunning)
                 .with_run_criteria(tick_elapsed)
                 .with_system(move_floater)
             )

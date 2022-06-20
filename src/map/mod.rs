@@ -9,7 +9,7 @@ use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
 use std::path::PathBuf;
 
-use crate::game::AppState;
+use crate::game::GameState;
 use crate::camera::{CameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::debug::Floater;
@@ -45,23 +45,23 @@ impl Plugin for MapPlugin {
                 flip_y: false
             })
             // Listens for "LoadMapEvent" and kicks off map loading
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .add_system_set(SystemSet::on_update(GameState::GameRunning)
                 .with_system(map_listen)
             )
 
             // Halts further progress until map is loaded.
             // When map is loaded, kicks off the graphics loading.
-            .add_system_set(SystemSet::on_update(AppState::MapLoadingFile)
+            .add_system_set(SystemSet::on_update(GameState::MapLoadingFile)
                 .with_system(map_finish_loading)
             )
 
             // Constructs map based on the TiledMap loaded.
-            .add_system_set(SystemSet::on_enter(AppState::MapConstructing)
+            .add_system_set(SystemSet::on_enter(GameState::MapConstructing)
                 .with_system(map_construct)
             )
 
             // Spawns map entities (the map itself, not the player, enemies, etc.)
-            .add_system_set(SystemSet::on_update(AppState::MapSpawning)
+            .add_system_set(SystemSet::on_update(GameState::MapSpawning)
                 .with_system(map_spawn_entities)
             )
         ;
@@ -73,7 +73,7 @@ impl Plugin for MapPlugin {
 // 3) Goes to LoadingMap state
 fn map_listen(
     mut events: EventReader<LoadMapEvent>,
-    mut state: ResMut<State<AppState>>,
+    mut state: ResMut<State<GameState>>,
     asset_server: Res<AssetServer>,
     mut commands: Commands
 ) {
@@ -92,7 +92,7 @@ fn map_listen(
         });
 
         // Goes to loading state
-        state.push(AppState::MapLoadingFile).unwrap()
+        state.push(GameState::MapLoadingFile).unwrap()
     }
 }
 
@@ -104,7 +104,7 @@ fn map_finish_loading(
     vidya_maps: Res<Assets<VidyaMap>>,
     map_config: Res<MapConfig>,
     asset_server_settings: Res<AssetServerSettings>,
-    mut app_state: ResMut<State<AppState>>,
+    mut app_state: ResMut<State<GameState>>,
     mut commands: Commands
 ) {
     log::debug!("(SYSTEM) map_finish_loading");
@@ -141,7 +141,7 @@ fn map_finish_loading(
 
             // Goes to "constructing" state
             commands.insert_resource(current_map_graphics);
-            app_state.set(AppState::MapConstructing).unwrap();
+            app_state.set(GameState::MapConstructing).unwrap();
         }
         LoadState::Failed => {
             panic!("Failed to load map file");
@@ -155,7 +155,7 @@ fn map_construct(
     mut current_map: ResMut<CurrentMap>,
     mut current_map_graphics: ResMut<CurrentMapGraphics>,
     vidya_map: Res<Assets<VidyaMap>>,
-    mut app_state: ResMut<State<AppState>>,
+    mut app_state: ResMut<State<GameState>>,
     map_config: Res<MapConfig>
 ) {
     log::debug!("(SYSTEM) map_construct");
@@ -173,7 +173,7 @@ fn map_construct(
         &mut current_map,
         &mut current_map_graphics
     ).unwrap();
-    app_state.set(AppState::MapSpawning).unwrap();
+    app_state.set(GameState::MapSpawning).unwrap();
 }
 
 fn map_spawn_entities(
@@ -183,7 +183,7 @@ fn map_spawn_entities(
     mut spawned_writer: EventWriter<MapSpawnedEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut state: ResMut<State<AppState>>,
+    mut state: ResMut<State<GameState>>,
     mut commands: Commands
 ) {
     log::debug!("(SYSTEM) map_spawn_entities");

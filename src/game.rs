@@ -40,9 +40,9 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(DefaultPlugins)
-            .add_state(AppState::AppStarting)
+            .add_state(GameState::GameStarting)
             .init_resource::<GameConfig>()
-            .add_system_set(SystemSet::on_in_stack_update(AppState::AppRunning)
+            .add_system_set(SystemSet::on_in_stack_update(GameState::GameRunning)
                 .with_system(update_partial_ticks.label(SystemLabels::TickStart))
             )
             .add_startup_system_set(SystemSet::new()
@@ -102,18 +102,18 @@ pub enum SystemLabels {
 }
 
 /// State of the application as a whole.
-/// Dictates what systems run and when.
+/// Dictates what systems run and when during the lifecycle of the game.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum AppState {
+pub enum GameState {
 
-    /// No systems should run, as the application is starting
-    AppStarting,
+    /// No systems should run, as the game is starting
+    GameStarting,
 
-    /// App started and is in a free state
-    AppRunning,
+    /// Game started and is in a free state
+    GameRunning,
 
     /// Application stopped. No systems should run
-    AppStopped,
+    GameStopped,
 
     /// TMX file is being loaded
     MapLoadingFile,
@@ -172,9 +172,9 @@ fn configure_app(config: Res<GameConfig>,mut commands: Commands) {
     commands.insert_resource(PartialTicks::new(config.timestep_secs));
 }
 
-fn start_app(mut app_state: ResMut<State<AppState>>) {
+fn start_app(mut app_state: ResMut<State<GameState>>) {
     log::debug!("(SYSTEM) 'start_app'");
-    app_state.set(AppState::AppRunning).unwrap();
+    app_state.set(GameState::GameRunning).unwrap();
 }
 
 /// Updates the partial ticks value

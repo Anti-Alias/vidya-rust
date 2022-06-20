@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::camera::Camera3d;
 
-use crate::game::{AppState, SystemLabels, tick_elapsed};
+use crate::game::{GameState, SystemLabels, tick_elapsed};
 use crate::physics::{Velocity, Friction, PreviousPosition, Position};
 
 use std::f32::consts::SQRT_2;
@@ -10,7 +10,7 @@ use std::f32::consts::SQRT_2;
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+        app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_run_criteria(tick_elapsed)
             .label(SystemLabels::CameraUpdate)
             .after(SystemLabels::TickStart)

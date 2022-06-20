@@ -1,4 +1,4 @@
-use crate::game::{AppState, SystemLabels, tick_elapsed};
+use crate::game::{GameState, SystemLabels, tick_elapsed};
 
 mod movement;
 mod terrain;
@@ -16,7 +16,7 @@ pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Gravity::default());
-        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+        app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_run_criteria(tick_elapsed)
             .after(SystemLabels::TickStart)
             .with_system(apply_gravity

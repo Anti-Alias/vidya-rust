@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
 use crate::physics::{Position, PreviousPosition};
-use crate::game::{AppState, SystemLabels, PartialTicks};
+use crate::game::{GameState, SystemLabels, PartialTicks};
 
 pub struct GraphicsPlugin;
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
-            SystemSet::on_update(AppState::AppRunning)
+            SystemSet::on_update(GameState::GameRunning)
                 .label(SystemLabels::InterpolateGraphics)
                 .after(SystemLabels::TickStart)
                 .after(SystemLabels::PhysicsMove)

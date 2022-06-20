@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-use crate::game::{AppState, SystemLabels};
+use crate::game::{GameState, SystemLabels};
 use crate::direction::{Direction, CardinalDirection};
 use crate::platformer::{Platformer, PlatformerSignal};
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_update(AppState::AppRunning)
+        app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_system(control_with_keyboard
                 .label(SystemLabels::Input)
                 .after(SystemLabels::TickStart)

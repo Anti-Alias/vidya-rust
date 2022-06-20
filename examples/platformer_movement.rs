@@ -100,7 +100,7 @@ fn spawn_player(
         .insert(Player)
         .insert(DirectionHolder::default())
         .insert(StateHolder::default())
-        .insert(Platformer::new(2.0))
+        .insert(Platformer::new(2.0, 33.0))
         .insert(PlatformerAnimator {
             direction_type: DirectionType::FourWay,
             idle_handle,

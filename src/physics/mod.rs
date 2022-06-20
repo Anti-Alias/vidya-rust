@@ -67,7 +67,8 @@ fn collide_with_terrain(
         let mut vel_value = vel.0;
 
         // For N retries...
-        for _ in 0..COLLISION_RETRIES {
+        println!("---------------");
+        for i in 0..COLLISION_RETRIES {
             let cylinder = CylinderCollider {
                 center: prev_pos_value,
                 radius: size.radius,
@@ -76,11 +77,12 @@ fn collide_with_terrain(
             let coll = terrain.collide_with_cylinder(&cylinder, pos_value - prev_pos_value);
             match coll {
                 Some(coll) => {
-                    const EPSILON: f32 = 0.0001;
-                    let t = (coll.t - EPSILON).max(0.0);
+                    const EPSILON: f32 = 0.001;
+                    let t = (coll.t - EPSILON).min(1.0).max(0.0);
                     prev_pos_value = prev_pos_value + vel_value * t;
                     vel_value = coll.velocity;
                     pos_value = prev_pos_value + vel_value * (1.0 - t);
+                    println!("--- Try: {}\ncoll: {:?}\npos: {:?}", i, coll, pos);
                 }
                 None => {
                     pos.0 = pos_value;
@@ -89,6 +91,6 @@ fn collide_with_terrain(
                 }
             }
         }
-        println!("Retries exhausted!");
+        log::info!("Collision retries exhausted");
     }
 }

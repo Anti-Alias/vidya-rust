@@ -76,6 +76,7 @@ impl PieceCollider {
         let x_collision = |ter_edge: f32| {
             let t = (ter_edge - cyl.center.x) / delta.x;
             if t >= 0.0 && t <= 1.0 {
+                let t = t - T_EPSILON;
                 let lerped_center = cyl.center + delta * t;
                 let lerped_bottom = lerped_center.y - cyl.half_height;
                 let lerped_top = lerped_center.y + cyl.half_height;
@@ -86,7 +87,7 @@ impl PieceCollider {
                     lerped_top > ter_bounds.min.y;
                 if in_yz_bounds {
                     let velocity =
-                        if t < 1.0 - T_EPSILON {
+                        if t < 1.0 {
                         let vel_2d = (next_cyl_center.yz() - lerped_center.yz()) / (1.0 - t);
                             Vec3::new(0.0, vel_2d.x, vel_2d.y)
                         }
@@ -132,12 +133,7 @@ impl PieceCollider {
                         radius: cyl.radius
                     }.contains_point(lerped_center_xz);
                 if in_xz_bounds {
-                    let velocity =
-                        if t < 1.0 - T_EPSILON {
-                            let vel_2d = (next_cyl_center.xz() - lerped_center_xz) / (1.0 - t);
-                            Vec3::new(vel_2d.x, 0.0, vel_2d.y)
-                        }
-                        else { Vec3::new(delta.x, 0.0, delta.z) };
+                    let velocity = Vec3::new(delta.x, 0.0, delta.z);
                     return Some(Collision {
                         t,
                         velocity,
@@ -226,6 +222,7 @@ impl PieceCollider {
         if delta.y < 0.0 {
             let coll = y_collision(ter_bounds.max.y + cyl.half_height);
             if coll.is_some() {
+                println!("Top coll: {:?}", coll);
                 return coll;
             }
         }
@@ -261,12 +258,14 @@ impl PieceCollider {
         // Near/left corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.max.z));
         if coll.is_some() {
+            println!("NL coll: {:?}", coll);
             return coll;
         }
 
         // Near/right corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.max.z));
         if coll.is_some() {
+            println!("NR coll: {:?}", coll);
             return coll;
         }
 

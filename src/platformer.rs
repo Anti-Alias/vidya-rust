@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
 use crate::game::{GameState, SystemLabels, tick_elapsed};
-use crate::physics::{Velocity, Friction};
+use crate::physics::{Velocity, Friction, Gravity};
 use crate::direction::{DirectionHolder, DirectionType};
 use crate::state::{StateHolder, State};
 use crate::util::SignalQueue;
@@ -42,13 +42,15 @@ pub enum PlatformerSignal {
 #[derive(Component, Debug)]
 pub struct Platformer {
     pub top_speed: f32,
+    pub jump_height: f32,
     pub signals: SignalQueue<PlatformerSignal>
 }
 
 impl Platformer {
-    pub fn new(top_speed: f32) -> Self {
+    pub fn new(top_speed: f32, jump_height: f32) -> Self {
         Self {
             top_speed,
+            jump_height,
             signals: SignalQueue::new()
         }
     }
@@ -64,13 +66,16 @@ pub struct PlatformerAnimator {
 }
 
 
-fn process_signals(mut platformer_entities: Query<(
-    &mut Platformer,
-    &Friction,
-    &mut Velocity,
-    &mut DirectionHolder,
-    &mut StateHolder
-)>) {
+fn process_signals(
+    gravity: Res<Gravity>,
+    mut platformer_entities: Query<(
+        &mut Platformer,
+        &Friction,
+        &mut Velocity,
+        &mut DirectionHolder,
+        &mut StateHolder,
+    )>)
+{
     log::debug!("(SYSTEM) process_signals");
     for (
         mut platformer,
@@ -95,7 +100,12 @@ fn process_signals(mut platformer_entities: Query<(
                     dir_holder.direction = direction;
                 }
                 PlatformerSignal::Jump => {
-                    log::info!("Jumping!!!");
+                    let g = gravity.gravity;
+                    let jh = platformer.jump_height;
+                    let det = g*g - 4.0 * (-jh * 2.0);
+                    if det > 0.0 {
+                        velocity.0.y = (-g + det.sqrt()) / 2.0;
+                    }
                 }
             }
             next_signal = platformer.signals.pop();

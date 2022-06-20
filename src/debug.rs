@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::app::{AppState, tick_elapsed};
+use crate::game::{AppState, tick_elapsed};
 use crate::physics::{ Velocity };
 
 pub struct DebugPlugin;

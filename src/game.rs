@@ -16,11 +16,11 @@ use bevy::app::PluginGroupBuilder;
 use bevy::ecs::schedule::ShouldRun;
 use bevy::prelude::*;
 
-// Default plugins
-pub struct VidyaPlugins;
-impl PluginGroup for VidyaPlugins {
+/// Group of plugins that vidya uses
+pub struct GamePlugins;
+impl PluginGroup for GamePlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
-        builder.add(VidyaCorePlugin);
+        builder.add(CorePlugin);
         builder.add(GraphicsPlugin);
         builder.add(SpritePlugin);
         builder.add(AnimationPlugin);
@@ -35,18 +35,14 @@ impl PluginGroup for VidyaPlugins {
 
 // Core plugin
 #[derive(Default)]
-pub struct VidyaCorePlugin;
-impl Plugin for VidyaCorePlugin {
+pub struct CorePlugin;
+impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
-        let timestep_secs = 1.0/60.0;
         app
             .add_plugins(DefaultPlugins)
             .add_state(AppState::AppStarting)
-            .insert_resource(AppConfig {
-                side: Side::Client,
-                timestep_secs
-            })
-            .add_system_set(SystemSet::on_update(AppState::AppRunning)
+            .init_resource::<GameConfig>()
+            .add_system_set(SystemSet::on_in_stack_update(AppState::AppRunning)
                 .with_system(update_partial_ticks.label(SystemLabels::TickStart))
             )
             .add_startup_system_set(SystemSet::new()
@@ -158,12 +154,21 @@ impl PartialTicks {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 /// Configuration of the application as a whole
-pub struct AppConfig {
+pub struct GameConfig {
     pub side: Side,
     pub timestep_secs: f64
 }
 
-fn configure_app(config: Res<AppConfig>,mut commands: Commands) {
+impl Default for GameConfig {
+    fn default() -> Self {
+        Self {
+            side: Side::Client,
+            timestep_secs: 1.0/60.0
+        }
+    }
+}
+
+fn configure_app(config: Res<GameConfig>,mut commands: Commands) {
     commands.insert_resource(PartialTicks::new(config.timestep_secs));
 }
 
@@ -179,7 +184,6 @@ fn update_partial_ticks(
 ) {
     log::debug!("(SYSTEM) ----- update_partial_ticks ----- ");
     let delta = time.delta();
-    //let delta = Duration::from_secs_f64(1.0/60.0);
     partial_ticks.timer.tick(delta);
 }
 

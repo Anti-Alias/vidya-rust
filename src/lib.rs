@@ -1,4 +1,4 @@
-pub mod app;
+pub mod game;
 pub mod state;
 pub mod animation;
 pub mod direction;

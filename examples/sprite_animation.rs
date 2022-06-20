@@ -3,12 +3,12 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use vidya_rust::animation::{AnimationSetBundle, AnimationTimer, AnimationPlugin, Animation, AnimationSet};
-use vidya_rust::app::{AppState, VidyaCorePlugin};
+use vidya_rust::game::{AppState, CorePlugin};
 use vidya_rust::sprite::SpritePlugin;
 
 fn main() {
     App::new()
-        .add_plugin(VidyaCorePlugin)
+        .add_plugin(CorePlugin)
         .add_plugin(SpritePlugin)
         .add_plugin(AnimationPlugin)
         .add_system_set(SystemSet::on_exit(AppState::AppStarting)

@@ -2,7 +2,7 @@ use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
-use crate::app::{AppState, SystemLabels, tick_elapsed};
+use crate::game::{AppState, SystemLabels, tick_elapsed};
 use crate::physics::{Velocity, Friction};
 use crate::direction::{DirectionHolder, DirectionType};
 use crate::state::{StateHolder, State};

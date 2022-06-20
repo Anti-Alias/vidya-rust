@@ -3,13 +3,13 @@ use std::time::Duration;
 use vidya_rust::camera::Targetable;
 use vidya_rust::extensions::*;
 use vidya_rust::animation::{AnimationSetBundle, AnimationSet, Animation, AnimationTimer};
-use vidya_rust::app::VidyaPlugins;
+use vidya_rust::game::{GamePlugins, GameConfig, Side};
 use vidya_rust::map::{LoadMapEvent, MapSpawnedEvent};
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
 use vidya_rust::direction::{DirectionHolder, DirectionType};
 use vidya_rust::physics::{Friction, Position, SizeCylinder, Weight, PhysicsBundle};
 use vidya_rust::player::Player;
-use vidya_rust::app::AppState;
+use vidya_rust::game::AppState;
 use vidya_rust::state::StateHolder;
 
 use bevy::prelude::*;
@@ -22,7 +22,11 @@ fn main() {
             height: 9.0*80.0,
             ..Default::default()
         })
-        .add_plugins(VidyaPlugins)
+        .insert_resource(GameConfig {
+            side: Side::Client,
+            timestep_secs: 1.0/20.0
+        })
+        .add_plugins(GamePlugins)
         .add_system_set(SystemSet::on_enter(AppState::AppRunning)
             .with_system(load_map)
         )

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::physics::{Position, PreviousPosition};
-use crate::app::{AppState, SystemLabels, PartialTicks};
+use crate::game::{AppState, SystemLabels, PartialTicks};
 
 pub struct GraphicsPlugin;
 impl Plugin for GraphicsPlugin {

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::camera::Camera3d;
 
-use crate::app::{AppState, SystemLabels, tick_elapsed};
+use crate::game::{AppState, SystemLabels, tick_elapsed};
 use crate::physics::{Velocity, Friction, PreviousPosition, Position};
 
 use std::f32::consts::SQRT_2;

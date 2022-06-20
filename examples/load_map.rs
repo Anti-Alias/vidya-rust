@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use vidya_rust::app::{ AppState, VidyaPlugins };
+use vidya_rust::game::{ AppState, GamePlugins };
 use vidya_rust::map::{ LoadMapEvent };
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
             height: 450.0,
             ..Default::default()
         })
-        .add_plugins(VidyaPlugins)
+        .add_plugins(GamePlugins)
         .add_system_set(SystemSet::on_enter(AppState::AppRunning).with_system(load_map))
         .run();
 }

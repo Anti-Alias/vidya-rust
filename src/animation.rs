@@ -2,7 +2,7 @@ use std::{fmt, time::Duration};
 
 use bevy::prelude::*;
 
-use crate::app::{AppState, SystemLabels};
+use crate::game::{AppState, SystemLabels};
 use crate::sprite::{Region, Sprite3D, Sprite3DBundle};
 
 /// Plugin that plays/loops entities with animation components

@@ -1,4 +1,4 @@
-use crate::app::{AppState, SystemLabels, tick_elapsed};
+use crate::game::{AppState, SystemLabels, tick_elapsed};
 
 mod movement;
 mod terrain;

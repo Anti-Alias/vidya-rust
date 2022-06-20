@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::app::{AppState, SystemLabels};
+use crate::game::{AppState, SystemLabels};
 use crate::direction::{Direction, CardinalDirection};
 use crate::platformer::{Platformer, PlatformerSignal};
 

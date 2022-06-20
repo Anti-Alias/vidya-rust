@@ -9,7 +9,7 @@ use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
 use std::path::PathBuf;
 
-use crate::app::AppState;
+use crate::game::AppState;
 use crate::camera::{CameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::debug::Floater;
@@ -77,7 +77,7 @@ fn map_listen(
     asset_server: Res<AssetServer>,
     mut commands: Commands
 ) {
-    log::debug!("(SYSTEM) on_load_map_event");
+    log::debug!("(SYSTEM) map_listen");
     if let Some(event) = events.iter().next() {
 
         // Begins loading map and stores the handle for later use

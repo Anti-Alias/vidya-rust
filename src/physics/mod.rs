@@ -62,19 +62,18 @@ fn collide_with_terrain(
 
     // For all collidable entities
     for (mut pos, prev_pos, size, mut vel) in collidable_entities.iter_mut() {
-        let mut pos_value = pos.0;
-        let mut prev_pos_value = prev_pos.0;
-        let mut vel_value = vel.0;
+        let mut pos_value = pos.0;              // End point in collision
+        let mut prev_pos_value = prev_pos.0;    // Start point in collision
+        let mut vel_value = vel.0;              // Velocity at start point
 
         // For N retries...
-        println!("---------------");
-        for i in 0..COLLISION_RETRIES {
+        for _ in 0..COLLISION_RETRIES {
             let cylinder = CylinderCollider {
                 center: prev_pos_value,
                 radius: size.radius,
                 half_height: size.half_height
             };
-            let coll = terrain.collide_with_cylinder(&cylinder, pos_value - prev_pos_value);
+            let coll = terrain.collide_with_cylinder(&cylinder, vel_value);
             match coll {
                 Some(coll) => {
                     const EPSILON: f32 = 0.001;
@@ -82,7 +81,6 @@ fn collide_with_terrain(
                     prev_pos_value = prev_pos_value + vel_value * t;
                     vel_value = coll.velocity;
                     pos_value = prev_pos_value + vel_value * (1.0 - t);
-                    println!("--- Try: {}\ncoll: {:?}\npos: {:?}", i, coll, pos);
                 }
                 None => {
                     pos.0 = pos_value;

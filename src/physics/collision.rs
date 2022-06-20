@@ -133,10 +133,9 @@ impl PieceCollider {
                         radius: cyl.radius
                     }.contains_point(lerped_center_xz);
                 if in_xz_bounds {
-                    let velocity = Vec3::new(delta.x, 0.0, delta.z);
                     return Some(Collision {
                         t,
-                        velocity,
+                        velocity: Vec3::new(delta.x, 0.0, delta.z),
                     });
                 }
             }
@@ -222,7 +221,6 @@ impl PieceCollider {
         if delta.y < 0.0 {
             let coll = y_collision(ter_bounds.max.y + cyl.half_height);
             if coll.is_some() {
-                println!("Top coll: {:?}", coll);
                 return coll;
             }
         }
@@ -258,14 +256,12 @@ impl PieceCollider {
         // Near/left corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.max.z));
         if coll.is_some() {
-            println!("NL coll: {:?}", coll);
             return coll;
         }
 
         // Near/right corner collision
         let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.max.z));
         if coll.is_some() {
-            println!("NR coll: {:?}", coll);
             return coll;
         }
 

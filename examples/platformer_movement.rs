@@ -6,11 +6,11 @@ use vidya_rust::animation::{AnimationSetBundle, AnimationSet, Animation, Animati
 use vidya_rust::game::GamePlugins;
 use vidya_rust::map::{LoadMapEvent, MapSpawnedEvent};
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
-use vidya_rust::direction::{DirectionHolder, DirectionType};
-use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle};
+use vidya_rust::direction::{DirectionState, DirectionType};
+use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle, PhysicsState};
 use vidya_rust::player::Player;
 use vidya_rust::game::GameState;
-use vidya_rust::state::StateHolder;
+use vidya_rust::state::ActionState;
 
 use bevy::prelude::*;
 
@@ -57,20 +57,21 @@ fn spawn_player(
     let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01.png", AlphaMode::Mask(0.5), &assets);
 
     // Creates animation set
-    let sprite_offset = Vec3::new(-31.0, -32.0 - 2.0, -10.0);
+    let offset = Vec3::new(-31.0, -34.0, -10.0);
+    let jump_offset = Vec3::new(-31.0, -32.0, -10.0);
     let mut animation_set = AnimationSet::new();
-    let idle_n = Animation::from_grid(0, 1*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let idle_s = Animation::from_grid(0, 0*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let idle_e = Animation::from_grid(0, 2*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let idle_w = Animation::from_grid(0, 3*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let run_n = Animation::from_grid(0, 5*64, 64, 64, 512, 512, 6).with_offset(sprite_offset);
-    let run_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6).with_offset(sprite_offset);
-    let run_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6).with_offset(sprite_offset);
-    let run_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6).with_offset(sprite_offset);
-    let jump_n = Animation::from_grid(6*64, 1*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let jump_s = Animation::from_grid(6*64, 0*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let jump_e = Animation::from_grid(6*64, 2*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
-    let jump_w = Animation::from_grid(6*64, 3*64, 64, 64, 512, 512, 1).with_offset(sprite_offset);
+    let idle_n = Animation::from_grid(0, 1*64, 64, 64, 512, 512, 1).with_offset(offset);
+    let idle_s = Animation::from_grid(0, 0*64, 64, 64, 512, 512, 1).with_offset(offset);
+    let idle_e = Animation::from_grid(0, 2*64, 64, 64, 512, 512, 1).with_offset(offset);
+    let idle_w = Animation::from_grid(0, 3*64, 64, 64, 512, 512, 1).with_offset(offset);
+    let run_n = Animation::from_grid(0, 5*64, 64, 64, 512, 512, 6).with_offset(offset);
+    let run_s = Animation::from_grid(0, 4*64, 64, 64, 512, 512, 6).with_offset(offset);
+    let run_e = Animation::from_grid(0, 6*64, 64, 64, 512, 512, 6).with_offset(offset);
+    let run_w = Animation::from_grid(0, 7*64, 64, 64, 512, 512, 6).with_offset(offset);
+    let jump_n = Animation::from_grid(6*64, 1*64, 64, 64, 512, 512, 1).with_offset(jump_offset);
+    let jump_s = Animation::from_grid(6*64, 0*64, 64, 64, 512, 512, 1).with_offset(jump_offset);
+    let jump_e = Animation::from_grid(6*64, 2*64, 64, 64, 512, 512, 1).with_offset(jump_offset);
+    let jump_w = Animation::from_grid(6*64, 3*64, 64, 64, 512, 512, 1).with_offset(jump_offset);
     let idle_handle = animation_set.add_animation_group(&[idle_e, idle_n, idle_w, idle_s]);
     let run_handle = animation_set.add_animation_group(&[run_e, run_n, run_w, run_s]);
     let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
@@ -100,10 +101,11 @@ fn spawn_player(
             GlobalTransform::default()
         ))
         .insert_bundle(physics_bundle)
+        .insert(PhysicsState::default())
         .insert(Player)
-        .insert(DirectionHolder::default())
-        .insert(StateHolder::default())
-        .insert(Platformer::new(2.0, 33.0))
+        .insert(DirectionState::default())
+        .insert(ActionState::default())
+        .insert(Platformer::new(2.0, 32.0))
         .insert(PlatformerAnimator {
             direction_type: DirectionType::FourWay,
             idle_handle,

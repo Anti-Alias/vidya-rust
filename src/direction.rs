@@ -3,12 +3,12 @@ pub use bevy::prelude::*;
 /// Component that allows an Entity to face a direction and hold state
 /// IE: Player, Creatures, etc
 #[derive(Component, Default)]
-pub struct DirectionHolder {
+pub struct DirectionState {
     /// Direction the entity is facing in radians.
     pub direction: f32
 }
 
-impl DirectionHolder {
+impl DirectionState {
 
     /// Determines group animation index to use for the direction of this being.
     pub fn get_direction_index(&self, direction_type: DirectionType) -> usize {

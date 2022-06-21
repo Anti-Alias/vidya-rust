@@ -17,8 +17,8 @@ impl Plugin for GraphicsPlugin {
         );
     }
 }
-
 // Synchronizes a [`Transform`] with a [`Position`].
+
 pub fn interpolate_graphics(
     partial_ticks: Res<PartialTicks>,
     mut query: Query<(&Position, &PreviousPosition, &mut Transform)>

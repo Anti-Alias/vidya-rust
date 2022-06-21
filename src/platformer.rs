@@ -3,9 +3,9 @@ use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
 use crate::game::{GameState, SystemLabels, tick_elapsed};
-use crate::physics::{Velocity, Friction, Gravity};
-use crate::direction::{DirectionHolder, DirectionType};
-use crate::state::{StateHolder, State};
+use crate::physics::{Velocity, Friction, Gravity, PhysicsState};
+use crate::direction::{DirectionState, DirectionType};
+use crate::state::{ActionState, State};
 use crate::util::SignalQueue;
 
 /// Plugin for "Platformer" behavior
@@ -72,8 +72,9 @@ fn process_signals(
         &mut Platformer,
         &Friction,
         &mut Velocity,
-        &mut DirectionHolder,
-        &mut StateHolder,
+        &mut DirectionState,
+        &PhysicsState,
+        &mut ActionState,
     )>)
 {
     log::debug!("(SYSTEM) process_signals");
@@ -81,7 +82,8 @@ fn process_signals(
         mut platformer,
         friction,
         mut velocity,
-        mut dir_holder,
+        mut dir_state,
+        physics_state,
         mut state_holder
     )
     in platformer_entities.iter_mut() {
@@ -97,23 +99,28 @@ fn process_signals(
                     velocity.0.z += vel.y;
                 }
                 PlatformerSignal::Look { direction } => {
-                    dir_holder.direction = direction;
+                    dir_state.direction = direction;
                 }
                 PlatformerSignal::Jump => {
-                    let g = gravity.gravity;
-                    let jh = platformer.jump_height;
-                    let det = g*g - 4.0 * (-jh * 2.0);
-                    if det > 0.0 {
-                        velocity.0.y = (-g + det.sqrt()) / 2.0;
+                    if physics_state.on_ground {
+                        let g = gravity.gravity;
+                        let jh = platformer.jump_height;
+                        let det = g*g - 4.0 * (-jh * 2.0);
+                        if det > 0.0 {
+                            velocity.0.y = (-g + det.sqrt()) / 2.0;
+                        }
                     }
                 }
             }
             next_signal = platformer.signals.pop();
         }
 
-        // Updates state based on velocity
+        // Updates state based on velocity / groundedness
         const EPSILON: f32 = 0.1;
-        if velocity.0.xz().length_squared() > EPSILON*EPSILON {
+        if !physics_state.on_ground {
+            state_holder.0 = State::Jumping;
+        }
+        else if velocity.0.xz().length_squared() > EPSILON*EPSILON {
             state_holder.0 = State::Running;
         }
         else {
@@ -124,12 +131,15 @@ fn process_signals(
 
 // Controls the platformer's animation based on their current state
 fn control_animations(mut platformer_entities: Query<
-    (&mut AnimationSet, &PlatformerAnimator, &DirectionHolder, &StateHolder),
-    Changed<StateHolder>
+    (&mut AnimationSet,
+    &PlatformerAnimator,
+    &DirectionState,
+    &ActionState),
+    Changed<ActionState>
 >) {
     log::debug!("(SYSTEM) control_animations");
-    for (mut animation_set, animator, dir_holder, state_holder) in platformer_entities.iter_mut() {
-        match state_holder.0 {
+    for (mut animation_set, animator, dir_holder, action_state) in platformer_entities.iter_mut() {
+        match action_state.0 {
             State::Idle => {
                 animation_set.set_grouped_animation(
                     animator.idle_handle,

@@ -35,7 +35,7 @@ pub struct PhysicsBundle<Shape: Component> {
     pub shape: Shape,
     pub velocity: Velocity,
     pub friction: Friction,
-    pub weight: Weight,
+    pub weight: Weight
 }
 impl<Shape: Component> PhysicsBundle<Shape> {
     pub fn new(
@@ -125,11 +125,19 @@ pub fn apply_friction(mut query: Query<(&mut Velocity, &Friction), With<Position
     }
 }
 
-/// Synchronizes previous states with the current one
-pub fn sync_previous_state(mut query: Query<(&mut Position, &mut PreviousPosition)>) {
-    log::debug!("(SYSTEM) sync_previous_state");
+/// Sets previous position data to current position data.
+pub fn prepare_positions(mut query: Query<(&mut Position, &mut PreviousPosition)>) {
+    log::debug!("(SYSTEM) prepare_positions");
     for (position, mut prev_position) in query.iter_mut() {
         prev_position.0 = position.0;
+    }
+}
+
+/// Resets physics states.
+pub fn prepare_states(mut query: Query<&mut PhysicsState>) {
+    log::debug!("(SYSTEM) prepare_states");
+    for mut state in query.iter_mut() {
+        state.on_ground = false;
     }
 }
 

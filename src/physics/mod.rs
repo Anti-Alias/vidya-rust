@@ -27,7 +27,12 @@ impl Plugin for PhysicsPlugin {
                 .after(SystemLabels::Logic)
                 .after(SystemLabels::PhysicsGravity)
             )
-            .with_system(sync_previous_state
+            .with_system(prepare_states
+                .label(SystemLabels::PhysicsSync)
+                .before(SystemLabels::PhysicsMove)
+                .after(SystemLabels::Logic)
+            )
+            .with_system(prepare_positions
                 .label(SystemLabels::PhysicsSync)
                 .before(SystemLabels::PhysicsMove)
                 .after(SystemLabels::Logic)
@@ -66,7 +71,7 @@ fn collide_with_terrain(
     };
 
     // For all collidable entities
-    for (mut pos, prev_pos, size, mut vel, state) in collidable_entities.iter_mut() {
+    for (mut pos, prev_pos, size, mut vel, mut state) in collidable_entities.iter_mut() {
         let mut pos_value = pos.0;              // End point in collision
         let mut prev_pos_value = prev_pos.0;    // Start point in collision
         let mut vel_value = vel.0;              // Velocity at start point
@@ -78,14 +83,19 @@ fn collide_with_terrain(
                 radius: size.radius,
                 half_height: size.half_height
             };
-            let coll = terrain.collide_with_cylinder(&cylinder, vel_value);
-            match coll {
-                Some(coll) => {
+            let collision = terrain.collide_with_cylinder(&cylinder, vel_value);
+            match collision {
+                Some(collision) => {
                     const EPSILON: f32 = 0.0001;
-                    let t = (coll.t - EPSILON).min(1.0).max(0.0);
+                    let t = (collision.t - EPSILON).min(1.0).max(0.0);
                     prev_pos_value = prev_pos_value + vel_value * t;
-                    vel_value = coll.velocity;
+                    vel_value = collision.velocity;
                     pos_value = prev_pos_value + vel_value * (1.0 - t);
+                    if let Some(state) = &mut state {
+                        if collision.typ == CollisionType::Floor {
+                            state.on_ground = true;
+                        }
+                    }
                 }
                 None => {
                     pos.0 = pos_value;

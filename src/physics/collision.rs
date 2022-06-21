@@ -86,7 +86,7 @@ impl PieceCollider {
                 let lerped_top = lerped_center.y + cyl.half_height;
                 let in_yz_bounds =
                     lerped_center.z > ter_bounds.min.z &&
-                    lerped_center.z < ter_bounds.max.z &&
+                    lerped_center.z < ter_bounds.max.z  &&
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_yz_bounds {

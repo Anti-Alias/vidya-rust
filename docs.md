@@ -30,10 +30,10 @@ Here is an example of the system's that run during a frame vs a tick.
 ## Tick + frame
 vidya_rust::game: (SYSTEM) ----- update_partial_ticks -----     
 vidya_rust::map: (SYSTEM) map_listen                        // Listens for map events
-vidya_rust::player: (SYSTEM) keyboard_control_platformer    // Maps keyboard inputs to platformer signals for a player
+vidya_rust::player: (SYSTEM) control_with_keyboard          // Maps keyboard inputs to platformer signals for a player
 vidya_rust::platformer: (SYSTEM) process_signals            // Processes the platformer's signals into actions
 vidya_rust::platformer: (SYSTEM) control_animations         // Controls platformer's animations based on their state
-vidya_rust::physics::movement: (SYSTEM) sync_previous_state // Syncs the previous state of a physics simulation in preparatation for the upcomming update
+vidya_rust::physics::movement: (SYSTEM) prepare_positions   // Syncs the previous state of a physics simulation in preparatation for the upcomming update
 vidya_rust::physics::movement: (SYSTEM) apply_gravity       // Applies gravity to all velocities
 vidya_rust::animation: (SYSTEM) update_animations           // Updates entities with AnimationSets. (Play, loop, etc)
 vidya_rust::physics::movement: (SYSTEM) apply_friction      // Applies entity friction to entity velocity before velocity gets applied to entity positions.
@@ -44,7 +44,7 @@ vidya_rust::graphics: (SYSTEM) interpolate_graphics         // Interpolates enti
 vidya_rust::sprite: (SYSTEM) draw_sprites                   // Renders Sprite3D components to their respective entity batches. Kinda convoluted.
 
 ## Frame only
-vidya_rust::player: (SYSTEM) keyboard_control_platformer    
+vidya_rust::player: (SYSTEM) control_with_keyboard
 vidya_rust::animation: (SYSTEM) update_animations    
 vidya_rust::graphics: (SYSTEM) interpolate_graphics    
 vidya_rust::sprite: (SYSTEM) draw_sprites

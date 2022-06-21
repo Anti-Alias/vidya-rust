@@ -14,4 +14,4 @@ impl Default for State {
 
 /// Component that holds state
 #[derive(Component, Debug, Clone, Default)]
-pub struct StateHolder(pub State);
+pub struct ActionState(pub State);

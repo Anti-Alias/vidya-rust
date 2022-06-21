@@ -10,7 +10,7 @@ pub struct PreviousPosition(pub Vec3);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy, Default, Reflect)]
 #[reflect(Component, PartialEq)]
-pub struct SizeCylinder {
+pub struct CylinderShape {
     pub half_height: f32,
     pub radius: f32
 }
@@ -29,28 +29,28 @@ impl Default for Weight {
 }
 
 #[derive(Bundle)]
-pub struct PhysicsBundle {
+pub struct PhysicsBundle<Shape: Component> {
     pub position: Position,
     pub prev_position: PreviousPosition,
-    pub size: SizeCylinder,
+    pub shape: Shape,
     pub velocity: Velocity,
     pub friction: Friction,
-    pub weight: Weight
+    pub weight: Weight,
 }
-impl PhysicsBundle {
+impl<Shape: Component> PhysicsBundle<Shape> {
     pub fn new(
         position: Position,
-        size: SizeCylinder,
+        shape: Shape,
         friction: Friction,
         weight: Weight
     ) -> Self {
         Self {
             position,
             prev_position: PreviousPosition(position.0),
-            size,
+            shape,
             velocity: Velocity(Vec3::ZERO),
             friction,
-            weight
+            weight,
         }
     }
 }
@@ -82,9 +82,15 @@ impl Bounds {
     }
 }
 
+/// State object
+#[derive(Component, PartialEq, Eq, Debug, Copy, Clone, Default)]
+pub struct PhysicsState {
+    pub on_ground: bool
+}
+
 
 /// Global resource that determines how fast entities with a [`Weight`] will fall.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Gravity {
     pub gravity: f32
 }

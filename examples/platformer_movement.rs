@@ -7,7 +7,7 @@ use vidya_rust::game::GamePlugins;
 use vidya_rust::map::{LoadMapEvent, MapSpawnedEvent};
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
 use vidya_rust::direction::{DirectionHolder, DirectionType};
-use vidya_rust::physics::{Friction, Position, SizeCylinder, Weight, PhysicsBundle};
+use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle};
 use vidya_rust::player::Player;
 use vidya_rust::game::GameState;
 use vidya_rust::state::StateHolder;
@@ -76,10 +76,9 @@ fn spawn_player(
     let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
 
     // Spawns platformer entity from bundle
-
     let mut physics_bundle = PhysicsBundle::new(
         Position(Vec3::new(259.4064, 19.011248, -251.05972)),
-        SizeCylinder{
+        CylinderShape {
             radius: 6.0,
             half_height: 15.0
         },

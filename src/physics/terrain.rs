@@ -428,7 +428,8 @@ fn test_div() {
     assert_eq!(1, div(2, 2));
     assert_eq!(-1, div(-1, 4));
     assert_eq!(-1, div(-3, 4));
-    assert_eq!(-2, div(-4, 4));
+    assert_eq!(-1, div(-4, 4));
+    assert_eq!(-2, div(-5, 4));
 }
 
 #[test]
@@ -516,22 +517,6 @@ fn test_chunk_iter() {
         ChunkInfo { pos: Coords { x: 0, y: 0, z: 0 }, size: UVec3::new(16, 16, 16) }
     ];
     assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_chunk_iter_edgecase() {
-    let mut terrain = Terrain::new(
-        Vec3::new(32.0, 32.0, 32.0),
-        UVec3::new(2, 2, 2)
-    );
-    terrain.get_or_create_mut(Coords::new(0, 0, -2));
-    let actual: Vec<ChunkRef> = terrain
-        .iter_chunks(
-            ChunkCoords::new(0, 0, -1),
-            ChunkCoords::new(1, 1, 1),
-        ).collect();
-    println!("Chunk len: {}", actual.len());
-    panic!();
 }
 
 #[test]

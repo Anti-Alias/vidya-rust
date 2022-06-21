@@ -11,8 +11,12 @@ const T_EPSILON: f32 = 0.001;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Collision {
     pub t: f32,
-    pub velocity: Vec3
+    pub velocity: Vec3,
+    pub typ: CollisionType
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum CollisionType { Floor, Wall, Ceiling }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Aabb {
@@ -86,15 +90,10 @@ impl PieceCollider {
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_yz_bounds {
-                    let velocity =
-                        if t < 1.0 {
-                        let vel_2d = (next_cyl_center.yz() - lerped_center.yz()) / (1.0 - t);
-                            Vec3::new(0.0, vel_2d.x, vel_2d.y)
-                        }
-                        else { Vec3::new(0.0, delta.y, delta.z) };
                     return Some(Collision {
                         t,
-                        velocity,
+                        velocity: Vec3::new(0.0, delta.y, delta.z),
+                        typ: CollisionType::Wall
                     });
                 }
             }
@@ -102,7 +101,7 @@ impl PieceCollider {
         };
 
         // Collision code for bottom and top sides of this cuboid
-        let y_collision = |ter_edge: f32| {
+        let y_collision = |ter_edge: f32, coll_type: CollisionType| {
             let t = (ter_edge - cyl.center.y) / delta.y;
             if t >= 0.0 && t <= 1.0 {
                 let lerped_center = cyl.center + delta * t;
@@ -136,6 +135,7 @@ impl PieceCollider {
                     return Some(Collision {
                         t,
                         velocity: Vec3::new(delta.x, 0.0, delta.z),
+                        typ: coll_type
                     });
                 }
             }
@@ -155,22 +155,17 @@ impl PieceCollider {
                     lerped_bottom < ter_bounds.max.y &&
                     lerped_top > ter_bounds.min.y;
                 if in_xy_bounds {
-                    let velocity =
-                        if t < 1.0 - T_EPSILON {
-                            let vel_2d = (next_cyl_center.xy() - lerped_center.xy()) / (1.0 - t);
-                            Vec3::new(vel_2d.x, vel_2d.y, 0.0)
-                        }
-                        else { Vec3::new(delta.x, delta.y, 0.0) };
                     return Some(Collision {
                         t,
-                        velocity
+                        velocity: Vec3::new(delta.x, delta.y, 0.0),
+                        typ: CollisionType::Wall
                     });
                 }
             }
             None
         };
 
-        // Collision of vertical line with cylinder
+        // Collision of a point with a circle
         let edge_collision = |edge: Vec2| -> Option<Collision> {
             let cir = Circle {
                 center: edge,
@@ -186,7 +181,8 @@ impl PieceCollider {
             if in_y_bounds {
                 return Some(Collision {
                     t: coll_2d.t,
-                    velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y)
+                    velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y),
+                    typ: CollisionType::Wall
                 })
             }
             None
@@ -210,7 +206,7 @@ impl PieceCollider {
 
         // Bottom collision
         if delta.y > 0.0 {
-            let coll = y_collision(ter_bounds.min.y - cyl.half_height);
+            let coll = y_collision(ter_bounds.min.y - cyl.half_height, CollisionType::Ceiling);
             if coll.is_some() {
                 return coll;
             }
@@ -219,7 +215,7 @@ impl PieceCollider {
 
         // Top collision
         if delta.y < 0.0 {
-            let coll = y_collision(ter_bounds.max.y + cyl.half_height);
+            let coll = y_collision(ter_bounds.max.y + cyl.half_height, CollisionType::Floor);
             if coll.is_some() {
                 return coll;
             }
@@ -462,8 +458,9 @@ fn test_collide() {
         terrain_collider,
         Vec3::new(10.0, 0.0, 5.0),
         Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 5.0)
+            t: 0.499,
+            velocity: Vec3::new(0.0, 0.0, 5.0000005),
+            typ: CollisionType::Wall
         })
     );
 
@@ -477,8 +474,9 @@ fn test_collide() {
         terrain_collider,
         Vec3::new(-10.0, 0.0, 5.0),
         Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 5.0)
+            t: 0.499,
+            velocity: Vec3::new(0.0, 0.0, 5.0000005),
+            typ: CollisionType::Wall
         })
     );
 
@@ -493,7 +491,8 @@ fn test_collide() {
         Vec3::new(5.0, 0.0, -15.0),
         Some(Collision {
             t: 0.0,
-            velocity: Vec3::new(5.0, 0.0, 0.0)
+            velocity: Vec3::new(5.0, 0.0, 0.0),
+            typ: CollisionType::Wall
         })
     );
 
@@ -508,7 +507,8 @@ fn test_collide() {
         Vec3::new(5.0, 0.0, 15.0),
         Some(Collision {
             t: 0.13333334,
-            velocity: Vec3::new(5.0, 0.0, 0.0)
+            velocity: Vec3::new(5.0, 0.0, 0.0),
+            typ: CollisionType::Wall
         })
     );
 
@@ -523,7 +523,8 @@ fn test_collide() {
         Vec3::new(5.0, 0.0, 15.0),
         Some(Collision {
             t: 0.13333334,
-            velocity: Vec3::new(5.0, 0.0, 0.0)
+            velocity: Vec3::new(5.0, 0.0, 0.0),
+            typ: CollisionType::Wall
         })
     );
 
@@ -544,7 +545,8 @@ fn test_collide() {
         Vec3::new(0.0, -2.0, 0.0),
         Some(Collision {
             t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0)
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Floor
         })
     );
 
@@ -559,7 +561,8 @@ fn test_collide() {
         Vec3::new(0.0, -2.0, 0.0),
         Some(Collision {
             t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0)
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Floor
         })
     );
 
@@ -575,7 +578,8 @@ fn test_collide() {
         Vec3::new(0.0, -2.0, 0.0),
         Some(Collision {
             t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0)
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Floor
         })
     );
 
@@ -603,7 +607,8 @@ fn test_collide() {
         Vec3::new(0.0, 2.0, 0.0),
         Some(Collision {
             t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0)
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Ceiling
         })
     );
 
@@ -617,7 +622,11 @@ fn test_collide() {
         },
         terrain_collider,
         Vec3::new(mov, 0.0, mov),
-        Some(Collision { t: 0.50000006, velocity: Vec3::new(0.0, 0.0, 0.0) })
+        Some(Collision {
+            t: 0.50000006,
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Wall
+        })
     );
 
     // Far/left corner edgecase
@@ -629,7 +638,11 @@ fn test_collide() {
         },
         terrain_collider,
         Vec3::new(0.0, 0.0, 2.0),
-        Some(Collision { t: 0.5, velocity: Vec3::new(0.0, 0.0, 0.0) })
+        Some(Collision {
+            t: 0.5,
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Wall
+        })
     );
 
     // Near/right corner
@@ -641,7 +654,11 @@ fn test_collide() {
         },
         terrain_collider,
         Vec3::new(-mov, 0.0, -mov),
-        Some(Collision { t: 0.50000006, velocity: Vec3::new(0.0, 0.0, 0.0) })
+        Some(Collision {
+            t: 0.50000006,
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            typ: CollisionType::Wall
+        })
     );
 
     // Missing

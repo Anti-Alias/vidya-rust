@@ -1,6 +1,6 @@
 use crate::game::{GameState, SystemLabels, tick_elapsed};
 
-mod movement;
+mod components;
 mod terrain;
 mod collision;
 
@@ -8,8 +8,7 @@ pub use bevy::prelude::*;
 
 pub use terrain::*;
 pub use collision::*;
-pub use movement::*;
-pub use movement::SizeCylinder;
+pub use components::*;
 
 /// Plugin that adds physics components and terrain collision
 pub struct PhysicsPlugin;
@@ -50,7 +49,13 @@ impl Plugin for PhysicsPlugin {
 const COLLISION_RETRIES: u32 = 10;
 fn collide_with_terrain(
     terrain_entity: Query<&Terrain>,
-    mut collidable_entities: Query<(&mut Position, &PreviousPosition, &SizeCylinder, &mut Velocity)>
+    mut collidable_entities: Query<(
+        &mut Position,
+        &PreviousPosition,
+        &CylinderShape,
+        &mut Velocity,
+        Option<&mut PhysicsState>
+    )>
 ) {
     log::debug!("(SYSTEM) collide_with_terrain");
 
@@ -61,7 +66,7 @@ fn collide_with_terrain(
     };
 
     // For all collidable entities
-    for (mut pos, prev_pos, size, mut vel) in collidable_entities.iter_mut() {
+    for (mut pos, prev_pos, size, mut vel, state) in collidable_entities.iter_mut() {
         let mut pos_value = pos.0;              // End point in collision
         let mut prev_pos_value = prev_pos.0;    // Start point in collision
         let mut vel_value = vel.0;              // Velocity at start point

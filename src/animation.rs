@@ -379,7 +379,7 @@ fn test_from_grid() {
         }],
         offset: Vec3::ZERO
     };
-    let actual = Animation::from_grid(0, 0, 32, 32, 32, 32, 100, Vec3::ZERO);
+    let actual = Animation::from_grid(0, 0, 32, 32, 32, 32, 100);
     assert_eq!(expected, actual);
 }
 
@@ -395,7 +395,7 @@ fn test_from_grid_2() {
         }],
         offset: Vec3::ZERO
     };
-    let actual = Animation::from_grid(0, 0, 32, 32, 63, 63, 100, Vec3::ZERO);
+    let actual = Animation::from_grid(0, 0, 32, 32, 63, 63, 100);
     assert_eq!(expected, actual);
 }
 
@@ -434,6 +434,6 @@ fn test_from_grid_3() {
         ],
         offset: Vec3::ZERO
     };
-    let actual = Animation::from_grid(0, 0, 32, 32, 64, 64, 100, Vec3::ZERO);
+    let actual = Animation::from_grid(0, 0, 32, 32, 64, 64, 100);
     assert_eq!(expected, actual);
 }

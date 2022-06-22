@@ -248,13 +248,41 @@ fn map_spawn_entities(
     }
 
     // Spawns/configures lights
+    // let light_transform = Transform::from_rotation(Quat::from_euler(euler, a, b, c));
+    // commands.spawn_bundle(DirectionalLightBundle {
+    //     directional_light: DirectionalLight {
+    //         illuminance: 27500.0,
+    //         shadows_enabled: true,
+    //         ..Default::default()
+    //     },
+    //     transform: light_transform,
+    //     ..Default::default()
+    // });
+
+    let light_transform = Transform::
+        from_translation(Vec3::new(16.0*5.0, 16.0*20.0, 0.0))
+        .with_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_3,
+            -std::f32::consts::FRAC_PI_8,
+            0.0
+        ));
     commands.spawn_bundle(DirectionalLightBundle {
+        transform: light_transform,
         directional_light: DirectionalLight {
-            color: Color::WHITE,
             illuminance: 27500.0,
+            shadows_enabled: true,
+            shadow_projection: OrthographicProjection {
+                left: -500.0,
+                right: 500.0,
+                bottom: -500.0,
+                top: 500.0,
+                near: 0.01,
+                far: 1000.0,
+                ..default()
+            },
             ..Default::default()
         },
-        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::Y),
         ..Default::default()
     });
 

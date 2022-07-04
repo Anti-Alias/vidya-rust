@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy.git", commit = "9e450f2827bdaa88257ca3024dd53ddf262925a9", features=["dynamic"] }
+bevy = "0.7.0"
 tiled = { git = "https://github.com/Anti-Alias/rs-tiled.git", commit = "5e5f70866cf7d86f3eae247c215ee017d9e826ae" }
 anyhow = "1.0"
 log = "0.4"

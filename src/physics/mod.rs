@@ -17,7 +17,6 @@ impl Plugin for PhysicsPlugin {
         app.insert_resource(Gravity::default());
         app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_run_criteria(run_if_tick_elapsed)
-            .after(SystemLabels::TickStart)
             .with_system(apply_gravity
                 .label(SystemLabels::PhysicsGravity)
                 .after(SystemLabels::Logic)

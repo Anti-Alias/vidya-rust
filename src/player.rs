@@ -10,7 +10,6 @@ impl Plugin for PlayerPlugin {
         app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_system(control_with_keyboard
                 .label(SystemLabels::Input)
-                .after(SystemLabels::TickStart)
             )
         );
     }

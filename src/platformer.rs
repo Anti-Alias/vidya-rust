@@ -14,7 +14,6 @@ impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_run_criteria(run_if_tick_elapsed)
-            .after(SystemLabels::TickStart)
             .with_system(process_signals
                 .label(SystemLabels::Logic)
                 .after(SystemLabels::Input)

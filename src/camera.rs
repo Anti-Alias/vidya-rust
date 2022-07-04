@@ -13,7 +13,6 @@ impl Plugin for CameraPlugin {
         app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_run_criteria(run_if_tick_elapsed)
             .label(SystemLabels::CameraUpdate)
-            .after(SystemLabels::TickStart)
             .after(SystemLabels::PhysicsMove)
             .after(SystemLabels::PhysicsCollide)
             .with_system(camera_target)

@@ -9,7 +9,6 @@ impl Plugin for GraphicsPlugin {
         app.add_system_set(
             SystemSet::on_update(GameState::GameRunning)
                 .label(SystemLabels::InterpolateGraphics)
-                .after(SystemLabels::TickStart)
                 .after(SystemLabels::PhysicsMove)
                 .after(SystemLabels::PhysicsCollide)
                 .after(SystemLabels::CameraUpdate)
@@ -24,8 +23,10 @@ pub fn interpolate_graphics(
     mut query: Query<(&Position, &PreviousPosition, &mut Transform)>
 ) {
     log::debug!("(SYSTEM) interpolate_graphics");
-    let old_t = partial_ticks.t();
-    let t = (old_t * 2.0).floor() / 2.0;
+    #[cfg(release)]
+    let t = partial_ticks.t();
+    #[cfg(not(release))]
+    let t = 1.0;
     for (position, prev_position, mut transform) in query.iter_mut() {
         let src = prev_position.0.round();
         let dest = position.0.round();

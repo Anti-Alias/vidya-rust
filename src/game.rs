@@ -1,4 +1,4 @@
-use std::time::{ SystemTime, Duration };
+use std::time::Duration;
 
 use crate::animation::AnimationPlugin;
 use crate::graphics::GraphicsPlugin;
@@ -42,7 +42,7 @@ impl Plugin for CorePlugin {
             .add_plugins(DefaultPlugins)
             .add_state(GameState::GameStarting)
             .init_resource::<GameConfig>()
-            .add_system_to_stage(CoreStage::PreUpdate, update_partial_ticks.label(SystemLabels::TickStart))
+            .add_system_to_stage(CoreStage::PreUpdate, update_partial_ticks)
             .add_startup_system_set(SystemSet::new()
                 .with_system(configure_app)
                 .with_system(start_app)
@@ -54,9 +54,6 @@ impl Plugin for CorePlugin {
 /// Labels used for scheduling the timing of systems in a single tick
 #[derive(SystemLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum SystemLabels {
-    /// Start of a tick.
-    TickStart,
-
     /// Processes input and converts to signals
     Input,
 
@@ -201,10 +198,13 @@ fn update_partial_ticks(
 
 /// Run criteria for when a tick has elapsed
 pub fn run_if_tick_elapsed(partial_ticks: ResMut<PartialTicks>) -> ShouldRun {
+    #[cfg(release)]
     if partial_ticks.times_finished() != 0 {
         ShouldRun::Yes
     }
     else {
         ShouldRun::No
     }
+    #[cfg(not(release))]
+    ShouldRun::Yes
 }

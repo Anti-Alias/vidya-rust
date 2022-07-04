@@ -171,6 +171,7 @@ impl BatchRenderer {
                 Indices::U32(vec) => vec,
                 _ => panic!("Unexpected index type")
             };
+            indices.clear();
             for i in 0..mesh_info.draw_quad_commands.len() {
                 let i = i as u32;
                 indices.extend_from_slice(&[i, i+1, i+2, i+2, i+3, i]);

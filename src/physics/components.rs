@@ -114,7 +114,7 @@ pub fn apply_gravity(
 }
 
 
-// Applies friction to entities
+/// Applies friction to entities
 pub fn apply_friction(mut query: Query<(&mut Velocity, &Friction), With<Position>>) {
     log::debug!("(SYSTEM) apply_friction");
     for (mut velocity, friction) in query.iter_mut() {
@@ -141,7 +141,7 @@ pub fn prepare_states(mut query: Query<&mut PhysicsState>) {
     }
 }
 
-// Moves an entity based on it's velocity
+/// Moves an entity based on it's velocity
 pub fn apply_velocity(
     mut query: Query<(&mut Position, &Velocity)>
 ) {

@@ -42,9 +42,7 @@ impl Plugin for CorePlugin {
             .add_plugins(DefaultPlugins)
             .add_state(GameState::GameStarting)
             .init_resource::<GameConfig>()
-            .add_system_set(SystemSet::on_in_stack_update(GameState::GameRunning)
-                .with_system(update_partial_ticks.label(SystemLabels::TickStart))
-            )
+            .add_system_to_stage(CoreStage::PreUpdate, update_partial_ticks.label(SystemLabels::TickStart))
             .add_startup_system_set(SystemSet::new()
                 .with_system(configure_app)
                 .with_system(start_app)
@@ -162,10 +160,7 @@ impl PartialTicks {
 
     /// T value between 0.0 and 1.0 used for lerping graphics
     pub fn t(&self) -> f32 {
-        let result = self.timer.elapsed().as_secs_f32() / self.timer.duration().as_secs_f32();
-        //result = (result * 4.0).round() / 4.0;
-        let result = (result - 0.15).min(0.0).max(1.0);
-        result
+        self.timer.elapsed().as_secs_f32() / self.timer.duration().as_secs_f32()
     }
 }
 

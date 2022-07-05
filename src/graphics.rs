@@ -24,7 +24,8 @@ pub fn interpolate_graphics(
     mut query: Query<(&Position, &PreviousPosition, &mut Transform)>
 ) {
     log::debug!("(SYSTEM) interpolate_graphics");
-    let t = partial_ticks.t();
+    let old_t = partial_ticks.t();
+    let t = (old_t * 2.0).floor() / 2.0;
     for (position, prev_position, mut transform) in query.iter_mut() {
         let src = prev_position.0.round();
         let dest = position.0.round();

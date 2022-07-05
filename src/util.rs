@@ -14,7 +14,14 @@ impl<S: Clone> SignalQueue<S> {
     // Pushes signal into the queue.
     // Returns false if there was a duplicate
     pub fn push(&mut self, signal: S) -> bool {
-        self.queue.push_back(signal);
+        let signal_disc = std::mem::discriminant(&signal);
+        let duplicate_signal = self.queue.iter().any(|sig| {
+            let sig_disc = std::mem::discriminant(sig);
+            signal_disc == sig_disc
+        });
+        if !duplicate_signal {
+            self.queue.push_back(signal);
+        }
         true
     }
 

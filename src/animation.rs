@@ -24,7 +24,9 @@ pub struct AnimationSet {
     animations: Vec<Animation>,         // All animations stored
     groups: Vec<Vec<AnimationHandle>>,  // All animation groups stored
     current_animation: AnimationHandle, // Handle to current animation playing/looping
-    frame: usize                        // Current frame in the animation playing/looping
+    frame: usize,                       // Current frame in the animation playing/looping
+    speed: f32,                         // Speed value to alter the rate of the animation. Defaults to 1.0
+    changed: bool                       // Set when sprite needs manual change
 }
 
 impl AnimationSet {
@@ -35,7 +37,9 @@ impl AnimationSet {
             animations: Vec::new(),
             groups: Vec::new(),
             current_animation: AnimationHandle(0),
-            frame: 0
+            frame: 0,
+            speed: 1.0,
+            changed: true
         }
     }
 
@@ -45,6 +49,9 @@ impl AnimationSet {
 
     /// Sets frame index of current animation
     pub fn set_frame_index(&mut self, frame_index: usize) -> Result<(), AnimationError> {
+        if frame_index == self.frame {
+            return Ok(());
+        }
         match self.current_animation() {
             Some(anim) => {
                 if frame_index >= anim.frames.len() {
@@ -58,6 +65,7 @@ impl AnimationSet {
             }
         }
         self.frame = frame_index;
+        self.changed = true;
         Ok(())
     }
 
@@ -65,13 +73,31 @@ impl AnimationSet {
     pub fn advance(&mut self, frames: usize) {
         if frames == 0 { return; }
         if let Some(anim) = self.current_animation() {
-            self.frame = (self.frame + frames) % anim.frames.len();
+            let next_frame = (self.frame + frames) % anim.frames.len();
+            if next_frame != self.frame {
+                self.frame = next_frame;
+                self.changed = true;
+            }
         }
     }
 
     /// Sets frame index to 0.
     pub fn reset(&mut self) {
-        self.frame = 0;
+        if self.frame != 0 {
+            self.frame = 0;
+            self.changed = true;
+        }
+    }
+
+    pub fn speed(&self) -> f32 {
+        self.speed
+    }
+
+    pub fn set_speed(&mut self, speed: f32) {
+        if speed <= 0.0 {
+            panic!("Invalid animation speed {}", speed)
+        };
+        self.speed = speed;
     }
 
     /// Adds an animation, and returns a handle to that animation
@@ -137,11 +163,16 @@ impl AnimationSet {
     /// Sets the current animation to be played/looped
     /// Sets frame to 0.
     pub fn set_animation(&mut self, handle: AnimationHandle) -> Result<(), AnimationError>  {
+        if handle == self.current_animation {
+            return Ok(());
+        }
         if handle.0 >= self.animations.len() {
             return Err(AnimationError::NoSuchAnimation);
         }
         self.frame = 0;
+        self.speed = 1.0;
         self.current_animation = handle;
+        self.changed = true;
         Ok(())
     }
 
@@ -168,6 +199,9 @@ impl AnimationSet {
 
         // Switches animation
         let next_anim_handle = self.get_grouped_animation_handle(group_handle, index)?;
+        if next_anim_handle == self.current_animation {
+            return Ok(());
+        }
 
         // Determines what to do with current frame index
         if preserve_frame_index {
@@ -182,6 +216,8 @@ impl AnimationSet {
 
         // Done
         self.current_animation = next_anim_handle;
+        self.changed = true;
+        self.speed = 1.0;
         Ok(())
     }
 }
@@ -334,12 +370,19 @@ fn update_animations(
     mut anim_entities: Query<(&mut Sprite3D, &mut AnimationSet, &mut AnimationTimer)>
 ) {
     log::debug!("(SYSTEM) update_animations");
+
     for (mut sprite, mut anim_set, mut anim_timer) in anim_entities.iter_mut() {
+        
+        // Updates animation set
         let timer = &mut anim_timer.0;
-        timer.tick(time.delta());
+        timer.tick(time.delta().mul_f32(anim_set.speed()));
         let times_finished = timer.times_finished();
         if times_finished > 0 {
             anim_set.advance(times_finished as usize);
+        }
+
+        // If animation was updated, change sprite data
+        if anim_set.changed {
             if let Some(info) = anim_set.current_frame_info() {
                 sprite.size = info.frame.size;
                 sprite.region = info.frame.region;

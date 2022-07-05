@@ -80,6 +80,9 @@ pub enum SystemLabels {
     /// Updates camera
     CameraUpdate,
 
+    /// Controls entity state
+    ControlState,
+
     /// Controls animations
     ControlAnimations,
 

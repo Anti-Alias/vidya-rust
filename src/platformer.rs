@@ -1,7 +1,7 @@
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
-use crate::animation::{AnimationGroupHandle, AnimationSet};
+use crate::animation::{AnimationGroupHandle, AnimationSet, AnimationTimer};
 use crate::game::{GameState, SystemLabels, run_if_tick_elapsed};
 use crate::physics::{Velocity, Friction, Gravity, PhysicsState};
 use crate::direction::{DirectionState, DirectionType};
@@ -14,13 +14,17 @@ impl Plugin for PlatformerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_run_criteria(run_if_tick_elapsed)
+            .with_system(control_animations
+                .label(SystemLabels::ControlAnimations)
+                .after(SystemLabels::ControlState)
+            )
+            .with_system(control_state
+                .label(SystemLabels::ControlState)
+                .after(SystemLabels::PhysicsCollide)
+            )
             .with_system(process_signals
                 .label(SystemLabels::Logic)
                 .after(SystemLabels::Input)
-            )
-            .with_system(control_animations
-                .label(SystemLabels::ControlAnimations)
-                .after(SystemLabels::Logic)
             )
         );
     }
@@ -72,8 +76,7 @@ fn process_signals(
         &Friction,
         &mut Velocity,
         &mut DirectionState,
-        &PhysicsState,
-        &mut ActionState,
+        &PhysicsState
     )>)
 {
     log::debug!("(SYSTEM) process_signals");
@@ -82,8 +85,7 @@ fn process_signals(
         friction,
         mut velocity,
         mut dir_state,
-        physics_state,
-        mut state_holder
+        physics_state
     )
     in platformer_entities.iter_mut() {
 
@@ -113,31 +115,52 @@ fn process_signals(
             }
             next_signal = platformer.signals.pop();
         }
+    }
+}
 
-        // Updates state based on velocity / groundedness
-        const EPSILON: f32 = 0.1;
+/// Updates the platformer's state based on physics state and velocity.
+fn control_state(mut query: Query<
+    (
+        &PhysicsState,
+        &Velocity,
+        &mut ActionState,
+    ),
+    With<Platformer>>
+) {
+    log::debug!("(SYSTEM) control_state");
+    for (physics_state, velocity, mut action_state) in query.iter_mut() {
+        const RUN_SPEED: f32 = 0.05;
         if !physics_state.on_ground {
-            state_holder.0 = State::Jumping;
+            action_state.0 = State::Jumping;
         }
-        else if velocity.0.xz().length_squared() > EPSILON*EPSILON {
-            state_holder.0 = State::Running;
+        else if velocity.0.xz().length_squared() > RUN_SPEED*RUN_SPEED {
+            action_state.0 = State::Running;
         }
         else {
-            state_holder.0 = State::Idle;
+            action_state.0 = State::Idle;
         }
     }
 }
 
 // Controls the platformer's animation based on their current state
 fn control_animations(mut platformer_entities: Query<
-    (&mut AnimationSet,
-    &PlatformerAnimator,
-    &DirectionState,
-    &ActionState),
+    (
+        &mut AnimationSet,
+        &PlatformerAnimator,
+        &Velocity,
+        &DirectionState,
+        &ActionState
+    ),
     Changed<ActionState>
 >) {
     log::debug!("(SYSTEM) control_animations");
-    for (mut animation_set, animator, dir_holder, action_state) in platformer_entities.iter_mut() {
+    for (
+        mut animation_set,
+        animator,
+        velocity,
+        dir_holder,
+        action_state
+    ) in platformer_entities.iter_mut() {
         match action_state.0 {
             State::Idle => {
                 animation_set.set_grouped_animation(
@@ -146,14 +169,16 @@ fn control_animations(mut platformer_entities: Query<
                     false
                 ).unwrap();
             },
-            crate::state::State::Running => {
+            State::Running => {
+                let vxz = velocity.0.xz().length_squared();
+                animation_set.set_speed(vxz / 4.0);
                 animation_set.set_grouped_animation(
                     animator.run_handle,
                     dir_holder.get_direction_index(animator.direction_type),
                     false
                 ).unwrap();
             },
-            crate::state::State::Jumping => {
+            State::Jumping => {
                 animation_set.set_grouped_animation(
                     animator.jump_handle,
                     dir_holder.get_direction_index(animator.direction_type),

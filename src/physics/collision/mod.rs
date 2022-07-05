@@ -1,13 +1,15 @@
+mod cuboid;
+
 use std::fmt::Debug;
 
 use bevy::{prelude::*, math::Vec3Swizzles};
 
-use crate::physics::TerrainPiece;
-
-use super::{Terrain, Coords, TerrainPieceRef};
+use crate::physics::{ Terrain, Coords, TerrainPiece, TerrainPieceRef };
+use crate::physics::collision::cuboid::collide_cuboid_with_cylinder;
 
 const T_EPSILON: f32 = 0.001;
 
+/// Represents a collision event
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Collision {
     pub t: f32,
@@ -15,9 +17,12 @@ pub struct Collision {
     pub typ: CollisionType
 }
 
+
+/// Type of collision that occurred
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum CollisionType { Floor, Wall, Ceiling }
 
+// 3D axis aligned bounding box
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Aabb {
     pub min: Vec3,
@@ -49,6 +54,16 @@ pub struct CylinderCollider {
     pub half_height: f32,
 }
 
+/// Represents a a slope collider
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct SlopeCollider {
+    /// Bottom-left-near corner
+    pub edge: Vec3,
+
+    /// Size of the collider
+    pub size: Vec3
+}
+
 /// Collider of a [`TerrainPiece`].
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PieceCollider {
@@ -62,208 +77,12 @@ impl PieceCollider {
     /// Collides a terrain piece with a cylinder's movement
     pub fn collide_with_cylinder(&self, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
         match self.piece {
-            TerrainPiece::Cuboid => self.collide_cuboid_with_cylinder(cyl, delta),
-            //TerrainPiece::Slope => self.collide_slope_with_cylinder(cyl, delta),
+            TerrainPiece::Cuboid => collide_cuboid_with_cylinder(self.aabb(), cyl, delta),
+            //TerrainPiece::Slope => collide_slope_with_cylinder(self.aabb(), cyl, delta),
             _ => None
         }
     }
 
-    fn collide_cuboid_with_cylinder(&self, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
-
-        // Terrain bounds
-        let ter_bounds = self.aabb();
-
-        // Unpacks movement
-        let next_cyl_center = cyl.center + delta;
-
-        // Collision code for left and right sides of this cuboid
-        let x_collision = |ter_edge: f32| {
-            let t = (ter_edge - cyl.center.x) / delta.x;
-            if t >= 0.0 && t <= 1.0 {
-                let t = t - T_EPSILON;
-                let lerped_center = cyl.center + delta * t;
-                let lerped_bottom = lerped_center.y - cyl.half_height;
-                let lerped_top = lerped_center.y + cyl.half_height;
-                let in_yz_bounds =
-                    lerped_center.z > ter_bounds.min.z &&
-                    lerped_center.z < ter_bounds.max.z  &&
-                    lerped_bottom < ter_bounds.max.y &&
-                    lerped_top > ter_bounds.min.y;
-                if in_yz_bounds {
-                    return Some(Collision {
-                        t,
-                        velocity: Vec3::new(0.0, delta.y, delta.z),
-                        typ: CollisionType::Wall
-                    });
-                }
-            }
-            None
-        };
-
-        // Collision code for bottom and top sides of this cuboid
-        let y_collision = |ter_edge: f32, coll_type: CollisionType| {
-            let t = (ter_edge - cyl.center.y) / delta.y;
-            if t >= 0.0 && t <= 1.0 {
-                let lerped_center = cyl.center + delta * t;
-                let lerped_center_xz = lerped_center.xz();
-                let in_xz_bounds =
-                    Rect {
-                        min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z),
-                        max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z)
-                    }.contains_point(lerped_center_xz) ||
-                    Rect {
-                        min: Vec2::new(ter_bounds.min.x, ter_bounds.min.z - cyl.radius),
-                        max: Vec2::new(ter_bounds.max.x, ter_bounds.max.z + cyl.radius)
-                    }.contains_point(lerped_center_xz) ||
-                    Circle {
-                        center: ter_bounds.min.xz(),
-                        radius: cyl.radius
-                    }.contains_point(lerped_center_xz) ||
-                    Circle {
-                        center: Vec2::new(ter_bounds.max.x, ter_bounds.min.z),
-                        radius: cyl.radius
-                    }.contains_point(lerped_center_xz) ||
-                    Circle {
-                        center: Vec2::new(ter_bounds.min.x, ter_bounds.max.z),
-                        radius: cyl.radius
-                    }.contains_point(lerped_center_xz) ||
-                    Circle {
-                        center: ter_bounds.max.xz(),
-                        radius: cyl.radius
-                    }.contains_point(lerped_center_xz);
-                if in_xz_bounds {
-                    return Some(Collision {
-                        t,
-                        velocity: Vec3::new(delta.x, 0.0, delta.z),
-                        typ: coll_type
-                    });
-                }
-            }
-            None
-        };
-
-        // Collision code for near and far sides of this cuboid
-        let z_collision = |ter_edge: f32| {
-            let t = (ter_edge - cyl.center.z) / delta.z;
-            if t >= 0.0 && t <= 1.0 {
-                let lerped_center = cyl.center + delta * t;
-                let lerped_bottom = lerped_center.y - cyl.half_height;
-                let lerped_top = lerped_center.y + cyl.half_height;
-                let in_xy_bounds =
-                    lerped_center.x > ter_bounds.min.x &&
-                    lerped_center.x < ter_bounds.max.x &&
-                    lerped_bottom < ter_bounds.max.y &&
-                    lerped_top > ter_bounds.min.y;
-                if in_xy_bounds {
-                    return Some(Collision {
-                        t,
-                        velocity: Vec3::new(delta.x, delta.y, 0.0),
-                        typ: CollisionType::Wall
-                    });
-                }
-            }
-            None
-        };
-
-        // Collision of a point with a circle
-        let edge_collision = |edge: Vec2| -> Option<Collision> {
-            let cir = Circle {
-                center: edge,
-                radius: cyl.radius
-            };
-            let coll_2d = collide_line_with_circle(cyl.center.xz(), next_cyl_center.xz(), cir)?;
-            let lerped_center = cyl.center + delta * coll_2d.t;
-            let lerped_bottom = lerped_center.y - cyl.half_height;
-            let lerped_top = lerped_center.y + cyl.half_height;
-            let in_y_bounds =
-                lerped_bottom < ter_bounds.max.y &&
-                lerped_top > ter_bounds.min.y;
-            if in_y_bounds {
-                return Some(Collision {
-                    t: coll_2d.t,
-                    velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y),
-                    typ: CollisionType::Wall
-                })
-            }
-            None
-        };
-
-        // Left collision
-        if delta.x > 0.0 {
-            let coll = x_collision(ter_bounds.min.x - cyl.radius);
-            if coll.is_some() {
-                return coll;
-            }
-        }
-
-        // Right collision
-        if delta.x < 0.0 {
-            let coll = x_collision(ter_bounds.max.x + cyl.radius);
-            if coll.is_some() {
-                return coll;
-            }
-        }
-
-        // Bottom collision
-        if delta.y > 0.0 {
-            let coll = y_collision(ter_bounds.min.y - cyl.half_height, CollisionType::Ceiling);
-            if coll.is_some() {
-                return coll;
-            }
-        }
-        
-
-        // Top collision
-        if delta.y < 0.0 {
-            let coll = y_collision(ter_bounds.max.y + cyl.half_height, CollisionType::Floor);
-            if coll.is_some() {
-                return coll;
-            }
-        }
-
-        // Near collision
-        if delta.z < 0.0 {
-            let coll = z_collision(ter_bounds.max.z + cyl.radius);
-            if coll.is_some() {
-                return coll;
-            }
-        }
-
-        // Far collision
-        if delta.z > 0.0 {
-            let coll = z_collision(ter_bounds.min.z - cyl.radius);
-            if coll.is_some() {
-                return coll;
-            }
-        }
-
-        // Far/left corner collision
-        let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.min.z));
-        if coll.is_some() {
-            return coll;
-        }
-
-        // Far/right corner collision
-        let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.min.z));
-        if coll.is_some() {
-            return coll;
-        }
-
-        // Near/left corner collision
-        let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.max.z));
-        if coll.is_some() {
-            return coll;
-        }
-
-        // Near/right corner collision
-        let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.max.z));
-        if coll.is_some() {
-            return coll;
-        }
-
-        // Default
-        None
-    }
 
     fn aabb(&self) -> Aabb {
         Aabb { min: self.position, max: self.position + self.size }
@@ -352,12 +171,12 @@ pub struct Collision2D {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-struct Circle {
+struct CircleHelper {
     center: Vec2,
     radius: f32
 }
 
-impl Circle {
+impl CircleHelper {
     fn contains_point(&self, point: Vec2) -> bool {
         let dist_squared = (point - self.center).length_squared();
         let rad_squared = self.radius*self.radius;
@@ -366,19 +185,19 @@ impl Circle {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-struct Rect {
-    min: Vec2,
-    max: Vec2
+struct RectHelper {
+    pub min: Vec2,
+    pub max: Vec2
 }
 
-impl Rect {
+impl RectHelper {
     fn contains_point(&self, point: Vec2) -> bool {
         point.x >= self.min.x && point.x <= self.max.x &&
         point.y >= self.min.y && point.y <= self.max.y
     }
 }
 
-fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: Circle) -> Option<Collision2D> {
+fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: CircleHelper) -> Option<Collision2D> {
 
     // Gets closest point on line "d"
     let a = src;
@@ -681,12 +500,12 @@ fn test_collide() {
 #[test]
 fn test_collide_line_with_circle() {
 
-    fn test(a: Vec2, b: Vec2, circle: Circle, expected: Option<Collision2D>) {
+    fn test(a: Vec2, b: Vec2, circle: CircleHelper, expected: Option<Collision2D>) {
         let collision = collide_line_with_circle(a, b, circle);
         assert_eq!(expected, collision);
     }
 
-    let circle = Circle {
+    let circle = CircleHelper {
         center: Vec2::new(2.0, 0.0),
         radius: 1.0
     };

@@ -43,7 +43,7 @@ pub trait StandardMaterialExt {
     fn from_image(
         image_file: &str,
         alpha_mode: AlphaMode,
-        assets: &AssetServer
+        assets: &AssetServer,
     ) -> StandardMaterial {
         let image_handle = assets.load(image_file);
         StandardMaterial {

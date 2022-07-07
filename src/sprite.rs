@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use bevy::math::Vec3A;
 use bevy::prelude::*;
-use bevy::asset::HandleId;
 use bevy::render::primitives::Aabb;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};

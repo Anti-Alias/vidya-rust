@@ -20,8 +20,8 @@ use bevy::prelude::*;
 pub struct GamePlugins;
 impl PluginGroup for GamePlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
+        builder.add(GraphicsPlugin);    // This needs to appear before CorePlugin. Otherwise, images will come with a linear sampler by default.
         builder.add(CorePlugin);
-        builder.add(GraphicsPlugin);
         builder.add(SpritePlugin);
         builder.add(AnimationPlugin);
         builder.add(MapPlugin);
@@ -185,7 +185,10 @@ fn update_partial_ticks(
 
 
 /// Run criteria for when a tick has elapsed
-pub fn run_if_tick_elapsed(partial_ticks: ResMut<PartialTicks>) -> ShouldRun {
+pub fn run_if_tick_elapsed(
+    #[cfg(release)]
+    partial_ticks: ResMut<PartialTicks>
+) -> ShouldRun {
     #[cfg(release)]
     if partial_ticks.times_finished() != 0 {
         ShouldRun::Yes

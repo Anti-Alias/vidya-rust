@@ -1,7 +1,7 @@
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
-use crate::animation::{AnimationGroupHandle, AnimationSet, AnimationTimer};
+use crate::animation::{AnimationGroupHandle, AnimationSet};
 use crate::game::{GameState, SystemLabels, run_if_tick_elapsed};
 use crate::physics::{Velocity, Friction, Gravity, PhysicsState};
 use crate::direction::{DirectionState, DirectionType};

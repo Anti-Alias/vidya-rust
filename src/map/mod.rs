@@ -141,7 +141,6 @@ fn map_finish_loading(
 
             // Goes to "constructing" state
             commands.insert_resource(current_map_graphics);
-            println!("Set map constructing!");
             app_state.set(GameState::MapConstructing).unwrap();
         }
         LoadState::Failed => {
@@ -174,7 +173,6 @@ fn map_construct(
         &mut current_map,
         &mut current_map_graphics
     ).unwrap();
-    println!("Set MapSpawning");
     app_state.overwrite_set(GameState::MapSpawning).unwrap();
 }
 
@@ -269,7 +267,7 @@ fn map_spawn_entities(
     let cam_width = 800.0;
     let cam_height = 450.0;
     let cam_pos = Vec3::new(16.0*10.0, 1000.0, 600.0);
-    let mut ortho_bundle = Camera3dBundle {
+    let ortho_bundle = Camera3dBundle {
         projection: Projection::Orthographic(OrthographicProjection {
             left: -cam_width / 2.0,
             right: cam_width / 2.0,

@@ -7,7 +7,7 @@ use bevy::{prelude::*, math::Vec3Swizzles};
 use crate::physics::{ Terrain, Coords, TerrainPiece, TerrainPieceRef };
 use crate::physics::collision::cuboid::collide_cuboid_with_cylinder;
 
-const T_EPSILON: f32 = 0.001;
+const T_EPSILON: f32 = 0.0001;
 
 /// Represents a collision event
 #[derive(Debug, Copy, Clone, PartialEq)]

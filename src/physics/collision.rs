@@ -6,7 +6,7 @@ use crate::physics::TerrainPiece;
 
 use super::{Terrain, Coords, TerrainPieceRef};
 
-const T_EPSILON: f32 = 0.001;
+const T_EPSILON: f32 = 0.0001;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Collision {

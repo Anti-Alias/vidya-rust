@@ -26,6 +26,7 @@ impl Plugin for PlatformerPlugin {
                 .label(SystemLabels::Logic)
                 .after(SystemLabels::Input)
             )
+            // .with_system(log_position.after(SystemLabels::PhysicsCollide))
         );
     }
 }
@@ -189,3 +190,9 @@ fn control_animations(mut platformer_entities: Query<
         }
     }
 }
+
+// fn log_position(platformers: Query<&Position, With<Platformer>>) {
+//     for pos in platformers.iter() {
+//         println!("Position: {:?}", pos.0);
+//     }
+// }

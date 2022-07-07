@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.7.0"
-tiled = { git = "https://github.com/Anti-Alias/rs-tiled.git", commit = "5e5f70866cf7d86f3eae247c215ee017d9e826ae" }
+bevy = { git = "https://github.com/bevyengine/bevy", commit = "bf1ca81779f2101a7c381e58df4df9e789430feb", features = ["dynamic"] }
+tiled = { git = "https://github.com/Anti-Alias/rs-tiled.git", commit = "672b5cab6934b4d7159a729d1c4ad9d6e6acaf2c" }
 anyhow = "1.0"
 log = "0.4"
 uuid = "0.8.2"

@@ -40,13 +40,10 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_plugins(DefaultPlugins)
-            .add_state(GameState::GameStarting)
+            .add_state(GameState::GameRunning)
             .init_resource::<GameConfig>()
             .add_system_to_stage(CoreStage::PreUpdate, update_partial_ticks)
-            .add_startup_system_set(SystemSet::new()
-                .with_system(configure_app)
-                .with_system(start_app)
-            );
+            .add_startup_system(configure_app);
     }
     fn name(&self) -> &str { "vidya_plugin" }
 }
@@ -104,9 +101,6 @@ pub enum SystemLabels {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum GameState {
 
-    /// No systems should run, as the game is starting
-    GameStarting,
-
     /// Game started and is in a free state
     GameRunning,
 
@@ -154,10 +148,6 @@ impl PartialTicks {
         self.timer.tick(duration);
     }
 
-    fn times_finished(&self) -> u32 {
-        self.timer.times_finished()
-    }
-
     /// T value between 0.0 and 1.0 used for lerping graphics
     pub fn t(&self) -> f32 {
         self.timer.elapsed().as_secs_f32() / self.timer.duration().as_secs_f32()
@@ -182,11 +172,6 @@ impl Default for GameConfig {
 
 fn configure_app(config: Res<GameConfig>,mut commands: Commands) {
     commands.insert_resource(PartialTicks::new(Duration::from_secs_f64(config.timestep_secs)));
-}
-
-fn start_app(mut app_state: ResMut<State<GameState>>) {
-    log::debug!("(SYSTEM) 'start_app'");
-    app_state.set(GameState::GameRunning).unwrap();
 }
 
 /// Updates the partial ticks value

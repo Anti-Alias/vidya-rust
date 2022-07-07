@@ -71,7 +71,7 @@ pub struct MeshInfo {
 #[derive(Default)]
 pub struct BatchRenderer {
     /// Mapping of material id to mesh info
-    pub mesh_infos: HashMap<HandleId, MeshInfo>
+    pub mesh_infos: HashMap<Handle<StandardMaterial>, MeshInfo>
 }
 
 impl BatchRenderer {
@@ -86,7 +86,7 @@ impl BatchRenderer {
 
         // Gets/creates mesh info associated with material id
         let mesh_info = self.mesh_infos
-            .entry(mat_handle.id)
+            .entry(mat_handle.clone_weak())
             .or_insert_with(|| {
                 let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
                 mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
@@ -182,14 +182,14 @@ impl BatchRenderer {
         }
     }
 
+    // Removes entries belonging to materials that are unloaded
     pub fn refresh(
         &mut self,
         materials: &Assets<StandardMaterial>,
         commands: &mut Commands
     ) {
-        // Removes entries belonging to materials that are unloaded
         self.mesh_infos.retain(|mat_handle, mesh_info| {
-            let is_loaded = materials.contains(*mat_handle);
+            let is_loaded = materials.contains(mat_handle);
             if !is_loaded {
                 commands.entity(mesh_info.entity).despawn();
             }

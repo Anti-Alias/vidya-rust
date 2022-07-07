@@ -1,11 +1,15 @@
 use bevy::prelude::*;
+use bevy::render::texture::ImageSettings;
 
 use crate::physics::{Position, PreviousPosition};
-use crate::game::{GameState, SystemLabels, PartialTicks};
+use crate::game::{GameState, SystemLabels};
 
+/// Interpolates entity graphics for high refresh-rate monitors.
+/// Also, defines default image settings.
 pub struct GraphicsPlugin;
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(ImageSettings::default_nearest());
         app.add_system_set(
             SystemSet::on_update(GameState::GameRunning)
                 .label(SystemLabels::InterpolateGraphics)
@@ -19,6 +23,7 @@ impl Plugin for GraphicsPlugin {
 // Synchronizes a [`Transform`] with a [`Position`].
 
 pub fn interpolate_graphics(
+    #[cfg(release)]
     partial_ticks: Res<PartialTicks>,
     mut query: Query<(&Position, &PreviousPosition, &mut Transform)>
 ) {

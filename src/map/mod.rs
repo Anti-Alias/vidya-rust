@@ -17,7 +17,7 @@ use crate::extensions::*;
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
-use bevy::render::camera::ScalingMode;
+use bevy::render::camera::{ScalingMode, Projection};
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 
@@ -173,7 +173,7 @@ fn map_construct(
         &mut current_map,
         &mut current_map_graphics
     ).unwrap();
-    app_state.set(GameState::MapSpawning).unwrap();
+    app_state.overwrite_set(GameState::MapSpawning).unwrap();
 }
 
 fn map_spawn_entities(
@@ -263,23 +263,29 @@ fn map_spawn_entities(
         .entity(map_entity)
         .insert(current_map.terrain.clone());
 
-    // Spawns camera
+    // Creates bevy 3d orthographic camera
     let cam_width = 800.0;
     let cam_height = 450.0;
     let cam_pos = Vec3::new(16.0*10.0, 1000.0, 600.0);
-    let mut ortho_bundle = OrthographicCameraBundle::new_3d();
-    let proj = &mut ortho_bundle.orthographic_projection;
-    proj.scaling_mode = ScalingMode::WindowSize;
-    proj.left = -cam_width / 2.0;
-    proj.right = cam_width / 2.0;
-    proj.bottom = -cam_height / 2.0;
-    proj.top = cam_height / 2.0;
-    proj.near = 1.0;
-    proj.far = 10000.0;
-    proj.scale = 0.5;
-    ortho_bundle.transform = Transform::from_translation(cam_pos)
-        .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
-        .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0));
+    let ortho_bundle = Camera3dBundle {
+        projection: Projection::Orthographic(OrthographicProjection {
+            left: -cam_width / 2.0,
+            right: cam_width / 2.0,
+            bottom: -cam_height / 2.0,
+            top: cam_height / 2.0,
+            near: 1.0,
+            far: 10000.0,
+            scale: 0.5,
+            scaling_mode: ScalingMode::WindowSize,
+            ..Default::default()
+        }),
+        transform: Transform::from_translation(cam_pos)
+            .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
+            .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0)),
+        ..default()
+    };
+
+    // Spawns camera using an in-game CameraBundle
     commands
         .spawn_bundle(CameraBundle::new(
             ortho_bundle,

@@ -376,7 +376,7 @@ fn update_animations(
         // Updates animation set
         let timer = &mut anim_timer.0;
         timer.tick(time.delta().mul_f32(anim_set.speed()));
-        let times_finished = timer.times_finished();
+        let times_finished = timer.times_finished_this_tick();
         if times_finished > 0 {
             anim_set.advance(times_finished as usize);
         }

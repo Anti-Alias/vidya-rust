@@ -14,3 +14,9 @@ num_enum = "0.5.7"
 [features]
 # Determines if debug features should be included (Camera, extra menus, etc)
 debug = []
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = "thin"

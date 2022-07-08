@@ -165,13 +165,19 @@ fn process_tiles_at<'map>(
         ClimbStatus::ClimbingWallS | ClimbStatus::ClimbingWallSE | ClimbStatus::ClimbingWallSW => {
             current_map.set_terrain_piece(TerrainPiece::Cuboid, coll_climber.coords());
         }
-        ClimbStatus::ClimbingSlopeFirst => {}
-        ClimbStatus::ClimbingSlopeSecond => {}
+        ClimbStatus::ClimbingSlopeFirst => {
+            current_map.set_terrain_piece(TerrainPiece::Slope, coll_climber.coords())
+        }
+        ClimbStatus::ClimbingSlopeSecond => {
+            // Assumed that ClimbingSlopeFirst case handled writing slope correctly.
+        }
         ClimbStatus::FinishedClimbing => {
             let mut coords = coll_climber.coords();
-            coords.y -= 1;
             let mut next_coords = coll_climber.next_coords();
+            coords.y -= 1;
             next_coords.y -= 1;
+
+            // Writes 'L' shape to current_map
             while coords.y > next_coords.y {
                 current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
                 coords.y -= 1;

@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use crate::animation::AnimationPlugin;
+#[cfg(feature = "debug")]
 use crate::debug::DebugPlugin;
 use crate::graphics::GraphicsPlugin;
 use crate::platformer::PlatformerPlugin;

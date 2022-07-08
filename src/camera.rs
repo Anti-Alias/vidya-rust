@@ -30,7 +30,8 @@ pub struct GameCameraBundle {
     prev_position: PreviousPosition,
     velocity: Velocity,
     friction: Friction,
-    settings: CameraTargetSettings
+    settings: CameraTargetSettings,
+    main: MainCamera
 }
 impl GameCameraBundle {
     pub fn new(
@@ -68,17 +69,22 @@ impl GameCameraBundle {
             prev_position: PreviousPosition(position.0),
             velocity,
             friction,
-            settings
+            settings,
+            main: MainCamera
         }
     }
 }
+
+/// Marks a camera as the "main" game camera.
+#[derive(Component)]
+pub struct MainCamera;
 
 /// Tag component that marks the entity as "targettable" by the camera.
 /// There should only be 1 entity with this marker at a time.
 #[derive(Component)]
 pub struct Targetable;
 
-#[derive(Component)]
+#[derive(Component, Debug, Clone, PartialEq)]
 pub struct CameraTargetSettings { pub distance: f32 }
 
 // Has the camera follow an entity with a "Targettable" component

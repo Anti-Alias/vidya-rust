@@ -1,5 +1,7 @@
 use bevy::prelude::*;
+use bevy::render::camera::{Projection, ScalingMode};
 
+use crate::extensions::TransformExt;
 use crate::game::{GameState, SystemLabels, run_if_tick_elapsed};
 use crate::physics::{Velocity, Friction, PreviousPosition, Position};
 
@@ -21,25 +23,47 @@ impl Plugin for CameraPlugin {
 
 /// Bundle of camera components
 #[derive(Bundle)]
-pub struct CameraBundle {
+pub struct GameCameraBundle {
     #[bundle]
-    ortho_bundle: Camera3dBundle,
+    cam_3d_bundle: Camera3dBundle,
     position: Position,
     prev_position: PreviousPosition,
     velocity: Velocity,
     friction: Friction,
     settings: CameraTargetSettings
 }
-impl CameraBundle {
+impl GameCameraBundle {
     pub fn new(
-        ortho_bundle: Camera3dBundle,
         position: Position,
         velocity: Velocity,
         friction: Friction,
         settings: CameraTargetSettings
     ) -> Self {
+
+        // Creates camera bundle
+        let width = 800.0;
+        let height = 450.0;
+        let cam_3d_bundle = Camera3dBundle {
+            projection: Projection::Orthographic(OrthographicProjection {
+                left: -width / 2.0,
+                right: width / 2.0,
+                bottom: -height / 2.0,
+                top: height / 2.0,
+                near: 1.0,
+                far: 10000.0,
+                scale: 0.5,
+                scaling_mode: ScalingMode::WindowSize,
+                ..default()
+            }),
+            transform: Transform::identity()
+                .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
+                .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0)),
+            ..default()
+        };
+
+        // Finishes GameCameraBundle
         Self {
-            ortho_bundle,
+            cam_3d_bundle,
             position,
             prev_position: PreviousPosition(position.0),
             velocity,

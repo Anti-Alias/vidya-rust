@@ -58,20 +58,30 @@ impl Climber {
         tile_y: i32,
         group_layer_name: &str
     ) -> Result<(), ClimbingError> {
+
+        // Goes to next position and determines new climb status
         let position = self.next_position;
         let prev_status = self.climb_status;
         self.climb_status = ClimbStatus::next(self.climb_status, tile_type, tile_x, tile_y, group_layer_name)?;
+
+        // Advances position based on our new status
         if self.climb_status == ClimbStatus::NotClimbing {
             self.next_position.z -= self.tile_size.y;
         }
         else if self.climb_status.is_climbing_wall() {
             self.next_position.y += self.tile_size.y;
         }
+        else if self.climb_status == ClimbStatus::ClimbingSlopeFirst || self.climb_status == ClimbStatus::ClimbingSlopeSecond {
+            self.next_position.y += self.tile_size.y * 0.5;
+            self.next_position.z -= self.tile_size.z * 0.5;
+        }
         else if self.climb_status == ClimbStatus::FinishedClimbing {
             let ydiff = self.next_position.y - self.offset.y;
             self.next_position.y = self.offset.y;
             self.next_position.z -= ydiff + self.tile_size.y;
         }
+
+        // Finishes
         self.position = position;
         self.prev_status = prev_status;
         Ok(())
@@ -79,28 +89,40 @@ impl Climber {
 
     pub fn climb_status(&self) -> ClimbStatus { self.climb_status }
 
+    /// Determines the shape of the current tile being scanned, if any.
+    /// Used for graphics.
     pub fn tile_shape(&self) -> Result<TileShape, ClimbingError> {
+
+        // Helpful error generator
+        let make_error = || -> ClimbingError {
+            ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, self.prev_status))
+        };
+
+        // Determines tile shape based on current and previous status
         match self.climb_status {
             ClimbStatus::NotClimbing => match self.prev_status {
-                ClimbStatus::ClimbingWallS | ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::Floor),
+                ClimbStatus::ClimbingWallS | ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing | ClimbStatus::ClimbingSlopeSecond => Ok(TileShape::Floor),
                 ClimbStatus::ClimbingWallSE => Ok(TileShape::WallEndSE),
-                ClimbStatus::ClimbingWallSW => Ok(TileShape::WallEndSW)
+                ClimbStatus::ClimbingWallSW => Ok(TileShape::WallEndSW),
+                _ => Err(make_error())
             }
             ClimbStatus::ClimbingWallS => Ok(TileShape::Wall),
             ClimbStatus::ClimbingWallSE => match self.prev_status {
                 ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::WallStartSE),
                 ClimbStatus::ClimbingWallSE => Ok(TileShape::WallSE),
-                _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, self.prev_status)))
+                _ => Err(make_error())
             },
             ClimbStatus::ClimbingWallSW => match self.prev_status {
                 ClimbStatus::NotClimbing | ClimbStatus::FinishedClimbing => Ok(TileShape::WallStartSW),
                 ClimbStatus::ClimbingWallSW => Ok(TileShape::WallSW),
-                _ => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, self.prev_status)))
+                _ => Err(make_error())
             },
             ClimbStatus::FinishedClimbing => match self.prev_status {
-                ClimbStatus::FinishedClimbing => Err(ClimbingError(format!("Entered state {:?}, after state {:?}", self.climb_status, self.prev_status))),
+                ClimbStatus::FinishedClimbing => Err(make_error()),
                 _ => Ok(TileShape::Floor)
-            }
+            },
+            ClimbStatus::ClimbingSlopeFirst => Ok(TileShape::SlopeS),
+            ClimbStatus::ClimbingSlopeSecond => Ok(TileShape::SlopeS)
         }
     }
 }
@@ -126,6 +148,10 @@ pub(crate) enum ClimbStatus {
     ClimbingWallSE,
     // Tile is treated as a south-west wall. Next tile is 1 higher (y)
     ClimbingWallSW,
+    // Tile is climbing 45-degree southern slope. First of 2 parts.
+    ClimbingSlopeFirst,
+    // Tile is climbing 45-degree southern slope. Second of 2 parts.
+    ClimbingSlopeSecond,
     // Just encountered a "lip" tile. Tile is treated as floor. Next tile is N tiles below (y) and N tiles farther (z), where N represents how high we were in tiles
     FinishedClimbing
 }
@@ -141,6 +167,19 @@ impl ClimbStatus {
         tile_y: i32,
         group_layer_name: &str
     ) -> Result<Self, ClimbingError> {
+
+        // Generates error value
+        let make_climbing_error = || -> ClimbingError {
+            ClimbingError(format!(
+                "Encountered a {:?} tile while in climb status {:?} on group layer '{}' at {}, {}",
+                tile_type,
+                prev_status,
+                group_layer_name,
+                tile_x,
+                tile_y
+            ))
+        };
+
         // What should the resulting climb status be, considering the current collision tile and the previous climb status?
         // Yes, this is ugly and no, I'm not going to fix it...
         if tile_type == TileType::Floor {
@@ -149,16 +188,19 @@ impl ClimbStatus {
                 prev_status == Self::ClimbingWallS ||
                 prev_status == Self::ClimbingWallSE ||
                 prev_status == Self::ClimbingWallSW ||
+                prev_status == Self::ClimbingSlopeSecond ||
                 prev_status == Self::FinishedClimbing;
             if !is_status_valid {
-                return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+                return Err(make_climbing_error());
             }
             Ok(Self::NotClimbing)
         }
         else if tile_type == TileType::Wall {
             if  prev_status == Self::NotClimbing ||
+                prev_status == Self::FinishedClimbing ||
                 prev_status == Self::ClimbingWallS ||
-                prev_status == Self::FinishedClimbing {
+                prev_status == Self::ClimbingSlopeSecond
+            {
                 Ok(Self::ClimbingWallS)
             }
             else if prev_status == Self::ClimbingWallSE {
@@ -168,8 +210,7 @@ impl ClimbStatus {
                 Ok(Self::ClimbingWallSW)
             }
             else {
-                // Slopes???
-                todo!()
+                return Err(make_climbing_error()); 
             }
         }
         else if tile_type == TileType::WallStartSE {
@@ -177,7 +218,7 @@ impl ClimbStatus {
                 prev_status == Self::NotClimbing ||
                 prev_status == Self::FinishedClimbing;
             if !is_status_valid {
-                return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+                return Err(make_climbing_error());
             }
             Ok(Self::ClimbingWallSE)
         }
@@ -186,30 +227,40 @@ impl ClimbStatus {
                 prev_status == Self::NotClimbing ||
                 prev_status == Self::FinishedClimbing;
             if !is_status_valid {
-                return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+                return Err(make_climbing_error());
             }
             Ok(Self::ClimbingWallSW)
         }
         else if tile_type == TileType::WallEndSE {
             if prev_status != Self::ClimbingWallSE {
-                return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+                return Err(make_climbing_error());
             }
             Ok(Self::NotClimbing)
         }
         else if tile_type == TileType::WallEndSW {
             if prev_status != Self::ClimbingWallSW {
-                return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+                return Err(make_climbing_error());
             }
             Ok(Self::NotClimbing)
         }
+        else if tile_type == TileType::Slope {
+            let next_status = match prev_status {
+                Self::NotClimbing => Self::ClimbingSlopeFirst,
+                Self::FinishedClimbing => Self::ClimbingSlopeFirst,
+                Self::ClimbingSlopeFirst => Self::ClimbingSlopeSecond,
+                Self::ClimbingSlopeSecond => Self::ClimbingSlopeFirst,
+                _ => return Err(make_climbing_error())
+            };
+            Ok(next_status)
+        }
         else if tile_type.is_lip() {
             if !(prev_status.is_climbing_wall() || prev_status == Self::NotClimbing) {
-                return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+                return Err(make_climbing_error());
             }
             Ok(Self::FinishedClimbing)
         }
         else {
-            return Err(Self::make_climbing_error(tile_type, prev_status, group_layer_name, tile_x, tile_y));
+            return Err(make_climbing_error());
         }
     }
 
@@ -217,16 +268,5 @@ impl ClimbStatus {
         self == Self::ClimbingWallS ||
         self == Self::ClimbingWallSE ||
         self == Self::ClimbingWallSW
-    }
-
-    fn make_climbing_error(tile_type: TileType, prev_status: ClimbStatus, group_layer_name: &str, tile_x: i32, tile_y: i32) -> ClimbingError {
-        ClimbingError(format!(
-            "Encountered a {:?} tile while in climb status {:?} on group layer '{}' at {}, {}",
-            tile_type,
-            prev_status,
-            group_layer_name,
-            tile_x,
-            tile_y
-        ))
     }
 }

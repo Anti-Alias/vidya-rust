@@ -1,11 +1,13 @@
 mod cuboid;
+mod slope;
 
 use std::fmt::Debug;
 
 use bevy::{prelude::*, math::Vec3Swizzles};
 
 use crate::physics::{ Terrain, Coords, TerrainPiece, TerrainPieceRef };
-use crate::physics::collision::cuboid::collide_cuboid_with_cylinder;
+use cuboid::collide_cuboid_with_cylinder;
+use slope::collide_slope_with_cylinder;
 
 const T_EPSILON: f32 = 0.0001;
 
@@ -78,7 +80,7 @@ impl PieceCollider {
     pub fn collide_with_cylinder(&self, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
         match self.piece {
             TerrainPiece::Cuboid => collide_cuboid_with_cylinder(self.aabb(), cyl, delta),
-            //TerrainPiece::Slope => collide_slope_with_cylinder(self.aabb(), cyl, delta),
+            TerrainPiece::Slope => collide_slope_with_cylinder(self.aabb(), cyl, delta),
             _ => None
         }
     }

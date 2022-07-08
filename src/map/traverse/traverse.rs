@@ -2,11 +2,11 @@ use bevy::prelude::*;
 use tiled::*;
 use std::result::Result;
 
-use crate::physics::{ TerrainPiece };
-use crate::map::{TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus };
+use crate::physics::TerrainPiece;
+use crate::map::{TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus, TileShape };
 
+// Used to push graphics closer to the camera by a tiny bit to get correct overlapping
 const DEPTH_EPSILON: f32 = 0.001;
-
 
 // Reads contents of tiled map, parses/validates it, and populates collision data (current_map) and graphics (current_map_graphics).
 pub(crate) fn process_tiled_map(
@@ -143,7 +143,7 @@ fn process_tiles_at<'map>(
         let flattened_layer_index = flattened_layer_index + layer_index;
         let depth_offset = Vec3::new(0.0, DEPTH_EPSILON, DEPTH_EPSILON) * flattened_layer_index as f32;
 
-        // Add tile info to graphics
+        // Write to current_map_graphics
         let geom_shape = geom_climber.tile_shape()?;
         current_map_graphics.add_tile(TileGraphics {
             tileset_index: tileset_index as u32,
@@ -153,7 +153,7 @@ fn process_tiles_at<'map>(
         });
     }
 
-    // Applies collision data to current map
+    // Write to current_map
     match coll_climber.climb_status() {
         ClimbStatus::NotClimbing => {
             let mut coords = coll_climber.coords();
@@ -165,6 +165,8 @@ fn process_tiles_at<'map>(
         ClimbStatus::ClimbingWallS | ClimbStatus::ClimbingWallSE | ClimbStatus::ClimbingWallSW => {
             current_map.set_terrain_piece(TerrainPiece::Cuboid, coll_climber.coords());
         }
+        ClimbStatus::ClimbingSlopeFirst => {}
+        ClimbStatus::ClimbingSlopeSecond => {}
         ClimbStatus::FinishedClimbing => {
             let mut coords = coll_climber.coords();
             coords.y -= 1;

@@ -60,6 +60,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
+
     fn add_tile(&mut self, tile: TileGraphics) {
 
         const X: usize = 0;
@@ -95,7 +96,7 @@ impl Chunk {
                 let norm = [0.0, 1.0, 0.0];
                 for _ in 0..4 { n.push(norm); }
                 // UVs and indices
-                push_uv_indices_4(&md, uvs, i, vlen);
+                push_uv_indices(&md, uvs, i, vlen);
             },
             TileShape::Wall => {
                 // Positions (4)
@@ -110,7 +111,7 @@ impl Chunk {
                 let norm = [0.0, 0.0, 1.0];
                 for _ in 0..4 { n.push(norm); }
                 // UVs and indices
-                push_uv_indices_4(&md, uvs, i, vlen);
+                push_uv_indices(&md, uvs, i, vlen);
             },
             TileShape::WallStartSE => {
                 // Vertices (6)
@@ -214,7 +215,7 @@ impl Chunk {
                     n.push(norm);
                 }
                 // UVs and indices
-                push_uv_indices_4(&md, uvs, i, vlen);
+                push_uv_indices(&md, uvs, i, vlen);
             }
             TileShape::WallSW => {
                 // Vertices (4)
@@ -231,15 +232,17 @@ impl Chunk {
                 tp[Y] -= th;
                 tp[Z] -= th;
                 p.push(tp);
+
                 // Normals (4)
                 let norm = [-1.0/SQRT_2, 0.0, 1.0/SQRT_2];
                 for _ in 0..4 {
                     n.push(norm);
                 }
                 // UVs and indices
-                push_uv_indices_4(&md, uvs, i, vlen);
+                push_uv_indices(&md, uvs, i, vlen);
             }
             TileShape::WallEndSE => {
+
                 // Vertices (6)
                 p.push(tp);
                 tp[X] += tw;
@@ -322,6 +325,22 @@ impl Chunk {
                 i.push(vlen+4);
                 i.push(vlen+5);
             }
+            TileShape::SlopeS => {
+                // Positions (4)
+                p.push(tp);
+                tp[X] += tw;
+                p.push(tp);
+                tp[Y] += th * 0.5;
+                tp[Z] -= th * 0.5;
+                p.push(tp);
+                tp[X] -= tw;
+                p.push(tp);
+                // Normals (4)
+                let norm = [0.0, 1.0, 0.0];
+                for _ in 0..4 { n.push(norm); }
+                // UVs and indices
+                push_uv_indices(&md, uvs, i, vlen);
+            },
             _ => {
                 //panic!("Unsupported tile shape '{:?}'", tile.shape);
             }
@@ -330,7 +349,7 @@ impl Chunk {
 }
 
 // Pushes 4 uv values and 6 indices (4 vertices)
-fn push_uv_indices_4(
+fn push_uv_indices(
     mesh_data: &TileMeshData,
     uvs: &mut Vec<[f32; 2]>,
     indices: &mut Vec<u32>,

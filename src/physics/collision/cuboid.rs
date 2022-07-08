@@ -1,9 +1,6 @@
-use bevy::math::{Vec2, Vec3, Vec3Swizzles};
+use bevy::math::{ Vec2, Vec3, Vec3Swizzles };
 
-use super::{Aabb, CylinderCollider, Collision, CollisionType, RectHelper, CircleHelper, collide_line_with_circle};
-
-const T_EPSILON: f32 = 0.001;
-
+use super::{ Aabb, CylinderCollider, Collision, CollisionType, RectHelper, CircleHelper, collide_line_with_circle, T_EPSILON };
 
 pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
 

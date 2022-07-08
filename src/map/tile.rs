@@ -86,5 +86,5 @@ pub enum TileShape {
     SlopeEndE,
     SlopeStartW,
     SlopeW,
-    SlopeEndW
+    SlopeEndW,
 }

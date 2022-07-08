@@ -10,3 +10,7 @@ anyhow = "1.0"
 log = "0.4"
 uuid = "0.8.2"
 num_enum = "0.5.7"
+
+[features]
+# Determines if debug features should be included (Camera, extra menus, etc)
+debug = []

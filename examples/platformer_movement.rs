@@ -87,7 +87,7 @@ fn spawn_player(
             GlobalTransform::default()
         ))
         .insert_bundle(PhysicsBundle::new(
-            Position(Vec3::new(234.00204, 15.00005, -255.84328)),
+            Position(Vec3::new(234.00204, 15.00005, -220.0)),
             CylinderShape {
                 radius: 6.0,
                 half_height: 15.0

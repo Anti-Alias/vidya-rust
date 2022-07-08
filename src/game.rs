@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use crate::animation::AnimationPlugin;
+#[cfg(feature = "debug")]
+use crate::debug::DebugPlugin;
 use crate::graphics::GraphicsPlugin;
 use crate::platformer::PlatformerPlugin;
 use crate::player::PlayerPlugin;
@@ -28,7 +30,8 @@ impl PluginGroup for GamePlugins {
         builder.add(CameraPlugin);
         builder.add(PhysicsPlugin);
         builder.add(PlatformerPlugin);
-        //builder.add(DebugPlugin);
+        #[cfg(feature = "debug")]
+        builder.add(DebugPlugin);
         builder.add(PlayerPlugin);
     }
 }

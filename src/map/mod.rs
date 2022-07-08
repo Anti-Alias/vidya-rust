@@ -4,20 +4,16 @@ mod current_map;
 mod current_map_graphics;
 mod tile;
 mod traverse;
-
-use std::f32::consts::SQRT_2;
 use std::iter::Iterator;
 use std::path::PathBuf;
 
 use crate::game::GameState;
-use crate::camera::{CameraBundle, CameraTargetSettings};
+use crate::camera::{GameCameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction, Terrain };
-use crate::debug::Floater;
 use crate::extensions::*;
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
-use bevy::render::camera::{ScalingMode, Projection};
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 
@@ -195,7 +191,7 @@ fn map_spawn_entities(
     }
 
     // Creates root map entity
-    let map_entity = commands.spawn().insert(MapTag).id();
+    let map_entity = commands.spawn().id();
 
     // Spawns chunks as PBRBundles
     let image_handles = &current_map_graphics.tileset_handles;
@@ -263,38 +259,14 @@ fn map_spawn_entities(
         .entity(map_entity)
         .insert(current_map.terrain.clone());
 
-    // Creates bevy 3d orthographic camera
-    let cam_width = 800.0;
-    let cam_height = 450.0;
-    let cam_pos = Vec3::new(16.0*10.0, 1000.0, 600.0);
-    let ortho_bundle = Camera3dBundle {
-        projection: Projection::Orthographic(OrthographicProjection {
-            left: -cam_width / 2.0,
-            right: cam_width / 2.0,
-            bottom: -cam_height / 2.0,
-            top: cam_height / 2.0,
-            near: 1.0,
-            far: 10000.0,
-            scale: 0.5,
-            scaling_mode: ScalingMode::WindowSize,
-            ..Default::default()
-        }),
-        transform: Transform::from_translation(cam_pos)
-            .looking_towards(Vec3::new(0.0, -1.0, -1.0), Vec3::new(0.0, 1.0, 0.0))
-            .with_scale(Vec3::new(1.0, 1.0/SQRT_2, 1.0)),
-        ..default()
-    };
-
     // Spawns camera using an in-game CameraBundle
     commands
-        .spawn_bundle(CameraBundle::new(
-            ortho_bundle,
-            Position(cam_pos),
+        .spawn_bundle(GameCameraBundle::new(
+            Position(Vec3::new(16.0*10.0, 1000.0, 600.0)),
             Velocity(Vec3::ZERO),
             Friction { xz: 0.8, y: 0.8 },
             CameraTargetSettings { distance: 512.0 }
-        ))
-        .insert(Floater { speed: 2.0 });
+        ));
 
     // Removes staging resources
     commands.remove_resource::<CurrentMap>();
@@ -312,7 +284,3 @@ pub struct MapConfig {
     pub chunk_size: Vec3,
     pub flip_y: bool
 }
-
-/// Marker component struct
-#[derive(Component)]
-pub struct MapTag;

@@ -326,3 +326,29 @@ fn test_intersect_3() {
         intersection
     );
 }
+
+#[test]
+fn test_intersect_4() {
+    let a1 = Vec2::new(1.0, 1.0);
+    let b1 = Vec2::new(0.0, 0.0);
+    let a2 = Vec2::new(2.0, 0.0);
+    let b2 = Vec2::new(1.0, 1.0);
+    let intersection = intersect(a1, b1, a2, b2);
+    assert_eq!(
+        Some(0.0),
+        intersection
+    );
+}
+
+#[test]
+fn test_intersect_5() {
+    let a1 = Vec2::new(0.999, 1.0);
+    let b1 = Vec2::new(0.0, 0.0);
+    let a2 = Vec2::new(2.0, 0.0);
+    let b2 = Vec2::new(1.0, 1.0);
+    let intersection = intersect(a1, b1, a2, b2);
+    assert_eq!(
+        None,
+        intersection
+    );
+}

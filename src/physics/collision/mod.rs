@@ -279,8 +279,8 @@ fn test_collide() {
         terrain_collider,
         Vec3::new(10.0, 0.0, 5.0),
         Some(Collision {
-            t: 0.499,
-            velocity: Vec3::new(0.0, 0.0, 5.0000005),
+            t: 0.4999,
+            velocity: Vec3::new(0.0, 0.0, 5.0),
             typ: CollisionType::Wall
         })
     );
@@ -295,8 +295,8 @@ fn test_collide() {
         terrain_collider,
         Vec3::new(-10.0, 0.0, 5.0),
         Some(Collision {
-            t: 0.499,
-            velocity: Vec3::new(0.0, 0.0, 5.0000005),
+            t: 0.4999,
+            velocity: Vec3::new(0.0, 0.0, 5.0),
             typ: CollisionType::Wall
         })
     );

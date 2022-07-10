@@ -254,7 +254,7 @@ impl ClimbStatus {
             Ok(next_status)
         }
         else if tile_type.is_lip() {
-            if !(prev_status.is_climbing_wall() || prev_status == Self::NotClimbing) {
+            if !(prev_status.is_climbing_wall() || prev_status == Self::NotClimbing || prev_status == Self::ClimbingSlopeSecond) {
                 return Err(make_climbing_error());
             }
             Ok(Self::FinishedClimbing)

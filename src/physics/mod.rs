@@ -62,6 +62,8 @@ fn collide_with_terrain(
     )>
 ) {
     log::debug!("(SYSTEM) collide_with_terrain");
+    println!("----------------------");
+
 
     // Gets terrain to collide with
     let terrain = match terrain_entity.iter().next() {
@@ -77,6 +79,7 @@ fn collide_with_terrain(
 
         // For N retries...
         for _ in 0..COLLISION_RETRIES {
+
             let cylinder = CylinderCollider {
                 center: prev_pos_value,
                 radius: size.radius,

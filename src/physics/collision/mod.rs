@@ -125,7 +125,6 @@ impl TerrainCollider for Terrain {
     ) -> Option<(Collision, TerrainId)> {
         
         let mut result: Option<(Collision, TerrainId)> = None;
-        let mut terRef = None;
 
         // Determines terrain area to select based on cylinder's size and movement
         let piece_size = self.piece_size();
@@ -157,12 +156,10 @@ impl TerrainCollider for Terrain {
             };
             if closer_than(collision, result.map(|data| data.0)) {
                 result = Some((collision, tid));
-                terRef = Some(piece_ref);
             }
         }
         
         // Returns closest collision
-        println!("Terrain ref: {:?}", terRef);
         result
     }
 }

@@ -110,8 +110,6 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
             lerped_bottom < ter_bounds.max.y &&
             lerped_top > ter_bounds.min.y;
         if in_y_bounds {
-            const EPSILON: f32 = 0.001;
-            let offset = (lerped_center.xz() - cir.center).normalize() * EPSILON;
             return Some(Collision {
                 t: coll_2d.t,
                 velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y),

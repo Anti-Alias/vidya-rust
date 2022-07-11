@@ -74,7 +74,6 @@ fn collide_with_terrain(
     };
 
     // For all collidable entities
-    println!("-------");
     for (mut pos, prev_pos, size, mut vel, mut state) in collidable_entities.iter_mut() {
         let mut pos_value = pos.0;              // End point in collision
         let mut prev_pos_value = prev_pos.0;    // Start point in collision
@@ -98,7 +97,6 @@ fn collide_with_terrain(
                     vel_value = collision.velocity;
                     delta = (vel_value + collision.offset) * (1.0 - t);
                     pos_value = prev_pos_value + delta;
-                    println!("pos: {},\nold_pos: {}", pos_value, prev_pos_value);
                     if let Some(state) = &mut state {
                         if collision.typ == CollisionType::Floor {
                             state.on_ground = true;

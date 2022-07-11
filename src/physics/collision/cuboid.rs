@@ -1,6 +1,6 @@
 use bevy::math::{ Vec2, Vec3, Vec3Swizzles };
 
-use super::{ Aabb, CylinderCollider, Collision, CollisionType, RectHelper, CircleHelper, collide_line_with_circle, T_EPSILON };
+use super::{ Aabb, CylinderCollider, Collision, CollisionType, RectHelper, CircleHelper, collide_line_with_circle, T_EPSILON, t_in_range };
 
 pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, delta: Vec3) -> Option<Collision> {
 
@@ -10,7 +10,7 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
     // Collision code for left and right sides of this cuboid
     let x_collision = |ter_edge: f32| {
         let t = (ter_edge - cyl.center.x) / delta.x;
-        if t >= 0.0 && t <= 1.0 {
+        if t_in_range(t) {
             let t = t - T_EPSILON;
             let lerped_center = cyl.center + delta * t;
             let lerped_bottom = lerped_center.y - cyl.half_height;
@@ -21,11 +21,11 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
                 lerped_bottom < ter_bounds.max.y &&
                 lerped_top > ter_bounds.min.y;
             if in_yz_bounds {
-                return Some(Collision {
+                return Some(Collision::new(
                     t,
-                    velocity: Vec3::new(0.0, delta.y, delta.z),
-                    typ: CollisionType::Wall
-                });
+                    Vec3::new(0.0, delta.y, delta.z),
+                    CollisionType::Wall
+                ));
             }
         }
         None
@@ -34,7 +34,7 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
     // Collision code for bottom and top sides of this cuboid
     let y_collision = |ter_edge: f32, coll_type: CollisionType| {
         let t = (ter_edge - cyl.center.y) / delta.y;
-        if t >= 0.0 && t <= 1.0 {
+        if t_in_range(t) {
             let lerped_center = cyl.center + delta * t;
             let lerped_center_xz = lerped_center.xz();
             let in_xz_bounds =
@@ -63,11 +63,11 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
                     radius: cyl.radius
                 }.contains_point(lerped_center_xz);
             if in_xz_bounds {
-                return Some(Collision {
+                return Some(Collision::new(
                     t,
-                    velocity: Vec3::new(delta.x, 0.0, delta.z),
-                    typ: coll_type
-                });
+                    Vec3::new(delta.x, 0.0, delta.z),
+                    coll_type
+                ));
             }
         }
         None
@@ -76,7 +76,7 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
     // Collision code for near and far sides of this cuboid
     let z_collision = |ter_edge: f32| {
         let t = (ter_edge - cyl.center.z) / delta.z;
-        if t >= 0.0 && t <= 1.0 {
+        if t_in_range(t) {
             let lerped_center = cyl.center + delta * t;
             let lerped_bottom = lerped_center.y - cyl.half_height;
             let lerped_top = lerped_center.y + cyl.half_height;
@@ -86,11 +86,11 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
                 lerped_bottom < ter_bounds.max.y &&
                 lerped_top > ter_bounds.min.y;
             if in_xy_bounds {
-                return Some(Collision {
+                return Some(Collision::new(
                     t,
-                    velocity: Vec3::new(delta.x, delta.y, 0.0),
-                    typ: CollisionType::Wall
-                });
+                    Vec3::new(delta.x, delta.y, 0.0),
+                    CollisionType::Wall
+                ));
             }
         }
         None
@@ -110,9 +110,12 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
             lerped_bottom < ter_bounds.max.y &&
             lerped_top > ter_bounds.min.y;
         if in_y_bounds {
+            const EPSILON: f32 = 0.001;
+            let offset = (lerped_center.xz() - cir.center).normalize() * EPSILON;
             return Some(Collision {
                 t: coll_2d.t,
                 velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y),
+                offset: Vec3::new(offset.x, 0.0, offset.y),
                 typ: CollisionType::Wall
             })
         }

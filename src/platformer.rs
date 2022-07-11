@@ -171,7 +171,7 @@ fn control_animations(mut platformer_entities: Query<
                 ).unwrap();
             },
             State::Running => {
-                let vxz = velocity.0.xz().length_squared();
+                let vxz = velocity.0.length_squared();
                 animation_set.set_speed(vxz / 4.0);
                 animation_set.set_grouped_animation(
                     animator.run_handle,

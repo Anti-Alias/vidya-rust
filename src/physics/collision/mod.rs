@@ -14,9 +14,20 @@ const T_EPSILON: f32 = 0.0001;
 /// Represents a collision event
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Collision {
+    /// T value between 0 and 1 which determines when the collision occurred
     pub t: f32,
+    /// Resulting velocity after the collision
     pub velocity: Vec3,
+    /// Positional offset to apply after collision
+    pub offset: Vec3,
+    /// Type of surface that was hit at collision
     pub typ: CollisionType
+}
+
+impl Collision {
+    fn new(t: f32, velocity: Vec3, typ: CollisionType) -> Self {
+        Self { t, velocity, offset: Vec3::ZERO, typ }
+    }
 }
 
 
@@ -99,6 +110,7 @@ impl TerrainCollider for Terrain {
 
     fn collide_with_cylinder(&self, cylinder: &CylinderCollider, delta: Vec3) -> Option<Collision> {
         let mut closest_coll = None;
+        let mut closest_ref = None;
 
         // Determines terrain area to select based on cylinder's size and movement
         let piece_size = self.piece_size();
@@ -106,6 +118,7 @@ impl TerrainCollider for Terrain {
         let (min, max) = Coords::from_aabb(cyl_aabb, piece_size);
 
         // For all terrain pieces in the selection...
+
         for piece_ref in self.iter_pieces(min, max) {
 
             // Create short-lived piece collider
@@ -123,7 +136,10 @@ impl TerrainCollider for Terrain {
 
             // Collides the piece collider with the moving cylinder
             let collision = piece_coll.collide_with_cylinder(cylinder, delta);
-            closest_coll = closest_collision(collision, closest_coll);
+            if closer_than(collision, closest_coll) {
+                closest_coll = collision;
+                closest_ref = Some(piece_ref);
+            }
         }
         
         // Returns closest collision
@@ -150,19 +166,29 @@ fn moving_cylinder_aabb(cylinder: &CylinderCollider, delta: Vec3) -> Aabb {
     Aabb { min, max }
 }
 
-fn closest_collision<'a>(a: Option<Collision>, b: Option<Collision>) -> Option<Collision> {
+fn closer_than<'a>(a: Option<Collision>, b: Option<Collision>) -> bool {
     match a {
         Some(a_coll) => {
             match b {
                 Some(b_coll) => {
-                    if a_coll.t < b_coll.t { a }
-                    else { b }
+                    if a_coll.t < b_coll.t { true }
+                    else { false }
                 }
-                None => a
+                None => true
             }
         }
-        None => b
+        None => false
     }
+}
+
+// Compares two floats with a margin of error
+fn float_eq(a: f32, b: f32, epsilon: f32) -> bool {
+    (a - b).abs() < epsilon
+}
+
+fn t_in_range(t: f32) -> bool {
+    const EPSILON: f32 = 0.001;
+    t >= 0.0 - EPSILON && t <= 1.0 + EPSILON
 }
 
 
@@ -202,11 +228,12 @@ impl RectHelper {
 fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: CircleHelper) -> Option<Collision2D> {
 
     // Gets closest point on line "d"
+    const EPSILON: f32 = 0.001;
     let a = src;
     let c = circle.center;
     let ca = c - a;
     let rad_squared = circle.radius * circle.radius;
-    if ca.length_squared() < rad_squared {
+    if ca.length_squared() + EPSILON < rad_squared {
         return None;
     };
     let b = dest;
@@ -230,7 +257,7 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: CircleHelper) -> Opti
     let e = d - ba_norm * ed_len;
     let ea_len = (e - a).length();
     let t = ea_len / ba_len;
-    if t < 0.0 || t > 1.0 {
+    if !t_in_range(t) {
         return None;
     }
 
@@ -253,371 +280,4 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: CircleHelper) -> Opti
         t,
         velocity
     })
-}
-
-#[test]
-fn test_collide() {
-
-    fn test(cyl: CylinderCollider, coll: PieceCollider, delta: Vec3, expected: Option<Collision>) {
-        let collision = coll.collide_with_cylinder(&cyl, delta);
-        assert_eq!(expected, collision);
-    }
-
-    let terrain_collider = PieceCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(0.0, 0.0, 0.0),
-        size: Vec3::new(10.0, 10.0, 10.0)
-    };
-
-    // Left
-    test(
-        CylinderCollider {
-            center: Vec3::new(-15.0, 5.0, 5.0),
-            half_height: 5.0,
-            radius: 10.0
-        },
-        terrain_collider,
-        Vec3::new(10.0, 0.0, 5.0),
-        Some(Collision {
-            t: 0.4999,
-            velocity: Vec3::new(0.0, 0.0, 5.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Right
-    test(
-        CylinderCollider {
-            center: Vec3::new(25.0, 5.0, 5.0),
-            half_height: 5.0,
-            radius: 10.0
-        },
-        terrain_collider,
-        Vec3::new(-10.0, 0.0, 5.0),
-        Some(Collision {
-            t: 0.4999,
-            velocity: Vec3::new(0.0, 0.0, 5.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Near
-    test(
-        CylinderCollider {
-            center: Vec3::new(5.0, 5.0, 20.0),
-            half_height: 5.0,
-            radius: 10.0
-        },
-        terrain_collider,
-        Vec3::new(5.0, 0.0, -15.0),
-        Some(Collision {
-            t: 0.0,
-            velocity: Vec3::new(5.0, 0.0, 0.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Far
-    test(
-        CylinderCollider {
-            center: Vec3::new(5.0, 5.0, -12.0),
-            half_height: 5.0,
-            radius: 10.0
-        },
-        terrain_collider,
-        Vec3::new(5.0, 0.0, 15.0),
-        Some(Collision {
-            t: 0.13333334,
-            velocity: Vec3::new(5.0, 0.0, 0.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Far
-    test(
-        CylinderCollider {
-            center: Vec3::new(5.0, 5.0, -12.0),
-            half_height: 5.0,
-            radius: 10.0
-        },
-        terrain_collider,
-        Vec3::new(5.0, 0.0, 15.0),
-        Some(Collision {
-            t: 0.13333334,
-            velocity: Vec3::new(5.0, 0.0, 0.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    let terrain_collider = PieceCollider {
-        piece: TerrainPiece::Cuboid,
-        position: Vec3::new(3.0, 0.0, -6.0),
-        size: Vec3::new(3.0, 4.0, 3.0)
-    };
-
-    // Top
-    test(
-        CylinderCollider {
-            center: Vec3::new(4.0, 6.0, -4.0),
-            half_height: 1.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(0.0, -2.0, 0.0),
-        Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Floor
-        })
-    );
-
-    // Top 2
-    test(
-        CylinderCollider {
-            center: Vec3::new(2.0, 6.0, -4.0),
-            half_height: 1.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(0.0, -2.0, 0.0),
-        Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Floor
-        })
-    );
-
-    // Top 3
-    let mov = std::f32::consts::FRAC_1_SQRT_2;
-    test(
-        CylinderCollider {
-            center: Vec3::new(3.0-mov, 6.0, -6.0-mov),
-            half_height: 1.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(0.0, -2.0, 0.0),
-        Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Floor
-        })
-    );
-
-    // Top 4
-    let mov = std::f32::consts::FRAC_1_SQRT_2 + 0.00001;
-    test(
-        CylinderCollider {
-            center: Vec3::new(3.0-mov, 6.0, -6.0-mov),
-            half_height: 1.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(0.0, -2.0, 0.0),
-        None
-    );
-
-    // Bottom
-    test(
-        CylinderCollider {
-            center: Vec3::new(4.0, -2.0, -4.0),
-            half_height: 1.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(0.0, 2.0, 0.0),
-        Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Ceiling
-        })
-    );
-
-    // Far/left corner
-    let mov = 2.0 * std::f32::consts::FRAC_1_SQRT_2;
-    test(
-        CylinderCollider {
-            center: Vec3::new(3.0-mov, 2.0, -6.0-mov),
-            half_height: 2.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(mov, 0.0, mov),
-        Some(Collision {
-            t: 0.50000006,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Far/left corner edgecase
-    test(
-        CylinderCollider {
-            center: Vec3::new(3.0, 2.0, -8.0),
-            half_height: 2.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(0.0, 0.0, 2.0),
-        Some(Collision {
-            t: 0.5,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Near/right corner
-    test(
-        CylinderCollider {
-            center: Vec3::new(6.0+mov, 2.0, -3.0+mov),
-            half_height: 2.0,
-            radius: 1.0
-        },
-        terrain_collider,
-        Vec3::new(-mov, 0.0, -mov),
-        Some(Collision {
-            t: 0.50000006,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
-            typ: CollisionType::Wall
-        })
-    );
-
-    // Missing
-    test(
-        CylinderCollider {
-            center: Vec3::new(-20.0, 15.0, 0.0),
-            half_height: 5.0,
-            radius: 10.0
-        },
-        PieceCollider {
-            piece: TerrainPiece::Cuboid,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            size: Vec3::new(10.0, 10.0, 10.0)
-        },
-        Vec3::new(20.0, 0.0, 5.0),
-        None
-    );
-}
-
-#[test]
-fn test_collide_line_with_circle() {
-
-    fn test(a: Vec2, b: Vec2, circle: CircleHelper, expected: Option<Collision2D>) {
-        let collision = collide_line_with_circle(a, b, circle);
-        assert_eq!(expected, collision);
-    }
-
-    let circle = CircleHelper {
-        center: Vec2::new(2.0, 0.0),
-        radius: 1.0
-    };
-
-    test(
-        Vec2::ZERO,
-        Vec2::new(2.0, 0.0),
-        circle,
-        Some(Collision2D {
-            t: 0.5,
-            velocity: Vec2::ZERO
-        })
-    );
-
-    test(
-        Vec2::new(-5.0, 0.0),
-        Vec2::new(-4.0, 1.0),
-        circle,
-        None
-    );
-
-    test(
-        Vec2::new(5.0, 0.0),
-        Vec2::new(6.0, 1.0),
-        circle,
-        None
-    );
-
-    test(
-        Vec2::ZERO,
-        Vec2::new(1.0, 1.0),
-        circle,
-        None
-    );
-
-    test(
-        Vec2::ZERO,
-        Vec2::new(1.0, -1.0),
-        circle,
-        None
-    );
-
-    test(
-        Vec2::new(-1.0, 0.0),
-        Vec2::ZERO,
-        circle,
-        None
-    );
-
-    test(
-        Vec2::new(1.0, 0.0),
-        Vec2::new(2.0, 0.0),
-        circle,
-        Some(Collision2D {
-            t: 0.0,
-            velocity: Vec2::ZERO
-        })
-    );
-
-    test(
-        Vec2::new(1.1, 0.0),
-        Vec2::new(2.0, 0.0),
-        circle,
-        None
-    );
-
-    test(
-        Vec2::new(0.0, 0.001),
-        Vec2::new(2.0, 0.001),
-        circle,
-        Some(Collision2D {
-            t: 0.50000024,
-            velocity: Vec2::new(9.536743e-10, 9.5367375e-7)
-        })
-    );
-
-    test(
-        Vec2::new(0.0, 0.99999),
-        Vec2::new(4.0, 0.99999),
-        circle,
-        Some(Collision2D {
-            t: 0.49888122,
-            velocity: Vec2::new(3.9820597, 0.01782036)
-        })
-    );
-
-    test(
-        Vec2::new(2.99999, 2.0),
-        Vec2::new(2.99999, -2.0),
-        circle,
-        Some(Collision2D {
-            t: 0.49888122,
-            velocity: Vec2::new(0.017820578, -3.9820595) }
-        )
-    );
-
-    test(
-        Vec2::new(1.9, 2.0),
-        Vec2::new(1.9, -2.0),
-        circle,
-        Some(Collision2D {
-            t: 0.25125313,
-            velocity: Vec2::new(-0.019949785, -0.0020050292)
-        })
-    );
-
-    test(
-        Vec2::new(3.0, 2.0),
-        Vec2::new(3.0, -2.0),
-        circle,
-        None
-    );
 }

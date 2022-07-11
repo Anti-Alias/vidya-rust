@@ -62,11 +62,10 @@ fn collide_with_terrain(
     )>
 ) {
     log::debug!("(SYSTEM) collide_with_terrain");
-    println!("----------------------");
 
 
     // Gets terrain to collide with
-    let terrain = match terrain_entity.iter().next() {
+    let terrain: &Terrain = match terrain_entity.iter().next() {
         Some(entity) => entity,
         None => return
     };
@@ -88,11 +87,11 @@ fn collide_with_terrain(
             let collision = terrain.collide_with_cylinder(&cylinder, vel_value);
             match collision {
                 Some(collision) => {
-                    const EPSILON: f32 = 0.001;
+                    const EPSILON: f32 = 0.0001;
                     let t = (collision.t - EPSILON).min(1.0).max(0.0);
                     prev_pos_value = prev_pos_value + vel_value * t;
                     vel_value = collision.velocity;
-                    pos_value = prev_pos_value + vel_value * (1.0 - t);
+                    pos_value = prev_pos_value + vel_value * (1.0 - t) + collision.offset;
                     if let Some(state) = &mut state {
                         if collision.typ == CollisionType::Floor {
                             state.on_ground = true;

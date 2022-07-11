@@ -3,7 +3,7 @@ mod slope;
 
 use std::fmt::Debug;
 
-use bevy::{prelude::*, math::Vec3Swizzles};
+use bevy::{prelude::*, math::Vec3Swizzles, utils::HashSet};
 
 use crate::physics::{ Terrain, Coords, TerrainPiece, TerrainPieceRef };
 use cuboid::collide_cuboid_with_cylinder;
@@ -102,15 +102,30 @@ impl PieceCollider {
     }
 }
 
+/// Uniquely defines the terrain that was collided with.
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct TerrainId(Coords);
+
 pub trait TerrainCollider {
-    fn collide_with_cylinder(&self, cylinder: &CylinderCollider, delta: Vec3) -> Option<Collision>;
+    fn collide_with_cylinder(
+        &self,
+        cylinder: &CylinderCollider,
+        delta: Vec3,
+        exclude: &HashSet<TerrainId>
+    ) -> Option<(Collision, TerrainId)>;
 }
 
 impl TerrainCollider for Terrain {
 
-    fn collide_with_cylinder(&self, cylinder: &CylinderCollider, delta: Vec3) -> Option<Collision> {
-        let mut closest_coll = None;
-        let mut closest_ref = None;
+    fn collide_with_cylinder(
+        &self,
+        cylinder: &CylinderCollider,
+        delta: Vec3,
+        exclude: &HashSet<TerrainId>
+    ) -> Option<(Collision, TerrainId)> {
+        
+        let mut result: Option<(Collision, TerrainId)> = None;
+        let mut terRef = None;
 
         // Determines terrain area to select based on cylinder's size and movement
         let piece_size = self.piece_size();
@@ -118,8 +133,9 @@ impl TerrainCollider for Terrain {
         let (min, max) = Coords::from_aabb(cyl_aabb, piece_size);
 
         // For all terrain pieces in the selection...
-
         for piece_ref in self.iter_pieces(min, max) {
+            let tid = TerrainId(piece_ref.coords);
+            if exclude.contains(&tid) { continue };
 
             // Create short-lived piece collider
             let TerrainPieceRef { piece, coords } = piece_ref;
@@ -135,15 +151,19 @@ impl TerrainCollider for Terrain {
             };
 
             // Collides the piece collider with the moving cylinder
-            let collision = piece_coll.collide_with_cylinder(cylinder, delta);
-            if closer_than(collision, closest_coll) {
-                closest_coll = collision;
-                closest_ref = Some(piece_ref);
+            let collision = match piece_coll.collide_with_cylinder(cylinder, delta) {
+                Some(coll) => coll,
+                None => continue
+            };
+            if closer_than(collision, result.map(|data| data.0)) {
+                result = Some((collision, tid));
+                terRef = Some(piece_ref);
             }
         }
         
         // Returns closest collision
-        closest_coll
+        println!("Terrain ref: {:?}", terRef);
+        result
     }
 }
 
@@ -166,18 +186,13 @@ fn moving_cylinder_aabb(cylinder: &CylinderCollider, delta: Vec3) -> Aabb {
     Aabb { min, max }
 }
 
-fn closer_than<'a>(a: Option<Collision>, b: Option<Collision>) -> bool {
-    match a {
-        Some(a_coll) => {
-            match b {
-                Some(b_coll) => {
-                    if a_coll.t < b_coll.t { true }
-                    else { false }
-                }
-                None => true
-            }
+fn closer_than(a: Collision, b: Option<Collision>) -> bool {
+    match b {
+        Some(b) => {
+            if a.t < b.t { true }
+            else { false }
         }
-        None => false
+        None => true
     }
 }
 

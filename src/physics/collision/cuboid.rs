@@ -115,7 +115,7 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
             return Some(Collision {
                 t: coll_2d.t,
                 velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y),
-                offset: Vec3::new(offset.x, 0.0, offset.y),
+                offset: Vec3::ZERO,
                 typ: CollisionType::Wall
             })
         }

@@ -69,9 +69,6 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
                     typ: CollisionType::Floor
                 });
             }
-            else {
-                println!("Not in xz bounds");
-            }
         None
     };
 
@@ -85,7 +82,7 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
             let in_xz_bounds =
                 RectHelper {
                     min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z - cyl.radius),
-                    max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z + cyl.radius)
+                    max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.min.z + cyl.radius)
                 }.contains_point(lerped_center_xz);
             if in_xz_bounds {
                 return Some(Collision::new(
@@ -235,9 +232,11 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
     }
 
     // Top collision
-    let coll = top_collision();
-    if coll.is_some() {
-        return coll;
+    if delta.y < 0.0 {
+        let coll = top_collision();
+        if coll.is_some() {
+            return coll;
+        }
     }
     // Far collision
     // if delta.z > 0.0 {
@@ -305,7 +304,6 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
 
     // Ignores case where a1 -> b1 is coming from underneath a2 -> b2
     if !is_ccw(a1, b2, a2) {
-        println!("Not CCW");
         return None;
     }
 
@@ -320,7 +318,6 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
     if slope1.abs() > 70.0 {
         let (slope2, inter2) = slope_intercept_of(a2, b2);
         if a2.x == b2.x {
-            println!("Case A");
             return None;
         }
         let y = slope2*a1.x + inter2;
@@ -333,12 +330,10 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
             let offset = Vec2::ZERO;
             return Some((collision, offset));
         }
-        println!("Case B");
         return None;
     }
     else if slope2.abs() > 70.0 {
         if a1.x == b1.x {
-            println!("Case C");
             return None;
         }
         let t = (a2.x - a1.x) / (b1.x - a1.x);
@@ -350,7 +345,6 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
         if t_in_range(t) {
             return Some((collision, offset));
         }
-        println!("Case D");
         return None;
     }
 
@@ -358,14 +352,12 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
     let inter_x = (intercept2 - intercept1) / (slope1 - slope2);
     let mut t = (inter_x - a1.x) / (b1.x - a1.x);
     if !t_in_range(t) {
-        println!("Case E {}", t);
         return None;
     }
     const EP: f32 = 0.01;
     let between_first = between(a1.x, b1.x, inter_x, EP);
     let between_second = between(a2.x, b2.x, inter_x, EP);
     if !(between_first || between_second) {
-        println!("Case F");
         return None;
     }
 

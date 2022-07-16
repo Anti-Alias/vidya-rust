@@ -110,11 +110,12 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
             lerped_bottom < ter_bounds.max.y &&
             lerped_top > ter_bounds.min.y;
         let dir = (lerped_center.xz() - edge).normalize();
+        let dir = Vec3::new(dir.x, 0.0, dir.y);
         if in_y_bounds {
             return Some(Collision {
                 t: coll_2d.t,
                 velocity: Vec3::new(coll_2d.velocity.x, delta.y, coll_2d.velocity.y),
-                offset: Vec3::ZERO,
+                offset: dir * 0.001,
                 typ: CollisionType::Wall
             })
         }

@@ -268,7 +268,7 @@ fn collide_line_with_circle(src: Vec2, dest: Vec2, circle: CircleHelper) -> Opti
     // Computes collision point
     let e = d - ba_norm * ed_len;
     let ea_len = (e - a).length();
-    let t = ea_len / ba_len;
+    let mut t = ea_len / ba_len;
     if !t_in_range(t) {
         return None;
     }

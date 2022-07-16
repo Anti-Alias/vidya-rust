@@ -51,7 +51,7 @@ impl Plugin for PhysicsPlugin {
 }
 
 
-const COLLISION_RETRIES: u32 = 10;
+const COLLISION_RETRIES: u32 = 4;
 fn collide_with_terrain(
     terrain_entity: Query<&Terrain>,
     mut collidable_entities: Query<(
@@ -63,7 +63,7 @@ fn collide_with_terrain(
     )>,
     mut terrain_ids: Local<HashSet<TerrainId>>
 ) {
-    const EPSILON: f32 = 0.0001;
+    const EPSILON: f32 = 0.01;
     log::debug!("(SYSTEM) collide_with_terrain");
     terrain_ids.clear();
 
@@ -77,8 +77,9 @@ fn collide_with_terrain(
     for (mut pos, prev_pos, size, mut vel, mut state) in collidable_entities.iter_mut() {
         let mut pos_value = pos.0;              // End point in collision
         let mut prev_pos_value = prev_pos.0;    // Start point in collision
+        let initial_vel_value = vel.0;          // Initial velocity value
         let mut vel_value = vel.0;              // Velocity at start point
-        let mut delta = vel_value;
+        let mut delta = vel_value;              // Change in motion
 
         // For N retries...
         for _ in 0..COLLISION_RETRIES {
@@ -90,7 +91,7 @@ fn collide_with_terrain(
             match terrain.collide_with_cylinder(&cylinder, delta, &terrain_ids) {
                 Some((collision, tid)) => {
 
-                    terrain_ids.insert(tid);
+                    //terrain_ids.insert(tid);
                     let t = (collision.t - EPSILON).min(1.0).max(0.0);
                     prev_pos_value += delta * t;
 
@@ -110,6 +111,8 @@ fn collide_with_terrain(
                 }
             }
         }
+        pos.0 = prev_pos_value;
+        vel.0 = initial_vel_value;
         log::info!("Collision retries exhausted");
     }
 }

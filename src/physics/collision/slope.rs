@@ -75,7 +75,7 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
         let b1 = a1 + delta.zy();
         let a2 = Vec2::new(max.z, min.y);
         let b2 = Vec2::new(min.z, max.y);
-        let (coll2d, offset2d) = collide2d(a1, b1, a2, b2)?;
+        let (coll2d, offset2d) = collide2d(a1, b1, a2, b2, Vec2::Y)?;
         let vel_zy = coll2d.velocity;
         let ter_point = cyl.center + delta * coll2d.t;
             if in_xz_bounds(ter_point.xz()) {
@@ -242,7 +242,7 @@ fn is_ccw(p1: Vec2, p2: Vec2, p3: Vec2) -> bool {
     val <= 0.0
 }
 
-fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2) -> Option<(Collision2D, Vec2)> {
+fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Option<(Collision2D, Vec2)> {
 
     // Ensures that a2 is to the right of b2
     if b2.x > a2.x {
@@ -254,7 +254,6 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2) -> Option<(Collisio
         return None;
     }
 
-
     // Checks pathological cases
     const EPSILON: f32 = 0.0001;
     if a1 == b1 { return None }
@@ -263,7 +262,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2) -> Option<(Collisio
     let (slope1, intercept1) = slope_intercept_of(a1, b1);
     let (slope2, intercept2) = slope_intercept_of(a2, b2);
 
-    if slope1.abs() > 100.0 {
+    if slope1.abs() > 70.0 {
         let (slope2, inter2) = slope_intercept_of(a2, b2);
         if a2.x == b2.x {
             return None;
@@ -280,7 +279,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2) -> Option<(Collisio
         }
         return None;
     }
-    else if float_eq(a2.x, b2.x, EPSILON) {
+    else if slope2.abs() > 70.0 {
         if a1.x == b1.x {
             return None;
         }
@@ -298,11 +297,14 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2) -> Option<(Collisio
 
     // Normal slope intersection
     let inter_x = (intercept2 - intercept1) / (slope1 - slope2);
-    let t = (inter_x - a1.x) / (b1.x - a1.x);
+    let mut t = (inter_x - a1.x) / (b1.x - a1.x);
+    if !t_in_range(t) {
+        return None;
+    }
     const EP: f32 = 0.01;
     let between_first = between(a1.x, b1.x, inter_x, EP);
     let between_second = between(a2.x, b2.x, inter_x, EP);
-    if  between_first && between_second  {
+    if between_first && between_second  {
         let inter_y = inter_x*slope2 + intercept2;
         let final_vel_x = b1.x - a1.x;
         let collision = Collision2D {
@@ -311,7 +313,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2) -> Option<(Collisio
         };
         let final_x = inter_x + final_vel_x;
         let final_y = slope2*final_x + intercept2;
-        let offset = Vec2::new(0.0, final_y - inter_y);
+        let offset = Vec2::new(0.0, final_y - inter_y) + normal*Vec2::new(0.01, 0.01);
         Some((collision, offset))
     }
     else {

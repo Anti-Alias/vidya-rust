@@ -75,6 +75,7 @@ fn collide_with_terrain(
 
     // For all collidable entities
     for (mut pos, prev_pos, size, mut vel, mut state) in collidable_entities.iter_mut() {
+        
         let mut pos_value = pos.0;              // End point in collision
         let mut prev_pos_value = prev_pos.0;    // Start point in collision
         let initial_vel_value = vel.0;          // Initial velocity value

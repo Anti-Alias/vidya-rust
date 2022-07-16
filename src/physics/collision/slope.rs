@@ -39,28 +39,8 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
     // Helper callback function
     let in_xz_bounds = |point: Vec2| -> bool {
         RectHelper {
-            min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z),
-            max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z)
-        }.contains_point(point) ||
-        RectHelper {
-            min: Vec2::new(ter_bounds.min.x, ter_bounds.min.z - cyl.radius),
-            max: Vec2::new(ter_bounds.max.x, ter_bounds.max.z + cyl.radius)
-        }.contains_point(point) ||
-        CircleHelper {
-            center: ter_bounds.min.xz(),
-            radius: cyl.radius
-        }.contains_point(point) ||
-        CircleHelper {
-            center: Vec2::new(ter_bounds.max.x, ter_bounds.min.z),
-            radius: cyl.radius
-        }.contains_point(point) ||
-        CircleHelper {
-            center: Vec2::new(ter_bounds.min.x, ter_bounds.max.z),
-            radius: cyl.radius
-        }.contains_point(point) ||
-        CircleHelper {
-            center: ter_bounds.max.xz(),
-            radius: cyl.radius
+            min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z - cyl.radius),
+            max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z + cyl.radius)
         }.contains_point(point)
     };
 
@@ -88,6 +68,9 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
                     offset: Vec3::new(0.0, offset2d.y + EPSILON, 0.0),
                     typ: CollisionType::Floor
                 });
+            }
+            else {
+                println!("Not in xz bounds");
             }
         None
     };
@@ -251,6 +234,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
 
     // Ignores case where a1 -> b1 is coming from underneath a2 -> b2
     if !is_ccw(a1, b2, a2) {
+        println!("Not ccw");
         return None;
     }
 
@@ -265,6 +249,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
     if slope1.abs() > 70.0 {
         let (slope2, inter2) = slope_intercept_of(a2, b2);
         if a2.x == b2.x {
+            println!("Case A");
             return None;
         }
         let y = slope2*a1.x + inter2;
@@ -277,10 +262,12 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
             let offset = Vec2::ZERO;
             return Some((collision, offset));
         }
+        println!("Case B");
         return None;
     }
     else if slope2.abs() > 70.0 {
         if a1.x == b1.x {
+            println!("Case C");
             return None;
         }
         let t = (a2.x - a1.x) / (b1.x - a1.x);
@@ -292,6 +279,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
         if t_in_range(t) {
             return Some((collision, offset));
         }
+        println!("Case D");
         return None;
     }
 
@@ -299,24 +287,25 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
     let inter_x = (intercept2 - intercept1) / (slope1 - slope2);
     let mut t = (inter_x - a1.x) / (b1.x - a1.x);
     if !t_in_range(t) {
+        println!("Case E");
         return None;
     }
     const EP: f32 = 0.01;
     let between_first = between(a1.x, b1.x, inter_x, EP);
     let between_second = between(a2.x, b2.x, inter_x, EP);
-    if between_first && between_second  {
-        let inter_y = inter_x*slope2 + intercept2;
-        let final_vel_x = b1.x - a1.x;
-        let collision = Collision2D {
-            t,
-            velocity: Vec2::new(final_vel_x, 0.0)
-        };
-        let final_x = inter_x + final_vel_x;
-        let final_y = slope2*final_x + intercept2;
-        let offset = Vec2::new(0.0, final_y - inter_y) + normal*Vec2::new(0.01, 0.01);
-        Some((collision, offset))
+    if !(between_first || between_second) {
+        println!("Case F");
+        return None;
     }
-    else {
-        None
-    }
+
+    let inter_y = inter_x*slope2 + intercept2;
+    let final_vel_x = b1.x - a1.x;
+    let collision = Collision2D {
+        t,
+        velocity: Vec2::new(final_vel_x, 0.0)
+    };
+    let final_x = inter_x + final_vel_x;
+    let final_y = slope2*final_x + intercept2;
+    let offset = Vec2::new(0.0, final_y - inter_y) + normal*Vec2::new(0.01, 0.01);
+    Some((collision, offset))
 }

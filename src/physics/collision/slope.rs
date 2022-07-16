@@ -20,12 +20,19 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
             let lerped_center = cyl.center + delta * t;
             let lerped_bottom = lerped_center.y - cyl.half_height;
             let lerped_top = lerped_center.y + cyl.half_height;
-            let in_yz_bounds =
+            let in_rect_bounds = || {
                 lerped_center.z > ter_bounds.min.z &&
                 lerped_center.z < ter_bounds.max.z  &&
                 lerped_bottom < ter_bounds.max.y &&
-                lerped_top > ter_bounds.min.y;
-            if in_yz_bounds {
+                lerped_top > ter_bounds.min.y
+            };
+            let under_slope = || {
+                let a = Vec2::new(ter_bounds.min.z, ter_bounds.max.y);
+                let b = Vec2::new(lerped_center.z - cyl.radius, lerped_center.y - cyl.half_height);
+                let c = Vec2::new(ter_bounds.max.z, ter_bounds.min.y);
+                is_ccw(a, b, c)
+            };
+            if in_rect_bounds() && under_slope() {
                 return Some(Collision::new(
                     t,
                     Vec3::new(0.0, delta.y, delta.z),
@@ -93,51 +100,7 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
             }
         }
         None
-    };
-
-    // Collision code for bottom and top sides of this cuboid
-    // let top_collision = || {
-    //     let ter_edge = ter_bounds.max.y + cyl.half_height;
-    //     let t = (ter_edge - cyl.center.y) / delta.y;
-    //     if t_in_range(t) {
-    //         let lerped_center = cyl.center + delta * t;
-    //         let lerped_center_xz = lerped_center.xz();
-    //         let in_xz_bounds =
-    //             RectHelper {
-    //                 min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z),
-    //                 max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z)
-    //             }.contains_point(lerped_center_xz) ||
-    //             RectHelper {
-    //                 min: Vec2::new(ter_bounds.min.x, ter_bounds.min.z - cyl.radius),
-    //                 max: Vec2::new(ter_bounds.max.x, ter_bounds.max.z + cyl.radius)
-    //             }.contains_point(lerped_center_xz) ||
-    //             CircleHelper {
-    //                 center: ter_bounds.min.xz(),
-    //                 radius: cyl.radius
-    //             }.contains_point(lerped_center_xz) ||
-    //             CircleHelper {
-    //                 center: Vec2::new(ter_bounds.max.x, ter_bounds.min.z),
-    //                 radius: cyl.radius
-    //             }.contains_point(lerped_center_xz) ||
-    //             CircleHelper {
-    //                 center: Vec2::new(ter_bounds.min.x, ter_bounds.max.z),
-    //                 radius: cyl.radius
-    //             }.contains_point(lerped_center_xz) ||
-    //             CircleHelper {
-    //                 center: ter_bounds.max.xz(),
-    //                 radius: cyl.radius
-    //             }.contains_point(lerped_center_xz);
-    //         if in_xz_bounds {
-    //             return Some(Collision::new(
-    //                 t,
-    //                 Vec3::new(delta.x, 0.0, delta.z),
-    //                 CollisionType::Floor
-    //             ));
-    //         }
-    //     }
-    //     None
-    // };
-    
+    };    
 
     // Collision code for the bottom side of this slope
     let bottom_collision = |ter_edge: f32, coll_type: CollisionType| {
@@ -202,20 +165,20 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
     };
 
     // Left collision
-    // if delta.x > 0.0 {
-    //     let coll = x_collision(ter_bounds.min.x - cyl.radius);
-    //     if coll.is_some() {
-    //         return coll;
-    //     }
-    // }
+    if delta.x > 0.0 {
+        let coll = x_collision(ter_bounds.min.x - cyl.radius);
+        if coll.is_some() {
+            return coll;
+        }
+    }
 
     // Right collision
-    // if delta.x < 0.0 {
-    //     let coll = x_collision(ter_bounds.max.x + cyl.radius);
-    //     if coll.is_some() {
-    //         return coll;
-    //     }
-    // }
+    if delta.x < 0.0 {
+        let coll = x_collision(ter_bounds.max.x + cyl.radius);
+        if coll.is_some() {
+            return coll;
+        }
+    }
 
     // Bottom collision
     // if delta.y > 0.0 {

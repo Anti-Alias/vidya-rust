@@ -166,7 +166,12 @@ fn process_tiles_at<'map>(
             current_map.set_terrain_piece(TerrainPiece::Cuboid, coll_climber.coords());
         }
         ClimbStatus::ClimbingSlopeFirst => {
-            current_map.set_terrain_piece(TerrainPiece::Slope, coll_climber.coords())
+            current_map.set_terrain_piece(TerrainPiece::Slope, coll_climber.coords());
+            let mut coords = coll_climber.coords();
+            while coords.y >= offset_y {
+                coords.y -= 1;
+                current_map.set_terrain_piece(TerrainPiece::Cuboid, coords);
+            }
         }
         ClimbStatus::ClimbingSlopeSecond => {
             // Assumed that ClimbingSlopeFirst case handled writing slope correctly.

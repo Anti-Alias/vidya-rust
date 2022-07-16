@@ -63,7 +63,7 @@ fn collide_with_terrain(
     )>,
     mut terrain_ids: Local<HashSet<TerrainId>>
 ) {
-    const EPSILON: f32 = 0.001;
+    const EPSILON: f32 = 0.01;
     log::debug!("(SYSTEM) collide_with_terrain");
     terrain_ids.clear();
 

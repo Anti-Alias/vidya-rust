@@ -76,6 +76,20 @@ fn spawn_player(
     let run_handle = animation_set.add_animation_group(&[run_e, run_n, run_w, run_s]);
     let jump_handle = animation_set.add_animation_group(&[jump_e, jump_n, jump_w, jump_s]);
 
+    let mut pb = PhysicsBundle::new(
+        Position(Vec3::new(200.0, 40.0, -360.0)),
+        CylinderShape {
+            radius: 6.0,
+            half_height: 15.0
+        },
+        Friction {
+            xz: 0.5,
+            y: 1.0,
+        },
+        Weight(0.5)
+    );
+    pb.velocity.0 = Vec3::new(15.0, 0.0, 0.0);
+
     // Spawns platformer entity from bundle
     commands
         .spawn()
@@ -86,18 +100,7 @@ fn spawn_player(
             Transform::default(),
             GlobalTransform::default()
         ))
-        .insert_bundle(PhysicsBundle::new(
-            Position(Vec3::new(234.00204, 15.00005, -220.0)),
-            CylinderShape {
-                radius: 6.0,
-                half_height: 15.0
-            },
-            Friction {
-                xz: 0.5,
-                y: 1.0,
-            },
-            Weight(0.5)
-        ))
+        .insert_bundle(pb)
         .insert(PhysicsState::default())
         .insert(Player)
         .insert(DirectionState::default())

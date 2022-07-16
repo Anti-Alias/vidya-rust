@@ -109,6 +109,7 @@ pub fn collide_cuboid_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, de
         let in_y_bounds =
             lerped_bottom < ter_bounds.max.y &&
             lerped_top > ter_bounds.min.y;
+        let dir = (lerped_center.xz() - edge).normalize();
         if in_y_bounds {
             return Some(Collision {
                 t: coll_2d.t,

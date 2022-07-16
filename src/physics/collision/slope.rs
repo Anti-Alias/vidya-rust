@@ -45,7 +45,7 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
     };
 
     // Collision code for the top side of this slope
-    let top_collision = || -> Option<Collision> {
+    let slope_collision = || -> Option<Collision> {
         let min = ter_bounds.min;
         let max = ter_bounds.max;
         let a1 = Vec2::new(
@@ -74,6 +74,72 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
             }
         None
     };
+
+    // Collision code for bottom and top sides of this cuboid
+    let top_collision = || {
+        let ter_edge = ter_bounds.max.y + cyl.half_height;
+        let t = (ter_edge - cyl.center.y) / delta.y;
+        if t_in_range(t) {
+            let lerped_center = cyl.center + delta * t;
+            let lerped_center_xz = lerped_center.xz();
+            let in_xz_bounds =
+                RectHelper {
+                    min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z - cyl.radius),
+                    max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z + cyl.radius)
+                }.contains_point(lerped_center_xz);
+            if in_xz_bounds {
+                return Some(Collision::new(
+                    t,
+                    Vec3::new(delta.x, 0.0, delta.z),
+                    CollisionType::Floor
+                ));
+            }
+        }
+        None
+    };
+
+    // Collision code for bottom and top sides of this cuboid
+    // let top_collision = || {
+    //     let ter_edge = ter_bounds.max.y + cyl.half_height;
+    //     let t = (ter_edge - cyl.center.y) / delta.y;
+    //     if t_in_range(t) {
+    //         let lerped_center = cyl.center + delta * t;
+    //         let lerped_center_xz = lerped_center.xz();
+    //         let in_xz_bounds =
+    //             RectHelper {
+    //                 min: Vec2::new(ter_bounds.min.x - cyl.radius, ter_bounds.min.z),
+    //                 max: Vec2::new(ter_bounds.max.x + cyl.radius, ter_bounds.max.z)
+    //             }.contains_point(lerped_center_xz) ||
+    //             RectHelper {
+    //                 min: Vec2::new(ter_bounds.min.x, ter_bounds.min.z - cyl.radius),
+    //                 max: Vec2::new(ter_bounds.max.x, ter_bounds.max.z + cyl.radius)
+    //             }.contains_point(lerped_center_xz) ||
+    //             CircleHelper {
+    //                 center: ter_bounds.min.xz(),
+    //                 radius: cyl.radius
+    //             }.contains_point(lerped_center_xz) ||
+    //             CircleHelper {
+    //                 center: Vec2::new(ter_bounds.max.x, ter_bounds.min.z),
+    //                 radius: cyl.radius
+    //             }.contains_point(lerped_center_xz) ||
+    //             CircleHelper {
+    //                 center: Vec2::new(ter_bounds.min.x, ter_bounds.max.z),
+    //                 radius: cyl.radius
+    //             }.contains_point(lerped_center_xz) ||
+    //             CircleHelper {
+    //                 center: ter_bounds.max.xz(),
+    //                 radius: cyl.radius
+    //             }.contains_point(lerped_center_xz);
+    //         if in_xz_bounds {
+    //             return Some(Collision::new(
+    //                 t,
+    //                 Vec3::new(delta.x, 0.0, delta.z),
+    //                 CollisionType::Floor
+    //             ));
+    //         }
+    //     }
+    //     None
+    // };
     
 
     // Collision code for the bottom side of this slope
@@ -162,12 +228,17 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
     //     }
     // }
 
+    // Slope collision
+    let coll = slope_collision();
+    if coll.is_some() {
+        return coll;
+    }
+
     // Top collision
     let coll = top_collision();
     if coll.is_some() {
         return coll;
     }
-
     // Far collision
     // if delta.z > 0.0 {
     //     let coll = z_collision(ter_bounds.min.z - cyl.radius);
@@ -234,7 +305,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
 
     // Ignores case where a1 -> b1 is coming from underneath a2 -> b2
     if !is_ccw(a1, b2, a2) {
-        println!("Not ccw");
+        println!("Not CCW");
         return None;
     }
 
@@ -287,7 +358,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
     let inter_x = (intercept2 - intercept1) / (slope1 - slope2);
     let mut t = (inter_x - a1.x) / (b1.x - a1.x);
     if !t_in_range(t) {
-        println!("Case E");
+        println!("Case E {}", t);
         return None;
     }
     const EP: f32 = 0.01;

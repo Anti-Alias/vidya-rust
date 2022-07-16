@@ -92,7 +92,7 @@ fn collide_with_terrain(
             match terrain.collide_with_cylinder(&cylinder, delta, &terrain_ids) {
                 Some((collision, tid)) => {
 
-                    //terrain_ids.insert(tid);
+                    terrain_ids.insert(tid);
                     let t = (collision.t - EPSILON).min(1.0).max(0.0);
                     prev_pos_value += delta * t;
 

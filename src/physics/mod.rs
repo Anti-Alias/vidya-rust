@@ -64,12 +64,11 @@ fn terrain_push_cylinder(
     mut delta: Vec3,
     retries: usize
 ) -> Option<CollisionInfo> {
-
+    
+    const EPSILON: f32 = 0.01;
     if retries == 0 {
         panic!("Invalid number of retries {}", retries);
     }
-
-    const EPSILON: f32 = 0.01;
     let mut result = None;
     let mut on_ground = false;
 
@@ -92,7 +91,9 @@ fn terrain_push_cylinder(
                 // Applies collision to previous position
                 cyl.center += delta * t;
                 delta = (collision.velocity + collision.offset) * (1.0 - t);
-                
+                if collision.typ == CollisionType::Floor {
+                    on_ground = true;
+                }
 
                 // Writes to result
                 result = Some(CollisionInfo {
@@ -160,9 +161,7 @@ fn collide_with_terrain(
             pos_value = coll_info.position;
             prev_pos_value = coll_info.prev_position;
             vel_value = coll_info.velocity;
-            if coll_info.collision_type == CollisionType::Floor {
-                on_ground = true;
-            }
+            on_ground = coll_info.on_ground;
             had_interactions = true;
         }
 

@@ -111,7 +111,6 @@ pub trait TerrainCollider {
         &self,
         cylinder: &CylinderCollider,
         delta: Vec3,
-        exclude: &HashSet<TerrainId>
     ) -> Option<(Collision, TerrainId)>;
 }
 
@@ -121,7 +120,6 @@ impl TerrainCollider for Terrain {
         &self,
         cylinder: &CylinderCollider,
         delta: Vec3,
-        exclude: &HashSet<TerrainId>
     ) -> Option<(Collision, TerrainId)> {
         
         let mut result: Option<(Collision, TerrainId)> = None;
@@ -134,7 +132,6 @@ impl TerrainCollider for Terrain {
         // For all terrain pieces in the selection...
         for piece_ref in self.iter_pieces(min, max) {
             let tid = TerrainId(piece_ref.coords);
-            if exclude.contains(&tid) { continue };
 
             // Create short-lived piece collider
             let TerrainPieceRef { piece, coords } = piece_ref;

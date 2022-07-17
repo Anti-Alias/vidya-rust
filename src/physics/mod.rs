@@ -50,8 +50,69 @@ impl Plugin for PhysicsPlugin {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, )]
+struct CollisionInfo {
+    position: Vec3,
+    prev_position: Vec3,
+    velocity: Vec3,
+    on_ground: bool
+}
 
-const COLLISION_RETRIES: u32 = 8;
+fn terrain_push_cylinder(
+    terrain: &Terrain,
+    mut cyl: CylinderCollider,
+    mut delta: Vec3,
+    retries: usize
+) -> Option<CollisionInfo> {
+
+    if retries == 0 {
+        panic!("Invalid number of retries {}", retries);
+    }
+
+    const EPSILON: f32 = 0.01;
+    let mut result = None;
+    let mut on_ground = false;
+
+    for i in 0..retries {
+        
+        // Collides cylinder with terrain, and gathers information
+        let coll = terrain.collide_with_cylinder(&cyl, delta);
+        match coll {
+            Some((collision, _)) => {
+
+                // If on the last retry, we'll want to ignore this collision
+                if i == retries - 1 {
+                    println!("Retries exhausted on push");
+                    return None;
+                }
+                
+                // Massages t value
+                let t = (collision.t - EPSILON).min(1.0).max(0.0);
+
+                // Applies collision to previous position
+                cyl.center += delta * t;
+                delta = (collision.velocity + collision.offset) * (1.0 - t);
+                
+
+                // Writes to result
+                result = Some(CollisionInfo {
+                    position: cyl.center + delta,
+                    prev_position: cyl.center,
+                    velocity: collision.velocity,
+                    on_ground,
+                });
+            }
+            None => {
+                return result
+            }
+        };
+    }
+
+    // Required to satisfy the compiler
+    None
+}
+
+
 fn collide_with_terrain(
     terrain_entity: Query<&Terrain>,
     mut collidable_entities: Query<(
@@ -63,7 +124,7 @@ fn collide_with_terrain(
     )>,
     mut terrain_ids: Local<HashSet<TerrainId>>
 ) {
-    const EPSILON: f32 = 0.01;
+    const COLLISION_RETRIES: usize = 8;
     log::debug!("(SYSTEM) collide_with_terrain");
     terrain_ids.clear();
 
@@ -80,39 +141,35 @@ fn collide_with_terrain(
         let mut prev_pos_value = prev_pos.0;    // Start point in collision
         let mut vel_value = vel.0;              // Velocity at start point
         let mut delta = vel_value;              // Change in motion
+        let mut had_interactions = false;       // If false, loop will quit early
+        let mut on_ground = false;
 
-        // For N retries...
-        for _ in 0..COLLISION_RETRIES {
-            let cylinder = CylinderCollider {
-                center: prev_pos_value,
-                radius: size.radius,
-                half_height: size.half_height
-            };
-            match terrain.collide_with_cylinder(&cylinder, delta, &terrain_ids) {
-                Some((collision, tid)) => {
-
-                    terrain_ids.insert(tid);
-                    let t = (collision.t - EPSILON).min(1.0).max(0.0);
-                    prev_pos_value += delta * t;
-
-                    vel_value = collision.velocity;
-                    delta = (vel_value + collision.offset) * (1.0 - t);
-                    pos_value = prev_pos_value + delta;
-                    if let Some(state) = &mut state {
-                        if collision.typ == CollisionType::Floor {
-                            state.on_ground = true;
-                        }
-                    }
-                }
-                None => {
-                    pos.0 = pos_value;
-                    vel.0 = vel_value;
-                    return;
-                }
+        // Pushes cylinder collider out of the terrain
+        let cylinder = CylinderCollider {
+            center: prev_pos.0,
+            radius: size.radius,
+            half_height: size.half_height
+        };
+        let coll_info = terrain_push_cylinder(
+            &terrain,
+            cylinder,
+            delta,
+            COLLISION_RETRIES
+        );
+        if let Some(coll_info) = coll_info {
+            pos_value = coll_info.position;
+            prev_pos_value = coll_info.prev_position;
+            vel_value = coll_info.velocity;
+            if coll_info.collision_type == CollisionType::Floor {
+                on_ground = true;
             }
+            had_interactions = true;
         }
-        pos.0 = prev_pos_value;
+
+        pos.0 = pos_value;
         vel.0 = vel_value;
-        log::info!("Collision retries exhausted");
+        if let Some(mut state) = state {
+            state.on_ground = on_ground;
+        }
     }
 }

@@ -15,6 +15,7 @@ impl Plugin for GraphicsPlugin {
                 .label(SystemLabels::InterpolateGraphics)
                 .after(SystemLabels::PhysicsMove)
                 .after(SystemLabels::PhysicsCollide)
+                .after(SystemLabels::PhysicsCast)
                 .after(SystemLabels::CameraUpdate)
                 .with_system(interpolate_graphics)
         );

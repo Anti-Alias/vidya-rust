@@ -77,6 +77,9 @@ pub enum SystemLabels {
     /// Collides objects with each other after movement happens
     PhysicsCollide,
 
+    /// Casts colliders down
+    PhysicsCast,
+
     /// Updates camera
     CameraUpdate,
 

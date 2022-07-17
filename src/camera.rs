@@ -16,6 +16,7 @@ impl Plugin for CameraPlugin {
             .label(SystemLabels::CameraUpdate)
             .after(SystemLabels::PhysicsMove)
             .after(SystemLabels::PhysicsCollide)
+            .after(SystemLabels::PhysicsCast)
             .with_system(camera_target)
         );
     }

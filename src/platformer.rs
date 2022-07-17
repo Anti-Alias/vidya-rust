@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::animation::{AnimationGroupHandle, AnimationSet};
 use crate::game::{GameState, SystemLabels, run_if_tick_elapsed};
-use crate::physics::{Velocity, Friction, Gravity, PhysicsState};
+use crate::physics::{Velocity, Friction, Gravity, WallState};
 use crate::direction::{DirectionState, DirectionType};
 use crate::state::{ActionState, State};
 use crate::util::SignalQueue;
@@ -21,6 +21,7 @@ impl Plugin for PlatformerPlugin {
             .with_system(control_state
                 .label(SystemLabels::ControlState)
                 .after(SystemLabels::PhysicsCollide)
+                .after(SystemLabels::PhysicsCast)
             )
             .with_system(process_signals
                 .label(SystemLabels::Logic)
@@ -77,7 +78,7 @@ fn process_signals(
         &Friction,
         &mut Velocity,
         &mut DirectionState,
-        &PhysicsState
+        &mut WallState
     )>)
 {
     log::debug!("(SYSTEM) process_signals");
@@ -86,7 +87,7 @@ fn process_signals(
         friction,
         mut velocity,
         mut dir_state,
-        physics_state
+        mut wall_state
     )
     in platformer_entities.iter_mut() {
 
@@ -104,12 +105,13 @@ fn process_signals(
                     dir_state.direction = direction;
                 }
                 PlatformerSignal::Jump => {
-                    if physics_state.on_ground {
+                    if wall_state.on_ground {
                         let g = gravity.gravity;
                         let jh = platformer.jump_height;
                         let det = g*g - 4.0 * (-jh * 2.0);
                         if det > 0.0 {
                             velocity.0.y = (-g + det.sqrt()) / 2.0;
+                            wall_state.jump();
                         }
                     }
                 }
@@ -122,7 +124,7 @@ fn process_signals(
 /// Updates the platformer's state based on physics state and velocity.
 fn control_state(mut query: Query<
     (
-        &PhysicsState,
+        &WallState,
         &Velocity,
         &mut ActionState,
     ),
@@ -190,9 +192,3 @@ fn control_animations(mut platformer_entities: Query<
         }
     }
 }
-
-// fn log_position(platformers: Query<&Position, With<Platformer>>) {
-//     for pos in platformers.iter() {
-//         println!("Position: {:?}", pos.0);
-//     }
-// }

@@ -82,10 +82,19 @@ impl Bounds {
     }
 }
 
-/// State object
+/// Determines side(s) that an entity is touching
 #[derive(Component, PartialEq, Eq, Debug, Copy, Clone, Default)]
-pub struct PhysicsState {
+pub struct WallState {
+    pub prev_on_ground: bool,
     pub on_ground: bool
+}
+
+impl WallState {
+    /// Turns off flags necessary for jumping to be performed properly
+    pub fn jump(&mut self) {
+        self.on_ground = false;
+        self.prev_on_ground = false;
+    }
 }
 
 
@@ -134,9 +143,10 @@ pub fn prepare_positions(mut query: Query<(&mut Position, &mut PreviousPosition)
 }
 
 /// Resets physics states.
-pub fn prepare_states(mut query: Query<&mut PhysicsState>) {
+pub fn prepare_states(mut query: Query<&mut WallState>) {
     log::debug!("(SYSTEM) prepare_states");
     for mut state in query.iter_mut() {
+        state.prev_on_ground = state.on_ground;
         state.on_ground = false;
     }
 }

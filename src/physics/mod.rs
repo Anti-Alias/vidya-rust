@@ -42,9 +42,13 @@ impl Plugin for PhysicsPlugin {
                 .after(SystemLabels::Logic)
                 .after(SystemLabels::PhysicsFriction)
             )
-            .with_system(collide_with_terrain
+            .with_system(collide_cylinders_with_terrain
                 .label(SystemLabels::PhysicsCollide)
                 .after(SystemLabels::PhysicsMove)
+            )
+            .with_system(cast_cylinders_on_terrain
+                .label(SystemLabels::PhysicsCast)
+                .after(SystemLabels::PhysicsCollide)
             )
         );
     }
@@ -58,9 +62,98 @@ struct CollisionInfo {
     on_ground: bool
 }
 
-fn terrain_push_cylinder(
+
+fn collide_cylinders_with_terrain(
+    terrain_entity: Query<&Terrain>,
+    mut collidable_entities: Query<(
+        &mut Position,
+        &PreviousPosition,
+        &CylinderShape,
+        &mut Velocity,
+        &mut WallState
+    )>
+) {
+    log::debug!("(SYSTEM) collide_cylinders_with_terrain");
+
+    const COLLISION_RETRIES: usize = 8;
+
+    // Gets terrain to collide with
+    let terrain: &Terrain = match terrain_entity.iter().next() {
+        Some(entity) => entity,
+        None => return
+    };
+
+    // For all collidable entities
+    for (mut pos, prev_pos, shape, mut vel, mut state) in collidable_entities.iter_mut() {
+
+        // Performs pushing logic
+        let mut cylinder = CylinderCollider {
+            center: prev_pos.0,
+            radius: shape.radius,
+            half_height: shape.half_height
+        };
+        let coll_info = coll_cyl_with_retries(
+            &terrain,
+            &mut cylinder,
+            vel.0,
+            COLLISION_RETRIES
+        );
+        if let Some(coll_info) = coll_info {
+            pos.0 = coll_info.position;
+            vel.0 = coll_info.velocity;
+            state.on_ground = coll_info.on_ground
+        }
+    }
+}
+
+/// Performs "downward-casting" logic to keep physics entities stuck to the ground when going down slopes, stairs, etc.
+fn cast_cylinders_on_terrain(
+    terrain_entity: Query<&Terrain>,
+    mut collidable_entities: Query<(
+        &mut Position,
+        &CylinderShape,
+        &mut WallState
+    )>
+) {
+    log::debug!("(SYSTEM) cast_cylinders_on_terrain");
+
+    const COLLISION_RETRIES: usize = 8;
+
+    // Gets terrain to collide with
+    let terrain: &Terrain = match terrain_entity.iter().next() {
+        Some(entity) => entity,
+        None => return
+    };
+
+    // For all collidable entities
+    for (mut pos, shape, mut state) in collidable_entities.iter_mut() {
+        if !state.on_ground && !state.prev_on_ground {
+            continue;
+        }
+
+        // Performs pushing logic
+        let mut cylinder = CylinderCollider {
+            center: pos.0,
+            radius: shape.radius,
+            half_height: shape.half_height
+        };
+        let coll_info = coll_cyl_with_retries(
+            &terrain,
+            &mut cylinder,
+            Vec3::new(0.0, -4.0, 0.0),
+            COLLISION_RETRIES
+        );
+        if let Some(coll_info) = coll_info {
+            pos.0 = coll_info.position;
+            state.on_ground = coll_info.on_ground;
+        }
+    }
+}
+
+
+fn coll_cyl_with_retries(
     terrain: &Terrain,
-    mut cyl: CylinderCollider,
+    cyl: &mut CylinderCollider,
     mut delta: Vec3,
     retries: usize
 ) -> Option<CollisionInfo> {
@@ -74,15 +167,17 @@ fn terrain_push_cylinder(
 
     for i in 0..retries {
         
-        // Collides cylinder with terrain, and gathers information
-        let coll = terrain.collide_with_cylinder(&cyl, delta);
+        // Finds collision with terrain and cylinder
+        let coll = terrain.collide_with_cylinder(cyl, delta);
+
+        // If there was a collision, gather information about it and prepare for the next retry
         match coll {
             Some((collision, _)) => {
 
                 // If on the last retry, we'll want to ignore this collision
                 if i == retries - 1 {
                     println!("Retries exhausted on push");
-                    return None;
+                    break;
                 }
                 
                 // Massages t value
@@ -103,72 +198,10 @@ fn terrain_push_cylinder(
                     on_ground,
                 });
             }
-            None => {
-                return result
-            }
+            None => {}
         };
     }
 
-    // Required to satisfy the compiler
-    None
-}
-
-
-fn collide_with_terrain(
-    terrain_entity: Query<&Terrain>,
-    mut collidable_entities: Query<(
-        &mut Position,
-        &PreviousPosition,
-        &CylinderShape,
-        &mut Velocity,
-        Option<&mut PhysicsState>
-    )>,
-    mut terrain_ids: Local<HashSet<TerrainId>>
-) {
-    const COLLISION_RETRIES: usize = 8;
-    log::debug!("(SYSTEM) collide_with_terrain");
-    terrain_ids.clear();
-
-    // Gets terrain to collide with
-    let terrain: &Terrain = match terrain_entity.iter().next() {
-        Some(entity) => entity,
-        None => return
-    };
-
-    // For all collidable entities
-    for (mut pos, prev_pos, size, mut vel, mut state) in collidable_entities.iter_mut() {
-        
-        let mut pos_value = pos.0;              // End point in collision
-        let mut prev_pos_value = prev_pos.0;    // Start point in collision
-        let mut vel_value = vel.0;              // Velocity at start point
-        let mut delta = vel_value;              // Change in motion
-        let mut had_interactions = false;       // If false, loop will quit early
-        let mut on_ground = false;
-
-        // Pushes cylinder collider out of the terrain
-        let cylinder = CylinderCollider {
-            center: prev_pos.0,
-            radius: size.radius,
-            half_height: size.half_height
-        };
-        let coll_info = terrain_push_cylinder(
-            &terrain,
-            cylinder,
-            delta,
-            COLLISION_RETRIES
-        );
-        if let Some(coll_info) = coll_info {
-            pos_value = coll_info.position;
-            prev_pos_value = coll_info.prev_position;
-            vel_value = coll_info.velocity;
-            on_ground = coll_info.on_ground;
-            had_interactions = true;
-        }
-
-        pos.0 = pos_value;
-        vel.0 = vel_value;
-        if let Some(mut state) = state {
-            state.on_ground = on_ground;
-        }
-    }
+    // Returns the result, if any
+    result
 }

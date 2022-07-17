@@ -3,7 +3,7 @@ mod slope;
 
 use std::fmt::Debug;
 
-use bevy::{prelude::*, math::Vec3Swizzles, utils::HashSet};
+use bevy::{prelude::*, math::Vec3Swizzles };
 
 use crate::physics::{ Terrain, Coords, TerrainPiece, TerrainPieceRef };
 use cuboid::collide_cuboid_with_cylinder;
@@ -188,11 +188,6 @@ fn closer_than(a: Collision, b: Option<Collision>) -> bool {
         }
         None => true
     }
-}
-
-// Compares two floats with a margin of error
-fn float_eq(a: f32, b: f32, epsilon: f32) -> bool {
-    (a - b).abs() < epsilon
 }
 
 fn t_in_range(t: f32) -> bool {

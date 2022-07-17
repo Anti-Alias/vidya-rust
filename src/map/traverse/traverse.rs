@@ -3,7 +3,7 @@ use tiled::*;
 use std::result::Result;
 
 use crate::physics::TerrainPiece;
-use crate::map::{TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus, TileShape };
+use crate::map::{TileType, TileGraphics, TileMeshData, CurrentMapGraphics, CurrentMap, ClimbingError, Climber, ClimbStatus };
 
 // Used to push graphics closer to the camera by a tiny bit to get correct overlapping
 const DEPTH_EPSILON: f32 = 0.001;

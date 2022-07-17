@@ -6,7 +6,6 @@ mod collision;
 
 pub use bevy::prelude::*;
 
-use bevy::utils::HashSet;
 pub use terrain::*;
 pub use collision::*;
 pub use components::*;

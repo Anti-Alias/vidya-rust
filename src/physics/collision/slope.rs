@@ -1,8 +1,6 @@
-use std::f32::consts::SQRT_2;
-
 use bevy::math::{ Vec2, Vec3, Vec3Swizzles };
 
-use crate::physics::collision::{float_eq, t_in_range};
+use crate::physics::collision::t_in_range;
 
 use super::{ Aabb, CylinderCollider, Collision, CollisionType, RectHelper, CircleHelper, collide_line_with_circle, T_EPSILON, Collision2D };
 
@@ -181,12 +179,12 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
     }
 
     // Bottom collision
-    // if delta.y > 0.0 {
-    //     let coll = bottom_collision(ter_bounds.min.y - cyl.half_height, CollisionType::Ceiling);
-    //     if coll.is_some() {
-    //         return coll;
-    //     }
-    // }
+    if delta.y > 0.0 {
+        let coll = bottom_collision(ter_bounds.min.y - cyl.half_height, CollisionType::Ceiling);
+        if coll.is_some() {
+            return coll;
+        }
+    }
 
     // Slope collision
     let coll = slope_collision();
@@ -202,36 +200,24 @@ pub fn collide_slope_with_cylinder(ter_bounds: Aabb, cyl: &CylinderCollider, del
         }
     }
     // Far collision
-    // if delta.z > 0.0 {
-    //     let coll = z_collision(ter_bounds.min.z - cyl.radius);
-    //     if coll.is_some() {
-    //         return coll;
-    //     }
-    // }
+    if delta.z > 0.0 {
+        let coll = z_collision(ter_bounds.min.z - cyl.radius);
+        if coll.is_some() {
+            return coll;
+        }
+    }
 
     // Far/left corner collision
-    // let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.min.z));
-    // if coll.is_some() {
-    //     return coll;
-    // }
+    let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.min.z));
+    if coll.is_some() {
+        return coll;
+    }
 
     // Far/right corner collision
-    // let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.min.z));
-    // if coll.is_some() {
-    //     return coll;
-    // }
-
-    // Near/left corner collision
-    // let coll = edge_collision(Vec2::new(ter_bounds.min.x, ter_bounds.max.z));
-    // if coll.is_some() {
-    //     return coll;
-    // }
-
-    // Near/right corner collision
-    // let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.max.z));
-    // if coll.is_some() {
-    //     return coll;
-    // }
+    let coll = edge_collision(Vec2::new(ter_bounds.max.x, ter_bounds.min.z));
+    if coll.is_some() {
+        return coll;
+    }
 
     // Default
     None
@@ -271,7 +257,6 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
     }
 
     // Checks pathological cases
-    const EPSILON: f32 = 0.0001;
     if a1 == b1 { return None }
     if a2 == b2 { return None }
 
@@ -313,7 +298,7 @@ fn collide2d(a1: Vec2, b1: Vec2, mut a2: Vec2, mut b2: Vec2, normal: Vec2) -> Op
 
     // Normal slope intersection
     let inter_x = (intercept2 - intercept1) / (slope1 - slope2);
-    let mut t = (inter_x - a1.x) / (b1.x - a1.x);
+    let t = (inter_x - a1.x) / (b1.x - a1.x);
     if !t_in_range(t) {
         return None;
     }

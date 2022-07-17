@@ -107,6 +107,21 @@ impl Default for Gravity {
     fn default() -> Self { Self{ gravity: 1.0 }}
 }
 
+/// Component that allows for components to "cast" their collider downwards a particular number of units.
+/// This is useful for objects that want to follow the contour of the ground.
+#[derive(Clone, Debug, Component, PartialEq)]
+pub struct Caster {
+    /// Distance to be casted downward.
+    /// Should be positive.
+    pub distance: f32
+}
+
+impl Default for Caster {
+    fn default() -> Self {
+        Self { distance: 4.0 }
+    }
+}
+
 
 // ----------------- Systems -----------------
 

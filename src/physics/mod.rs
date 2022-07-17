@@ -111,7 +111,8 @@ fn cast_cylinders_on_terrain(
     mut collidable_entities: Query<(
         &mut Position,
         &CylinderShape,
-        &mut WallState
+        &mut WallState,
+        &Caster
     )>
 ) {
     log::debug!("(SYSTEM) cast_cylinders_on_terrain");
@@ -125,7 +126,7 @@ fn cast_cylinders_on_terrain(
     };
 
     // For all collidable entities
-    for (mut pos, shape, mut state) in collidable_entities.iter_mut() {
+    for (mut pos, shape, mut state, caster) in collidable_entities.iter_mut() {
         if !state.on_ground && !state.prev_on_ground {
             continue;
         }
@@ -139,7 +140,7 @@ fn cast_cylinders_on_terrain(
         let coll_info = coll_cyl_with_retries(
             &terrain,
             &mut cylinder,
-            Vec3::new(0.0, -4.0, 0.0),
+            Vec3::new(0.0, -caster.distance, 0.0),
             COLLISION_RETRIES
         );
         if let Some(coll_info) = coll_info {

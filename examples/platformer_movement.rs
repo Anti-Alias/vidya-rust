@@ -7,7 +7,7 @@ use vidya_rust::game::GamePlugins;
 use vidya_rust::map::{LoadMapEvent, MapSpawnedEvent};
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
 use vidya_rust::direction::{DirectionState, DirectionType};
-use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle, WallState};
+use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle, WallState, Caster};
 use vidya_rust::player::Player;
 use vidya_rust::game::GameState;
 use vidya_rust::state::ActionState;
@@ -112,6 +112,7 @@ fn spawn_player(
             run_handle,
             jump_handle
         })
+        .insert(Caster::default())
         .insert(Targetable)
     ;
 }

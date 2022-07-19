@@ -12,3 +12,4 @@ pub mod player;
 pub mod graphics;
 pub mod extensions;
 pub mod util;
+pub mod ui;

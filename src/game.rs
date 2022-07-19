@@ -7,6 +7,8 @@ use crate::graphics::GraphicsPlugin;
 use crate::platformer::PlatformerPlugin;
 use crate::player::PlayerPlugin;
 use crate::sprite::SpritePlugin;
+use crate::ui::UiLayers;
+use crate::util::Permanent;
 use crate:: {
     camera::CameraPlugin,
     map::MapPlugin,
@@ -45,8 +47,13 @@ impl Plugin for CorePlugin {
             .add_plugins(DefaultPlugins)
             .add_state(GameState::GameRunning)
             .init_resource::<GameConfig>()
-            .add_system_to_stage(CoreStage::PreUpdate, update_partial_ticks)
-            .add_startup_system(configure_app);
+            .add_system_to_stage(CoreStage::PreUpdate, update_partial_ticks);
+
+        // Configures world
+        let world = &mut app.world;
+        let config = world.resource::<GameConfig>();
+        world.insert_resource(PartialTicks::new(Duration::from_secs_f64(config.timestep_secs)));
+        setup_ui_layers(world);
     }
     fn name(&self) -> &str { "vidya_plugin" }
 }
@@ -106,7 +113,6 @@ pub enum SystemLabels {
 /// Dictates what systems run and when during the lifecycle of the game.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum GameState {
-
     /// Game started and is in a free state
     GameRunning,
 
@@ -176,10 +182,6 @@ impl Default for GameConfig {
     }
 }
 
-fn configure_app(config: Res<GameConfig>,mut commands: Commands) {
-    commands.insert_resource(PartialTicks::new(Duration::from_secs_f64(config.timestep_secs)));
-}
-
 /// Updates the partial ticks value
 fn update_partial_ticks(
     time: Res<Time>,
@@ -204,4 +206,45 @@ pub fn run_if_tick_elapsed(
     }
     #[cfg(not(release))]
     ShouldRun::Yes
+}
+
+// Sets up UI layers
+fn setup_ui_layers(world: &mut World) {
+
+    // UI Camera
+    world.spawn()
+        .insert_bundle(Camera2dBundle::default())
+        .insert(Permanent);
+    
+    // Main UI layer
+    let ui_layer = world.spawn().insert_bundle(NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        color: Color::NONE.into(),
+        ..default()
+    })
+    .insert(Permanent)
+    .id();
+
+    // Layer for transitioning the screen (loading, fade to black, etc)
+    let transition_layer = world.spawn().insert_bundle(NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        color: Color::NONE.into(),
+        ..default()
+    })
+    .insert(Permanent)
+    .id();
+
+    // Inserts layer resource
+    world.insert_resource(UiLayers {
+        transition_layer,
+        ui_layer
+    });
 }

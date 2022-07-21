@@ -23,7 +23,7 @@ fn main() {
             ..Default::default()
         })
         .add_plugins(GamePlugins)
-        .add_system_set(SystemSet::on_update(GameState::GameRunning)
+        .add_system_set(SystemSet::on_enter(GameState::GameRunning)
             .with_system(load_map)
         )
         .add_system_set(SystemSet::on_update(GameState::GameRunning)

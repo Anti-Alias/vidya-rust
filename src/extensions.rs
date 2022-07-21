@@ -1,6 +1,6 @@
 use std::path::{ Path, PathBuf };
 
-use bevy::{prelude::{AssetServer, Transform}, pbr::{StandardMaterial, AlphaMode}, math::Vec3};
+use bevy::prelude::*;
 
 pub trait PathExt {
     fn relativize(&self, parent: impl AsRef<Path>) -> PathBuf;
@@ -65,6 +65,52 @@ impl TransformExt for Transform {
     fn looking_towards(&self, direction: Vec3, up: Vec3) -> Self {
         let target = self.translation + direction;
         self.looking_at(target, up)
+    }
+}
+
+pub trait NodeBundleExt {
+    fn cbox() -> Self;
+    fn vbox(justify: JustifyContent) -> Self;
+    fn packed_hbox() -> Self;
+}
+impl NodeBundleExt for NodeBundle {
+
+    /// Container that centralizes it's content vertically and horizontally.
+    /// Stores content left to right.
+    fn cbox() -> Self {
+        Self {
+            style: Style {
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            color: Color::NONE.into(),
+            ..default()
+        }
+    }
+
+    /// Vertical container that takes up all the space it can
+    fn vbox(justify: JustifyContent) -> Self {
+        Self {
+            style: Style {
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                flex_direction: FlexDirection::ColumnReverse,
+                justify_content: justify,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            color: Color::NONE.into(),
+            ..default()
+        }
+    }
+
+    // Horizontal packed container
+    fn packed_hbox() -> Self {
+        Self {
+            color: Color::NONE.into(),
+            ..default()
+        }
     }
 }
 

@@ -23,14 +23,13 @@ impl<E: Event + Clone> Plugin for UiEventPlugin<E> {
 /// An event that lies dormant in a Ui entity only to be fired
 /// when interacted with.
 #[derive(Component)]
-pub struct UiAction<E: Event + Clone>(pub E);
+pub struct Dormant<E: Event + Clone>(pub E);
 
 /// Handles UI interactions
 pub fn handle_interactions<E: Event + Clone>(
-    mut commands: Commands,
     mut writer: EventWriter<E>,
     interacted_nodes: Query<
-        (&Interaction, &UiAction<E>),
+        (&Interaction, &Dormant<E>),
         Changed<Interaction>
     >
 ) {

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use vidya_rust::extensions::NodeBundleExt;
 use vidya_rust::game::{GamePlugins, GameState};
 use vidya_rust::ui::UiLayers;
-use vidya_rust::ui_event::{UiEventPlugin, UiAction};
+use vidya_rust::ui_event::{UiEventPlugin, Dormant};
 
 /// Events that can be fired by the title screen
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -20,6 +20,7 @@ fn main() {
         .add_system_set(SystemSet::on_enter(GameState::GameRunning)
             .with_system(create_title_screen)
         )
+        .add_system(handle_events)
         .run();
 }
 
@@ -70,23 +71,31 @@ fn create_title_screen(
         // Start game / Options / Quit
         ui_container.spawn_bundle(NodeBundle::packed_hbox()).with_children(|buttons| {
 
-            // Start Game
-            buttons.spawn_bundle(TextBundle {
-                style: Style {
-                    margin: UiRect::all(Val::Px(20.0)),
-                    ..default()
-                },
-                text: Text::with_section(
-                    "Start Game",
-                    TextStyle {
-                        font: font.clone(),
-                        font_size: 24.0,
-                        color: Color::WHITE
+            // Start button
+            buttons
+                .spawn_bundle(ButtonBundle {
+                    style: Style {
+                        padding: UiRect::all(Val::Px(20.0)),
+                        ..default()
                     },
-                    Default::default()
-                ),
-                ..default()
-            });
+                    color: Color::NONE.into(),
+                    ..default()
+                })
+                .with_children(|quit_button| {
+                    quit_button.spawn_bundle(TextBundle {
+                        text: Text::with_section(
+                            "Start Game",
+                            TextStyle {
+                                font: font.clone(),
+                                font_size: 24.0,
+                                color: Color::WHITE
+                            },
+                            Default::default()
+                        ),
+                        ..default()
+                    });
+                })
+                .insert(Dormant(TitleScreenEvent::StartGame));
 
 
             // Options button
@@ -96,7 +105,7 @@ fn create_title_screen(
                         padding: UiRect::all(Val::Px(20.0)),
                         ..default()
                     },
-                    color: Color::BLUE.into(),
+                    color: Color::NONE.into(),
                     ..default()
                 })
                 .with_children(|quit_button| {
@@ -113,17 +122,16 @@ fn create_title_screen(
                         ..default()
                     });
                 })
-                .insert(UiAction(TitleScreenEvent::OpenOptions));
+                .insert(Dormant(TitleScreenEvent::OpenOptions));
 
             // Quit button
-            let quit_button_name = Name::new("QUIT_BUTTON");
             buttons
                 .spawn_bundle(ButtonBundle {
                     style: Style {
                         padding: UiRect::all(Val::Px(20.0)),
                         ..default()
                     },
-                    color: Color::RED.into(),
+                    color: Color::NONE.into(),
                     ..default()
                 })
                 .with_children(|quit_button| {
@@ -140,11 +148,21 @@ fn create_title_screen(
                         ..default()
                     });
                 })
-                .insert(UiAction(TitleScreenEvent::QuitGame));
+                .insert(Dormant(TitleScreenEvent::QuitGame));
         });
     })
     .id();
 
     // Adds UI container to the ui layer
     commands.entity(layers.ui_layer).add_child(ui_container);
+}
+
+fn handle_events(mut reader: EventReader<TitleScreenEvent>) {
+    for event in reader.iter() {
+        match event {
+            TitleScreenEvent::StartGame => println!("Starting Game!"),
+            TitleScreenEvent::OpenOptions => println!("Opening options!"),
+            TitleScreenEvent::QuitGame => println!("Quitting Game!")
+        }
+    }
 }

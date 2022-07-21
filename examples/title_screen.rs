@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use vidya_rust::extensions::NodeBundleExt;
 use vidya_rust::game::{GamePlugins, GameState};
 use vidya_rust::ui::UiLayers;
-use vidya_rust::ui_event::{UiEventPlugin, Dormant};
+use vidya_rust::ui_event::{UiEventPlugin, OnClick};
 
 /// Events that can be fired by the title screen
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -95,7 +95,7 @@ fn create_title_screen(
                         ..default()
                     });
                 })
-                .insert(Dormant(TitleScreenEvent::StartGame));
+                .insert(OnClick(TitleScreenEvent::StartGame));
 
 
             // Options button
@@ -122,7 +122,7 @@ fn create_title_screen(
                         ..default()
                     });
                 })
-                .insert(Dormant(TitleScreenEvent::OpenOptions));
+                .insert(OnClick(TitleScreenEvent::OpenOptions));
 
             // Quit button
             buttons
@@ -148,7 +148,7 @@ fn create_title_screen(
                         ..default()
                     });
                 })
-                .insert(Dormant(TitleScreenEvent::QuitGame));
+                .insert(OnClick(TitleScreenEvent::QuitGame));
         });
     })
     .id();

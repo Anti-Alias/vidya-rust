@@ -16,26 +16,48 @@ impl<E: Event + Clone> Default for UiEventPlugin<E> {
 impl<E: Event + Clone> Plugin for UiEventPlugin<E> {
     fn build(&self, app: &mut App) {
         app.add_event::<E>();
-        app.add_system(handle_interactions::<E>);
+        app.add_system(handle_clicks::<E>);
+        app.add_system(handle_hovers::<E>);
     }
 }
 
-/// An event that lies dormant in a Ui entity only to be fired
-/// when interacted with.
+/// A Component that stores an event to be fired when the entity is clicked
 #[derive(Component)]
-pub struct Dormant<E: Event + Clone>(pub E);
+pub struct OnClick<E: Event + Clone>(pub E);
 
-/// Handles UI interactions
-pub fn handle_interactions<E: Event + Clone>(
+/// A Component that stores an event to be fired when the entity is hovered
+#[derive(Component)]
+pub struct OnHover<E: Event + Clone>(pub E);
+
+/// Handles click interactions
+fn handle_clicks<E: Event + Clone>(
     mut writer: EventWriter<E>,
     interacted_nodes: Query<
-        (&Interaction, &Dormant<E>),
+        (&Interaction, &OnClick<E>),
         Changed<Interaction>
     >
 ) {
     for (interaction, action) in interacted_nodes.iter() {
         match interaction {
             Interaction::Clicked => {
+                writer.send(action.0.clone())
+            },
+            _ => {}
+        }
+    }
+}
+
+/// Handles hover interactions
+fn handle_hovers<E: Event + Clone>(
+    mut writer: EventWriter<E>,
+    interacted_nodes: Query<
+        (&Interaction, &OnHover<E>),
+        Changed<Interaction>
+    >
+) {
+    for (interaction, action) in interacted_nodes.iter() {
+        match interaction {
+            Interaction::Hovered => {
                 writer.send(action.0.clone())
             },
             _ => {}

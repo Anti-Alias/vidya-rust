@@ -13,10 +13,10 @@ const DRAW_BATCHES_STAGE: &str = "draw_batches";
 pub struct SpritePlugin;
 impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<BatchRenderer>()
-            .add_stage_after(CoreStage::PostUpdate, DRAW_BATCHES_STAGE, SystemStage::single_threaded())
-            .add_system_to_stage(DRAW_BATCHES_STAGE, draw_sprites)
+        // app
+        //     .init_resource::<BatchRenderer>()
+            //.add_stage_after(CoreStage::PostUpdate, DRAW_BATCHES_STAGE, SystemStage::single_threaded())
+            //.add_system_to_stage(DRAW_BATCHES_STAGE, draw_sprites)
         ;
     }
 }
@@ -222,10 +222,11 @@ fn draw_sprites(
     for (sprite, mat_handle, transform) in sprite_query.iter() {
 
         // Buffers draw command for sprite
-        let mut transform = *transform;
-        transform.translation += sprite.offset;
+        let trans = Transform::from_translation(sprite.offset);
+        let mut global_trans = *transform;
+        global_trans.mul_transform(trans);
         let draw_command = DrawQuadCommand {
-            transform,
+            transform: global_trans,
             size: sprite.size,
             uv_region: sprite.region
         };

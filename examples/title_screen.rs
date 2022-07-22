@@ -7,7 +7,7 @@ use vidya_rust::ui_event::{UiEventPlugin, OnClick};
 
 /// Events that can be fired by the title screen
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum TitleScreenEvent {
+enum TitleScreenEvent {
     StartGame,
     QuitGame,
     OpenOptions

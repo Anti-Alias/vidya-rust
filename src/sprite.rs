@@ -13,10 +13,10 @@ const DRAW_BATCHES_STAGE: &str = "draw_batches";
 pub struct SpritePlugin;
 impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
-        // app
-        //     .init_resource::<BatchRenderer>()
-            //.add_stage_after(CoreStage::PostUpdate, DRAW_BATCHES_STAGE, SystemStage::single_threaded())
-            //.add_system_to_stage(DRAW_BATCHES_STAGE, draw_sprites)
+        app
+            .init_resource::<BatchRenderer>()
+            .add_stage_after(CoreStage::PostUpdate, DRAW_BATCHES_STAGE, SystemStage::single_threaded())
+            .add_system_to_stage(DRAW_BATCHES_STAGE, draw_sprites)
         ;
     }
 }

@@ -25,7 +25,13 @@ fn setup_ui_layers(mut commands: Commands) {
 
     // UI Camera
     commands
-        .spawn_bundle(Camera2dBundle::default())
+        .spawn_bundle(Camera2dBundle {
+            camera: Camera {
+                priority: 1,
+                ..default()
+            },
+            ..default()
+        })
         .insert(Permanent);
 
     // Root layer

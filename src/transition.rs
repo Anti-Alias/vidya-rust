@@ -8,7 +8,7 @@ pub struct FadeTransitionPlugin;
 impl Plugin for FadeTransitionPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_system_set(SystemSet::on_update(GameState::GameRunning)
+            .add_system_set_to_stage(CoreStage::PostUpdate, SystemSet::on_update(GameState::GameRunning)
                 .with_run_criteria(run_if_tick_elapsed)
                 .with_system(handle_transition)
             );
@@ -39,11 +39,11 @@ impl FadeTransition {
 }
 
 fn handle_transition(
-    mut commands: Commands,
-    ui_layers: Res<UiLayers>,
     transition: Option<ResMut<FadeTransition>>,
+    ui_layers: Res<UiLayers>,
     time: Res<Time>,
-    mut color_query: Query<&mut UiColor>
+    mut color_query: Query<&mut UiColor>,
+    mut commands: Commands
 ) {
     log::debug!("(SYSTEM) handle_transition");
 
@@ -64,20 +64,16 @@ fn handle_transition(
         Some(node) => {
             if transition.timer.finished() {
                 commands.remove_resource::<FadeTransition>();
-                println!("Done!");
-                commands.entity(node).despawn();
+                commands.entity(ui_layers.transition_layer).despawn_descendants();
                 return
             }
-            println!("Changing color");
-            // let node_color = &mut color_query.get_mut(node).unwrap().0;
-            // *node_color = Color::rgba(tcolor[0], tcolor[1], tcolor[2], alpha);
+            let node_color = &mut color_query.get_mut(node).unwrap().0;
+            *node_color = Color::rgba(tcolor[0], tcolor[1], tcolor[2], alpha);
             node
         },
         None => {
             if transition.timer.finished() {
-                println!("Before");
                 commands.remove_resource::<FadeTransition>();
-                println!("After");
                 return
             }
             let color = transition.color;

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, ui::FocusPolicy};
+use bevy::{prelude::*, ui::FocusPolicy, core_pipeline::clear_color::ClearColorConfig};
 use crate::util::Permanent;
 
 /// Plugin that adds UI related features for the game
@@ -29,6 +29,9 @@ fn setup_ui_layers(mut commands: Commands) {
             camera: Camera {
                 priority: 1,
                 ..default()
+            },
+            camera_2d: Camera2d {
+                clear_color: ClearColorConfig::None
             },
             ..default()
         })

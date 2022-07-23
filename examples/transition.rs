@@ -10,7 +10,7 @@ use vidya_rust::ui_event::{UiEventPlugin, OnClick};
 
 /// Events that can be fired by the title screen
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum TransitionEvent {
+enum MyEvent {
     BlackTransition,
     BlueTransition,
 }
@@ -18,7 +18,7 @@ enum TransitionEvent {
 fn main() {
     App::new()
         .add_plugins(GamePlugins)
-        .add_plugin(UiEventPlugin::<TransitionEvent>::default())
+        .add_plugin(UiEventPlugin::<MyEvent>::default())
         .add_system_set(SystemSet::on_enter(GameState::GameRunning)
             .with_system(create_screen)
         )
@@ -36,7 +36,9 @@ fn create_screen(
     let font: Handle<Font> = asset_server.load("fonts/yoster.ttf");
 
     // Screen container
-    let container = commands.spawn_bundle(NodeBundle::vbox(JustifyContent::Center)).with_children(|container| {
+    let mut cbundle = NodeBundle::vbox(JustifyContent::Center);
+    cbundle.color = Color::GRAY.into();
+    let container = commands.spawn_bundle(cbundle).with_children(|container| {
 
         // Transition buttons
         container.spawn_bundle(NodeBundle::packed_hbox()).with_children(|buttons| {
@@ -64,7 +66,7 @@ fn create_screen(
                         ..default()
                     });
                 })
-                .insert(OnClick(TransitionEvent::BlackTransition));
+                .insert(OnClick(MyEvent::BlackTransition));
 
 
             // Blue
@@ -90,7 +92,7 @@ fn create_screen(
                         ..default()
                     });
                 })
-                .insert(OnClick(TransitionEvent::BlueTransition));
+                .insert(OnClick(MyEvent::BlueTransition));
         });
     })
     .id();
@@ -101,13 +103,20 @@ fn create_screen(
 
 fn handle_events(
     mut commands: Commands,
-    mut reader: EventReader<TransitionEvent>
+    mut events: EventReader<MyEvent>,
+    existing_transition: Option<Res<FadeTransition>>
 ) {
-    for event in reader.iter() {
-        let color = match event {
-            TransitionEvent::BlueTransition => Color::BLUE,
-            TransitionEvent::BlackTransition => Color::BLACK
-        };
-        commands.insert_resource(FadeTransition::new(color, Duration::from_secs(2)));
+    // Takes single transition event, if there is one
+    let event = match events.iter().next() {
+        Some(event) => event,
+        None => return
+    };
+    if existing_transition.is_some() {
+        return
     }
+    let color = match event {
+        MyEvent::BlueTransition => Color::BLUE,
+        MyEvent::BlackTransition => Color::BLACK
+    };
+    commands.insert_resource(FadeTransition::new(color, Duration::from_secs(2)));
 }

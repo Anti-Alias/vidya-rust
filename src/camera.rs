@@ -1,3 +1,4 @@
+use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 use bevy::render::camera::{Projection, ScalingMode};
 
@@ -46,6 +47,10 @@ impl GameCameraBundle {
         let width = 800.0;
         let height = 450.0;
         let cam_3d_bundle = Camera3dBundle {
+            camera_3d: Camera3d {
+                clear_color: ClearColorConfig::Custom(Color::GRAY),
+                ..default()
+            },
             projection: Projection::Orthographic(OrthographicProjection {
                 left: -width / 2.0,
                 right: width / 2.0,

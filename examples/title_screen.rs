@@ -56,14 +56,13 @@ fn create_title_screen(
                 margin: UiRect::all(Val::Px(40.0)),
                 ..default()
             },
-            text: Text::with_section(
+            text: Text::from_section(
                 "MMO Maker",
                 TextStyle {
                     font: font.clone(),
                     font_size: 48.0,
                     color: Color::WHITE
-                },
-                Default::default()
+                }
             ),
             ..default()
         });
@@ -83,14 +82,13 @@ fn create_title_screen(
                 })
                 .with_children(|quit_button| {
                     quit_button.spawn_bundle(TextBundle {
-                        text: Text::with_section(
+                        text: Text::from_section(
                             "Start Game",
                             TextStyle {
                                 font: font.clone(),
                                 font_size: 24.0,
                                 color: Color::WHITE
-                            },
-                            Default::default()
+                            }
                         ),
                         ..default()
                     });
@@ -110,14 +108,13 @@ fn create_title_screen(
                 })
                 .with_children(|quit_button| {
                     quit_button.spawn_bundle(TextBundle {
-                        text: Text::with_section(
+                        text: Text::from_section(
                             "Options",
                             TextStyle {
                                 font: font.clone(),
                                 font_size: 24.0,
                                 color: Color::WHITE
-                            },
-                            Default::default()
+                            }
                         ),
                         ..default()
                     });
@@ -136,14 +133,13 @@ fn create_title_screen(
                 })
                 .with_children(|quit_button| {
                     quit_button.spawn_bundle(TextBundle {
-                        text: Text::with_section(
+                        text: Text::from_section(
                             "Quit",
                             TextStyle {
                                 font: font.clone(),
                                 font_size: 24.0,
                                 color: Color::WHITE
-                            },
-                            Default::default()
+                            }
                         ),
                         ..default()
                     });

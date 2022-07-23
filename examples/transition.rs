@@ -53,14 +53,13 @@ fn create_screen(
                 })
                 .with_children(|quit_button| {
                     quit_button.spawn_bundle(TextBundle {
-                        text: Text::with_section(
+                        text: Text::from_section(
                             "Black Transition",
                             TextStyle {
                                 font: font.clone(),
                                 font_size: 24.0,
                                 color: Color::BLACK
-                            },
-                            Default::default()
+                            }
                         ),
                         ..default()
                     });
@@ -80,14 +79,13 @@ fn create_screen(
                 })
                 .with_children(|quit_button| {
                     quit_button.spawn_bundle(TextBundle {
-                        text: Text::with_section(
+                        text: Text::from_section(
                             "Blue Transition",
                             TextStyle {
                                 font: font.clone(),
                                 font_size: 24.0,
                                 color: Color::BLUE
-                            },
-                            Default::default()
+                            }
                         ),
                         ..default()
                     });

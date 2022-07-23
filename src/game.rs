@@ -25,7 +25,7 @@ pub struct GamePlugins;
 impl PluginGroup for GamePlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
         builder.add(GraphicsPlugin);    // This needs to appear before CorePlugin. Otherwise, images will come with a linear sampler by default.
-        // builder.add(FadeTransitionPlugin);
+        builder.add(FadeTransitionPlugin);
         builder.add(CorePlugin);
         builder.add(UiPlugin);
         builder.add(SpritePlugin);

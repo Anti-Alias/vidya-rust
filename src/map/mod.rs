@@ -190,9 +190,6 @@ fn map_spawn_entities(
         return
     }
 
-    // Creates root map entity
-    let map_entity = commands.spawn().id();
-
     // Spawns chunks as PBRBundles
     let image_handles = &current_map_graphics.tileset_handles;
     for (key, chunk) in &current_map_graphics.chunks {
@@ -227,20 +224,13 @@ fn map_spawn_entities(
         let material_handle = materials.add(material);
 
         // Creates entity for chunk
-        let chunk_entity = commands
+        commands
             .spawn_bundle(PbrBundle {
                 mesh: mesh_handle,
                 material: material_handle,
                 transform: Transform::from_translation(chunk_pos),
                 ..Default::default()
-            })
-            .id();
-
-        
-        // Attaches chunk entity to map entity
-        commands
-            .entity(map_entity)
-            .push_children(&[chunk_entity]);
+            });
     }
 
     // Spawns/configures lights
@@ -254,10 +244,8 @@ fn map_spawn_entities(
         ..Default::default()
     });
 
-    // Adds terrain to map entity
-    commands
-        .entity(map_entity)
-        .insert(current_map.terrain.clone());
+    // Spawns terrain
+    commands.spawn().insert(current_map.terrain.clone());
 
     // Spawns camera using an in-game CameraBundle
     commands

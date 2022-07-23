@@ -31,13 +31,16 @@ impl CurrentMapGraphics {
         assets.get_group_load_state(handle_ids)
     }
 
-    pub fn add_tile(&mut self, tile: TileGraphics) {
+    pub fn add_tile(&mut self, mut tile: TileGraphics) {
         let chunk_size = self.chunk_size;
-        let tile_pos = tile.translation / chunk_size;
-        let (x, y, z) = (tile_pos.x as i32, tile_pos.y as i32, tile_pos.z as i32);
+        let chunk_coords = tile.translation / chunk_size;
+        let (cx, cy, cz) = (chunk_coords.x as i32, chunk_coords.y as i32, chunk_coords.z as i32);
         let tileset_index = tile.tileset_index as usize;
-        let key = ChunkKey { x, y, z, tileset_handle_index: tileset_index };
+        let key = ChunkKey { x: cx, y: cy, z: cz, tileset_handle_index: tileset_index };
         let chunk = self.chunks.entry(key).or_default();
+        
+        let chunk_offset = Vec3::new(cx as f32, cy as f32, cz as f32) * chunk_size;
+        tile.translation -= chunk_offset;
         chunk.add_tile(tile);
         log::trace!("Added tile {:?} at pos {:?} to {:?}", tile.shape, tile.translation, key);
     }

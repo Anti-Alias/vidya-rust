@@ -55,7 +55,7 @@ fn spawn_player(
     }
 
     // Loads material from single image
-    let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01_red.png", AlphaMode::Mask(0.5), &assets);
+    let player_mat = StandardMaterial::from_image("player/char_a_p1_0bas_demn_v01.png", AlphaMode::Mask(0.5), &assets);
 
     // Creates animation set
     let offset = Vec3::new(-31.0, -34.0, -10.0);

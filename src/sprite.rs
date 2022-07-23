@@ -219,14 +219,13 @@ fn draw_sprites(
     batch_renderer.refresh(&materials, &mut commands);
 
     // For all sprites...
-    for (sprite, mat_handle, transform) in sprite_query.iter() {
+    for (sprite, mat_handle, global) in sprite_query.iter() {
 
         // Buffers draw command for sprite
         let trans = Transform::from_translation(sprite.offset);
-        let mut global_trans = *transform;
-        global_trans.mul_transform(trans);
+        let global = (*global).mul_transform(trans);
         let draw_command = DrawQuadCommand {
-            transform: global_trans,
+            transform: global,
             size: sprite.size,
             uv_region: sprite.region
         };

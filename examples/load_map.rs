@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use vidya_rust::game::{ GameState, GamePlugins };
-use vidya_rust::map::{ LoadMapEvent };
+use vidya_rust::screen::LoadScreenEvent;
+use vidya_rust::map::MapScreenType;
 
 fn main() {
     App::new()
@@ -15,10 +16,10 @@ fn main() {
         .run();
 }
 
-fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
+fn load_map(mut emitter: EventWriter<LoadScreenEvent>) {
     
     // Starts the app
     log::debug!("Entered system 'load_map'");
-    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
+    emitter.send(LoadScreenEvent::new("maps/tmx/map.tmx", MapScreenType));
     log::debug!("Sent LoadMapEvent event");
 }

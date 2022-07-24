@@ -1,4 +1,3 @@
-mod events;
 mod vidya_map;
 mod current_map;
 mod current_map_graphics;
@@ -11,24 +10,30 @@ use crate::game::GameState;
 use crate::camera::{GameCameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::extensions::*;
+use crate::screen::{LoadScreenEvent, CurrentScreen};
+use crate::util::Permanent;
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
+use bevy::reflect::TypeUuid;
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 
 pub use current_map::*;
 pub use current_map_graphics::*;
-pub use events::*;
 pub use vidya_map::*;
 pub use tile::*;
 pub use traverse::*;
+
+/// Screen type for maps
+#[derive(Debug, TypeUuid)]
+#[uuid = "178984ab-b9f7-4326-97bd-0301c154e61a"]
+pub struct MapScreenType;
 
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<LoadMapEvent>()
             .add_event::<MapSpawnedEvent>()
             .add_asset::<VidyaMap>()
             .init_asset_loader::<VidyaMapLoader>()
@@ -42,7 +47,7 @@ impl Plugin for MapPlugin {
             })
             // Listens for "LoadMapEvent" and kicks off map loading
             .add_system_set(SystemSet::on_update(GameState::GameRunning)
-                .with_system(map_listen)
+                .with_system(handle_load_event)
             )
 
             // Halts further progress until map is loaded.
@@ -67,29 +72,45 @@ impl Plugin for MapPlugin {
 // 1) Listens for "LoadMapEvent"
 // 2) Begins loading map specified
 // 3) Goes to LoadingMap state
-fn map_listen(
-    mut events: EventReader<LoadMapEvent>,
+fn handle_load_event(
+    mut load_events: EventReader<LoadScreenEvent>,
     mut state: ResMut<State<GameState>>,
     asset_server: Res<AssetServer>,
+    current_screen: Res<CurrentScreen>,
+    all_entities: Query<Entity, Without<Permanent>>,
     mut commands: Commands
 ) {
     log::debug!("(SYSTEM) map_listen");
-    if let Some(event) = events.iter().next() {
-
-        // Begins loading map and stores the handle for later use
-        let map_file = &event.0;
-        let map_handle = asset_server.load(map_file);
-
-        // Creates current map resource and keeps track of the map that is loading
-        commands.insert_resource(CurrentMap {
-            name: map_file.clone(),
-            map_handle,
-            terrain: Terrain::new(Vec3::new(16.0, 16.0, 16.0), UVec3::new(16, 16, 16))
-        });
-
-        // Goes to loading state
-        state.push(GameState::MapLoadingFile).unwrap()
+    
+    // Gets load event, or quits if it's for a different screen type
+    let event = match load_events.iter().next() {
+        Some(event) => event,
+        None => return
+    };
+    if !event.0.is_screen_type(MapScreenType) {
+        return;
     }
+
+    // Unloads if current screen type is MapScreenType
+    if current_screen.0.is_screen_type(MapScreenType) {
+        for entity in all_entities.iter() {
+            commands.entity(entity).despawn();
+        }
+    }
+
+    // Begins loading map and stores the handle for later use
+    let map_file = event.0.name();
+    let map_handle = asset_server.load(map_file);
+
+    // Creates current map resource and keeps track of the map that is loading
+    commands.insert_resource(CurrentMap {
+        name: map_file.to_string(),
+        map_handle,
+        terrain: Terrain::new(Vec3::new(16.0, 16.0, 16.0), UVec3::new(16, 16, 16))
+    });
+
+    // Goes to loading state
+    state.push(GameState::MapLoadingFile).unwrap()
 }
 
 // 1) When in LoadingMapState, checks if map finished loading
@@ -272,3 +293,7 @@ pub struct MapConfig {
     pub chunk_size: Vec3,
     pub flip_y: bool
 }
+
+// Fired when map has fully spawned
+#[derive(Debug, Clone)]
+pub struct MapSpawnedEvent(pub String);

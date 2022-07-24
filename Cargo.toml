@@ -7,6 +7,8 @@ edition = "2021"
 bevy = { git = "https://github.com/bevyengine/bevy", features = ["dynamic"] }
 tiled = { git = "https://github.com/Anti-Alias/rs-tiled.git" }
 anyhow = "1.0"
+anymap = "0.12.1"
+dyn-clone = "1.0.8"
 log = "0.4"
 uuid = "0.8.2"
 num_enum = "0.5.7"

@@ -47,7 +47,9 @@ fn setup_ui_layers(mut commands: Commands) {
         color: Color::NONE.into(),
         focus_policy: FocusPolicy::Pass,
         ..default()
-    }).id();
+    })
+    .insert(Permanent)
+    .id();
     
     // Main UI layer
     let ui_layer = commands.spawn_bundle(NodeBundle {

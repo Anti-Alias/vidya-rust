@@ -6,6 +6,7 @@ use crate::debug::DebugPlugin;
 use crate::graphics::GraphicsPlugin;
 use crate::platformer::PlatformerPlugin;
 use crate::player::PlayerPlugin;
+use crate::screen::ScreenPlugin;
 use crate::sprite::SpritePlugin;
 use crate::transition::FadeTransitionPlugin;
 use crate::ui::UiPlugin;
@@ -26,6 +27,7 @@ impl PluginGroup for GamePlugins {
     fn build(&mut self, builder: &mut PluginGroupBuilder) {
         builder.add(GraphicsPlugin);    // This needs to appear before CorePlugin. Otherwise, images will come with a linear sampler by default.
         builder.add(FadeTransitionPlugin);
+        builder.add(ScreenPlugin);
         builder.add(CorePlugin);
         builder.add(UiPlugin);
         builder.add(SpritePlugin);

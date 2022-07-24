@@ -4,12 +4,13 @@ use vidya_rust::camera::Targetable;
 use vidya_rust::extensions::*;
 use vidya_rust::animation::{AnimationSetBundle, AnimationSet, Animation, AnimationTimer};
 use vidya_rust::game::GamePlugins;
-use vidya_rust::map::{LoadMapEvent, MapSpawnedEvent};
+use vidya_rust::map::{MapSpawnedEvent, MapScreenType};
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
 use vidya_rust::direction::{DirectionState, DirectionType};
 use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle, WallState, Caster};
 use vidya_rust::player::Player;
 use vidya_rust::game::GameState;
+use vidya_rust::screen::LoadScreenEvent;
 use vidya_rust::state::ActionState;
 
 use bevy::prelude::*;
@@ -33,9 +34,9 @@ fn main() {
 }
 
 // Kicks off map loading
-fn load_map(mut emitter: EventWriter<LoadMapEvent>) {
+fn load_map(mut writer: EventWriter<LoadScreenEvent>) {
     log::debug!("Entered system 'load_map'");
-    emitter.send(LoadMapEvent("maps/tmx/map.tmx".to_string()));
+    writer.send(LoadScreenEvent::new("maps/tmx/map.tmx", MapScreenType));
     log::debug!("Sent LoadMapEvent event");
 }
 

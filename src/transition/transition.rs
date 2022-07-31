@@ -1,13 +1,25 @@
-use std::time::Duration;
+use std::{time::Duration, marker::PhantomData};
 
 use bevy::prelude::*;
+use bevy::ecs::event::Event;
 
 use crate::{game::{GameState, run_if_tick_elapsed}, ui::UiLayers};
 
-pub struct FadeTransitionPlugin;
-impl Plugin for FadeTransitionPlugin {
+use super::TransitionState;
+
+/// Plugin that allows the user to fade the screen to an opaque color, fire an event,
+/// wait for an event response, then fade back.
+/// Useful for scene transitions.
+pub struct FadeTransitionPlugin<E1: Event, E2: Event> {
+    event: Option<E1>,
+    marker: PhantomData<E2>
+}
+
+impl<E1: Event, E2: Event> Plugin for FadeTransitionPlugin<E1, E2> {
     fn build(&self, app: &mut App) {
         app
+            .add_state(TransitionState::Idle)
+            .init_resource::<TransitionState>()
             .add_system_set_to_stage(CoreStage::PostUpdate, SystemSet::on_update(GameState::GameRunning)
                 .with_run_criteria(run_if_tick_elapsed)
                 .with_system(handle_transition)
@@ -15,17 +27,19 @@ impl Plugin for FadeTransitionPlugin {
     }
 }
 
-/// Short lived resource that fades to an opaque color before switching screens.
-pub struct FadeTransition {
+
+/// Short lived resource that fades to an opaque color before firing an event.
+pub struct FadeTransition<E1: Event> {
     color: [f32; 3],
     timer: Timer,
-    node: Option<Entity>
+    node: Option<Entity>,
+    event_to_fire: Option<E1>
 }
 
-impl FadeTransition {
+impl<E1: Event> FadeTransition<E1> {
 
     /// New transition. Alpha is ignored if supplied.
-    pub fn new(color: Color, duration: Duration) -> Self {
+    pub fn new(color: Color, duration: Duration, event_to_fire: E1) -> Self {
         if duration <= Duration::ZERO {
             panic!("Invalid duration");
         }
@@ -33,15 +47,18 @@ impl FadeTransition {
         Self {
             color: [color[0], color[1], color[2]],
             timer: Timer::new(duration, false),
-            node: None
+            node: None,
+            event_to_fire: Some(event_to_fire)
         }
     }
 }
 
-fn handle_transition(
+fn handle_transition<E1: Event, E2: Event>(
     transition: Option<ResMut<FadeTransition>>,
     ui_layers: Res<UiLayers>,
     time: Res<Time>,
+    writer: ResMut<EventWriter<E1>>,
+    reader: ResMut<EventReader<E2>>,
     mut color_query: Query<&mut UiColor>,
     mut commands: Commands
 ) {

@@ -10,12 +10,9 @@ use crate::screen::ScreenPlugin;
 use crate::sprite::SpritePlugin;
 use crate::transition::FadeTransitionPlugin;
 use crate::ui::UiPlugin;
-use crate:: {
-    camera::CameraPlugin,
-    map::MapPlugin,
-    //debug::DebugPlugin,
-    physics::PhysicsPlugin,
-};
+use crate::camera::CameraPlugin;
+use crate::map::MapPlugin;
+use crate::physics::PhysicsPlugin;
 
 use bevy::app::PluginGroupBuilder;
 use bevy::ecs::schedule::ShouldRun;

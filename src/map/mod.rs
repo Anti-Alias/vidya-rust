@@ -10,8 +10,7 @@ use crate::game::GameState;
 use crate::camera::{GameCameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::extensions::*;
-use crate::screen::{LoadScreenEvent, CurrentScreen};
-use crate::util::Permanent;
+use crate::screen::{LoadScreenEvent, CurrentScreen, ScreenLoadedEvent};
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };
@@ -45,7 +44,7 @@ impl Plugin for MapPlugin {
                 ),
                 flip_y: false
             })
-            // Listens for "LoadMapEvent" and kicks off map loading
+            // Listens for "LoadScreenEvent" and kicks off map loading
             .add_system_set(SystemSet::on_update(GameState::GameRunning)
                 .with_system(handle_load_event)
             )
@@ -69,15 +68,13 @@ impl Plugin for MapPlugin {
     }
 }
 
-// 1) Listens for "LoadMapEvent"
+// 1) Listens for "LoadScreenEvent"
 // 2) Begins loading map specified
 // 3) Goes to LoadingMap state
 fn handle_load_event(
     mut load_events: EventReader<LoadScreenEvent>,
     mut state: ResMut<State<GameState>>,
     asset_server: Res<AssetServer>,
-    current_screen: Res<CurrentScreen>,
-    all_entities: Query<Entity, Without<Permanent>>,
     mut commands: Commands
 ) {
     log::debug!("(SYSTEM) map_listen");
@@ -89,13 +86,6 @@ fn handle_load_event(
     };
     if !event.0.is_screen_type(MapScreenType) {
         return;
-    }
-
-    // Unloads if current screen type is MapScreenType
-    if current_screen.0.is_screen_type(MapScreenType) {
-        for entity in all_entities.iter() {
-            commands.entity(entity).despawn();
-        }
     }
 
     // Begins loading map and stores the handle for later use
@@ -197,7 +187,7 @@ fn map_spawn_entities(
     current_map: Res<CurrentMap>,
     current_map_graphics: ResMut<CurrentMapGraphics>,
     assets: Res<AssetServer>,
-    mut spawned_writer: EventWriter<MapSpawnedEvent>,
+    mut screen_writer: EventWriter<ScreenLoadedEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut state: ResMut<State<GameState>>,
@@ -283,7 +273,7 @@ fn map_spawn_entities(
     
     // Finishes map loading
     state.pop().unwrap();
-    spawned_writer.send(MapSpawnedEvent(current_map.name.clone()));
+    screen_writer.send(ScreenLoadedEvent);
     log::debug!("Done spawning map graphics entities...");
 }
 

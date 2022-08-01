@@ -1,28 +1,18 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 
 use vidya_rust::extensions::NodeBundleExt;
-use vidya_rust::game::{GamePlugins, GameState};
-use vidya_rust::transition::FadeTransition;
+use vidya_rust::game::GamePlugins;
+use vidya_rust::map::MapScreenType;
+use vidya_rust::transition::TransitionEvent;
 use vidya_rust::ui::UiLayers;
 use vidya_rust::ui_event::{UiEventPlugin, OnClick};
 
-/// Events that can be fired by the title screen
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum MyEvent {
-    BlackTransition,
-    BlueTransition,
-}
 
 fn main() {
     App::new()
         .add_plugins(GamePlugins)
-        .add_plugin(UiEventPlugin::<MyEvent>::default())
-        .add_system_set(SystemSet::on_enter(GameState::GameRunning)
-            .with_system(create_screen)
-        )
-        .add_system(handle_events)
+        .add_plugin(UiEventPlugin::<TransitionEvent>::default())
+        .add_startup_system(create_screen)
         .run();
 }
 
@@ -43,7 +33,7 @@ fn create_screen(
         // Transition buttons
         container.spawn_bundle(NodeBundle::packed_hbox()).with_children(|buttons| {
 
-            // Black
+            // Button
             buttons
                 .spawn_bundle(ButtonBundle {
                     style: Style {
@@ -56,7 +46,7 @@ fn create_screen(
                 .with_children(|quit_button| {
                     quit_button.spawn_bundle(TextBundle {
                         text: Text::from_section(
-                            "Black Transition",
+                            "Go To Map!",
                             TextStyle {
                                 font: font.clone(),
                                 font_size: 24.0,
@@ -66,57 +56,11 @@ fn create_screen(
                         ..default()
                     });
                 })
-                .insert(OnClick(MyEvent::BlackTransition));
-
-
-            // Blue
-            buttons
-                .spawn_bundle(ButtonBundle {
-                    style: Style {
-                        padding: UiRect::all(Val::Px(20.0)),
-                        ..default()
-                    },
-                    color: Color::NONE.into(),
-                    ..default()
-                })
-                .with_children(|quit_button| {
-                    quit_button.spawn_bundle(TextBundle {
-                        text: Text::from_section(
-                            "Blue Transition",
-                            TextStyle {
-                                font: font.clone(),
-                                font_size: 24.0,
-                                color: Color::BLUE
-                            }
-                        ),
-                        ..default()
-                    });
-                })
-                .insert(OnClick(MyEvent::BlueTransition));
+                .insert(OnClick(TransitionEvent::fade("maps/tmx/map.tmx", MapScreenType)));
         });
     })
     .id();
 
     // Adds UI container to the ui layer
     commands.entity(layers.ui_layer).add_child(container);
-}
-
-fn handle_events(
-    mut commands: Commands,
-    mut events: EventReader<MyEvent>,
-    existing_transition: Option<Res<FadeTransition>>
-) {
-    // Takes single transition event, if there is one
-    let event = match events.iter().next() {
-        Some(event) => event,
-        None => return
-    };
-    if existing_transition.is_some() {
-        return
-    }
-    let color = match event {
-        MyEvent::BlueTransition => Color::BLUE,
-        MyEvent::BlackTransition => Color::BLACK
-    };
-    commands.insert_resource(FadeTransition::new(color, Duration::from_secs(2)));
 }

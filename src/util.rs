@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use bevy::prelude::Component;
-
 /// Represents a queue of signals
 #[derive(Debug)]
 pub struct SignalQueue<S: Clone> {
@@ -36,8 +34,3 @@ impl<S: Clone> SignalQueue<S> {
 
     pub fn is_empty(&self) -> bool { self.queue.is_empty() }
 }
-
-/// Maker component that tells the engine to never despawn this entity.
-/// Useful for UI layer entities.
-#[derive(Component)]
-pub struct Permanent;

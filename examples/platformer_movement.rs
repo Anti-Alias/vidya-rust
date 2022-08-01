@@ -4,13 +4,13 @@ use vidya_rust::camera::Targetable;
 use vidya_rust::extensions::*;
 use vidya_rust::animation::{AnimationSetBundle, AnimationSet, Animation, AnimationTimer};
 use vidya_rust::game::GamePlugins;
-use vidya_rust::map::{MapSpawnedEvent, MapScreenType};
+use vidya_rust::map::MapScreenType;
 use vidya_rust::platformer::{Platformer, PlatformerAnimator};
 use vidya_rust::direction::{DirectionState, DirectionType};
 use vidya_rust::physics::{Friction, Position, CylinderShape, Weight, PhysicsBundle, WallState, Caster};
 use vidya_rust::player::Player;
 use vidya_rust::game::GameState;
-use vidya_rust::screen::LoadScreenEvent;
+use vidya_rust::screen::{LoadScreenEvent, ScreenLoadedEvent};
 use vidya_rust::state::ActionState;
 
 use bevy::prelude::*;
@@ -24,9 +24,7 @@ fn main() {
             ..Default::default()
         })
         .add_plugins(GamePlugins)
-        .add_system_set(SystemSet::on_enter(GameState::GameRunning)
-            .with_system(load_map)
-        )
+        .add_startup_system(load_map)
         .add_system_set(SystemSet::on_update(GameState::GameRunning)
             .with_system(spawn_player)
         )
@@ -43,7 +41,7 @@ fn load_map(mut writer: EventWriter<LoadScreenEvent>) {
 // Spawns player after map finishes loading
 fn spawn_player(
     assets: Res<AssetServer>,
-    mut events: EventReader<MapSpawnedEvent>,
+    mut events: EventReader<ScreenLoadedEvent>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands
 ) {

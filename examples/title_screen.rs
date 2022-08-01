@@ -1,11 +1,20 @@
 use bevy::prelude::*;
 
 use vidya_rust::extensions::NodeBundleExt;
-use vidya_rust::game::{GamePlugins, GameState};
+use vidya_rust::game::GamePlugins;
 use vidya_rust::ui::UiLayers;
 use vidya_rust::ui_event::{UiEventPlugin, OnClick};
 
-/// Events that can be fired by the title screen
+fn main() {
+    App::new()
+        .add_plugins(GamePlugins)
+        .add_plugin(UiEventPlugin::<TitleScreenEvent>::default())
+        .add_startup_system(create_title_screen)
+        .add_system(handle_events)
+        .run();
+}
+
+/// Dormant events that are fired when buttons are pressed on the title screen.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum TitleScreenEvent {
     StartGame,
@@ -13,17 +22,7 @@ enum TitleScreenEvent {
     OpenOptions
 }
 
-fn main() {
-    App::new()
-        .add_plugins(GamePlugins)
-        .add_plugin(UiEventPlugin::<TitleScreenEvent>::default())
-        .add_system_set(SystemSet::on_enter(GameState::GameRunning)
-            .with_system(create_title_screen)
-        )
-        .add_system(handle_events)
-        .run();
-}
-
+/// Builds title screen UI
 fn create_title_screen(
     mut commands: Commands,
     layers: Res<UiLayers>,

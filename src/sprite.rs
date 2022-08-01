@@ -6,7 +6,7 @@ use bevy::render::primitives::Aabb;
 use bevy::render::{render_resource::PrimitiveTopology};
 use bevy::render::mesh::{VertexAttributeValues, Indices};
 
-use crate::util::Permanent;
+use crate::screen::Keep;
 
 /// Batch drawing stage
 const DRAW_BATCHES_STAGE: &str = "draw_batches";
@@ -105,7 +105,7 @@ impl BatchRenderer {
                         center: Vec3A::ZERO,
                         half_extents: Vec3A::new(f32::MAX, f32::MAX, f32::MAX)
                     })
-                    .insert(Permanent)
+                    .insert(Keep)
                     .id();
                 MeshInfo {
                     mesh_handle,

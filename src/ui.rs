@@ -1,11 +1,12 @@
 use bevy::{prelude::*, ui::FocusPolicy, core_pipeline::clear_color::ClearColorConfig};
-use crate::util::Permanent;
+
+use crate::screen::Keep;
 
 /// Plugin that adds UI related features for the game
 pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup_ui_layers);
+        app.add_startup_system_to_stage(StartupStage::PreStartup, setup_ui_layers);
     }
 }
  
@@ -35,7 +36,7 @@ fn setup_ui_layers(mut commands: Commands) {
             },
             ..default()
         })
-        .insert(Permanent);
+        .insert(Keep);
 
     // Root layer
     let root_layer = commands.spawn_bundle(NodeBundle {
@@ -48,7 +49,7 @@ fn setup_ui_layers(mut commands: Commands) {
         focus_policy: FocusPolicy::Pass,
         ..default()
     })
-    .insert(Permanent)
+    .insert(Keep)
     .id();
     
     // Main UI layer
@@ -63,7 +64,7 @@ fn setup_ui_layers(mut commands: Commands) {
         color: Color::NONE.into(),
         ..default()
     })
-    .insert(Permanent)
+    .insert(Keep)
     .id();
 
     // Layer for transitioning the screen (loading, fade to black, etc)
@@ -78,7 +79,7 @@ fn setup_ui_layers(mut commands: Commands) {
         color: Color::NONE.into(),
         ..default()
     })
-    .insert(Permanent)
+    .insert(Keep)
     .id();
 
     // Adds sub layers to root layer

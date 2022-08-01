@@ -56,7 +56,7 @@ fn create_screen(
                         ..default()
                     });
                 })
-                .insert(OnClick(TransitionEvent::fade("maps/tmx/map.tmx", MapScreenType)));
+                .insert(OnClick(TransitionEvent::new("maps/tmx/map.tmx", MapScreenType)));
         });
     })
     .id();

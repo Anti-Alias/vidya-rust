@@ -10,7 +10,7 @@ use crate::game::GameState;
 use crate::camera::{GameCameraBundle, CameraTargetSettings};
 use crate::physics::{ Position, Velocity, Friction, Terrain };
 use crate::extensions::*;
-use crate::screen::{LoadScreenEvent, CurrentScreen, ScreenLoadedEvent};
+use crate::screen::{LoadScreenEvent, ScreenLoadedEvent};
 
 use bevy::prelude::*;
 use bevy::asset::{ AssetServerSettings, LoadState };

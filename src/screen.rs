@@ -56,8 +56,8 @@ pub struct ScreenLoadedEvent;
 #[derive(Default)]
 pub struct CurrentScreen(pub ScreenInfo);
 
-/// Maker component that tells the engine to never despawn this entity.
-/// Useful for UI layer entities.
+/// Marker component that prevents an entity from being despawned during a screen transition.
+/// Useful for a player character, for example.
 #[derive(Component)]
 pub struct Keep;
 

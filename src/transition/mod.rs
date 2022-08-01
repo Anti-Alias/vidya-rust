@@ -1,9 +1,6 @@
-mod fade;
+use crate::{screen::{ScreenInfo, LoadScreenEvent, ScreenLoadedEvent, ScreenType, Keep}, ui::UiLayers};
 
-pub use fade::*;
-use crate::screen::{ScreenType, ScreenInfo, LoadScreenEvent, ScreenLoadedEvent};
-
-use bevy::{prelude::*, reflect::{Uuid, TypeUuidDynamic, TypeUuid}};
+use bevy::{prelude::*, ui::FocusPolicy};
 use std::time::Duration;
 
 /// Plugin that allows the user to fade the screen to an opaque color, kick off screen loading, then fade back in when the loading completes.
@@ -14,9 +11,8 @@ impl Plugin for TransitionPlugin {
         app
             .add_event::<TransitionEvent>()
             .add_state_to_stage(CoreStage::PreUpdate, TransitionState::Idle)
-            .add_plugin(FadeTransitionPlugin)
             .add_system_set_to_stage(CoreStage::PreUpdate, SystemSet::on_update(TransitionState::Idle)
-                .with_system(listen_for_transition_event)
+                .with_system(start)
             )
             .add_system_set_to_stage(CoreStage::PreUpdate, SystemSet::on_update(TransitionState::FirstHalf)
                 .with_system(first_half)
@@ -30,45 +26,22 @@ impl Plugin for TransitionPlugin {
     }
 }
 
-/// Represents a type of transition.
-pub trait TransitionType: TypeUuidDynamic {}
-impl<T: TypeUuidDynamic> TransitionType for T {}
 
 /// Event that kicks off a transition.
 #[derive(Clone, Debug)]
 pub struct TransitionEvent {
     /// Information about the screen to transition to
     pub screen_info: ScreenInfo,
-    /// Transition type
-    pub transition_type: Uuid,
     /// Duration of the fade in and fade out phases of the transition
     pub fade_duration: Duration
 }
 impl TransitionEvent {
 
-    pub fn new(
-        screen_info: ScreenInfo,
-        transition_type: impl TransitionType,
-        fade_duration: Duration
-    ) -> Self {
-        Self {
-            screen_info,
-            transition_type: transition_type.type_uuid(),
-            fade_duration,
-        }
-    }
-
-    /// Creates a simple fade transition
-    pub fn fade(screen_name: impl Into<String>, screen_type: impl ScreenType) -> Self {
+    pub fn new(screen_name: impl Into<String>, screen_type: impl ScreenType) -> Self {
         Self {
             screen_info: ScreenInfo::new(screen_name, screen_type),
-            transition_type: FadeTransitionType::TYPE_UUID,
-            fade_duration: Duration::from_secs(1)
+            fade_duration: Duration::from_secs(1),
         }
-    }
-
-    pub fn is_type(&self, transition_type: impl TransitionType) -> bool {
-        self.transition_type == transition_type.type_uuid()
     }
 }
 
@@ -80,54 +53,76 @@ pub enum TransitionState {
     SecondHalf
 }
 
-/// Keeps track of the progress of a transition
-#[derive(Debug, Clone)]
+/// Resoruce that tracks the progress of the transition
 pub struct TransitionInfo {
+    node: Entity,
     timer: Timer,
-    event_to_fire: Option<LoadScreenEvent>,
-    transition_type: Uuid
-}
-impl TransitionInfo {
-    pub fn percent(&self) -> f32 {
-        self.timer.percent()
-    }
-    pub fn is_type(&self, transition_type: impl TransitionType) -> bool {
-        return self.transition_type == transition_type.type_uuid()
-    }
+    event_to_fire: Option<LoadScreenEvent>
 }
 
-fn listen_for_transition_event(
+fn start(
     mut trans_events: EventReader<TransitionEvent>,
+    ui_layers: Res<UiLayers>,
     mut trans_state: ResMut<State<TransitionState>>,
     mut commands: Commands
 ) {
-    for event in trans_events.iter() {
-        commands.insert_resource(TransitionInfo {
-            timer: Timer::new(event.fade_duration, false),
-            event_to_fire: Some(LoadScreenEvent(event.screen_info.clone())),
-            transition_type: event.transition_type
-        });
-        trans_state.set(TransitionState::FirstHalf).unwrap();
-    }
+    // Gets event
+    let event = match trans_events.iter().next() {
+        Some(event) => event,
+        None => return
+    };
+
+    // Spawns fullscreen node as a child of the transition layer
+    let node = commands.spawn_bundle(NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+            ..default()
+        },
+        color: Color::NONE.into(),
+        focus_policy: FocusPolicy::Pass,
+        ..default()
+    })
+    .insert(Keep)
+    .id();
+    commands.entity(ui_layers.transition_layer).add_child(node);
+
+    // Inserts transition resource
+    commands.insert_resource(TransitionInfo {
+        node,
+        timer: Timer::new(event.fade_duration, false),
+        event_to_fire: Some(LoadScreenEvent(event.screen_info.clone()))
+    });
+
+    // Sets state to FirstHalf of transition
+    trans_state.set(TransitionState::FirstHalf).unwrap();
 }
 
+/// Update logic for the first half
 fn first_half(
     mut trans_state: ResMut<State<TransitionState>>,
-    mut progress: ResMut<TransitionInfo>,
     time: Res<Time>,
-    mut writer: EventWriter<LoadScreenEvent>,
+    mut transition_info: ResMut<TransitionInfo>,
+    mut node_query: Query<&mut UiColor>,
+    mut writer: EventWriter<LoadScreenEvent>
 ) {
-    let timer = &mut progress.timer;
+    // Updates timer
+    let node = transition_info.node;
+    let timer = &mut transition_info.timer;
     timer.tick(time.delta());
-    println!("First half percent: {}", timer.percent());
+
+    // Sets transition node's alpha
+    let mut node_color = node_query.get_mut(node).unwrap();
+    *node_color = Color::rgba(0.0, 0.0, 0.0, timer.percent()).into();
+
+    // Sends LoadScreenEvent if timer finished
     if timer.finished() {
         timer.reset();
         trans_state.set(TransitionState::Waiting).unwrap();
-        writer.send(progress.event_to_fire.take().unwrap());
-        println!("Fired!");
+        writer.send(transition_info.event_to_fire.take().unwrap());
     }
 }
 
+/// Logic that waits for ScreenLoadedEvent before continuing to second half
 fn waiting(
     mut reader: EventReader<ScreenLoadedEvent>,
     mut trans_state: ResMut<State<TransitionState>>
@@ -138,19 +133,30 @@ fn waiting(
     }
 }
 
+/// Update logic for second half
 fn second_half(
     mut commands: Commands,
     mut trans_state: ResMut<State<TransitionState>>,
-    mut progress: ResMut<TransitionInfo>,
-    time: Res<Time>
+    ui_layers: Res<UiLayers>,
+    time: Res<Time>,
+    mut transition_info: ResMut<TransitionInfo>,
+    mut node_query: Query<&mut UiColor>
 ) {
-    let timer = &mut progress.timer;
+    // Gets node / updates timer
+    let node = transition_info.node;
+    let timer = &mut transition_info.timer;
     timer.tick(time.delta());
-    println!("Second half percent: {}", timer.percent());
+
+    // Sets transition node's alpha
+    let mut node_color = node_query.get_mut(node).unwrap();
+    *node_color = Color::rgba(0.0, 0.0, 0.0, timer.percent_left()).into();
+
+    // If timer finished, remove node/resource, and go back to idle
     if timer.finished() {
         timer.reset();
         trans_state.set(TransitionState::Idle).unwrap();
         commands.remove_resource::<TransitionInfo>();
-        println!("Second half finished!");
+        commands.entity(ui_layers.transition_layer).despawn_descendants();
+        println!("Finished!");
     }
 }
